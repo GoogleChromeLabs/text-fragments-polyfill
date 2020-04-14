@@ -13,6 +13,6 @@ injected via Web Inspector.</sup></figcaption>
 </figure>
 </div>
 
-There are still many limitations and the code is very hacky, but it serves well as a proof of concept.
+There are still **many** limitations and the code is very hacky, but it serves well as a proof of concept.
 This *could* be used in Chrome for iOS by injecting the script with
 [`WKUserScript`](https://developer.apple.com/documentation/webkit/wkuserscript).
