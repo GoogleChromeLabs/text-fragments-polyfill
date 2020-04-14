@@ -5,7 +5,7 @@ for browsers that don't support it natively.
 
 <div>
 <figure>
-  <img width="400" src="https://user-images.githubusercontent.com/145676/79250513-02bb5800-7e7f-11ea-8e56-bd63edd31f5b.jpeg">
+  <img style="width: 400px; height: auto; display: block;" src="https://user-images.githubusercontent.com/145676/79250513-02bb5800-7e7f-11ea-8e56-bd63edd31f5b.jpeg">
   <figcaption><sup>The text fragment link
 <a href="https://en.wikipedia.org/wiki/Cat#Size:~:text=This%20article%20is,kept%20as%20a%20pet">en.wikipedia.org/wiki/Cat#Size:~:text=This%20article%20is,kept%20as%20a%20pet</a> rendered in Safari on an iOS device running Safari, with
 <a href="https://github.com/tomayac/text-fragments-polyfill/blob/master/inject.js"><code>inject.js</code></a>
