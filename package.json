@@ -1,0 +1,23 @@
+{
+  "name": "text-fragments-polyfill",
+  "version": "0.0.1",
+  "description": "This is an attempt to polyfill the [Text Fragments](https://wicg.github.io/ScrollToTextFragment/) feature for browsers that don't support it natively.",
+  "main": "inject.js",
+  "dependencies": {
+    "prettier": "^2.0.4"
+  },
+  "devDependencies": {},
+  "scripts": {
+    "lint": "npx prettier --write ."
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/tomayac/text-fragments-polyfill.git"
+  },
+  "author": "Thomas Steiner (steiner.thomas@gmail.com)",
+  "license": "Apache-2.0",
+  "bugs": {
+    "url": "https://github.com/tomayac/text-fragments-polyfill/issues"
+  },
+  "homepage": "https://github.com/tomayac/text-fragments-polyfill#readme"
+}

@@ -64,6 +64,10 @@ const processFragmentDirectives = (parsedFragmentDirectives) => {
   return processedFragmentDirectives;
 };
 
+const escapeRegExp = (s) => {
+  return s.replace(/[\\^$.*+?()[\]{}|]/g, '\\$&');
+};
+
 const processTextFragmentDirective = (textFragment) => {
   const prefixNodes = findText(textFragment.prefix);
   const textStartNodes = findText(textFragment.textStart);
@@ -82,7 +86,7 @@ const processTextFragmentDirective = (textFragment) => {
     ) {
       const textStartNode = textStartNodes[0].parentNode;
       const adjacentHTML = textStartNodes[0].textContent.replace(
-        new RegExp(`(^.*?)(${textFragment.textStart})(.*?$)`),
+        new RegExp(`(^.*?)(${escapeRegExp(textFragment.textStart)})(.*?$)`),
         '$1<mark>$2</mark>$3',
       );
       textStartNode.textContent = '';
@@ -98,7 +102,9 @@ const processTextFragmentDirective = (textFragment) => {
       const textStartNode = textStartNodes[0].parentNode;
       const adjacentHTML = textStartNodes[0].textContent.replace(
         new RegExp(
-          `(^.*?)(${textFragment.textStart})(.*?)(${textFragment.textEnd})(.*?$)`,
+          `(^.*?)(${escapeRegExp(textFragment.textStart)})(.*?)(${
+            textFragment.textEnd
+          })(.*?$)`,
         ),
         '$1<mark>$2$3$4</mark>$5',
       );

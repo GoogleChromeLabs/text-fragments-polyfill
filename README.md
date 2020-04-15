@@ -1,7 +1,8 @@
 # Text Fragments Polyfill
 
-This is an attempt to polyfill the [Text Fragments](https://wicg.github.io/ScrollToTextFragment/) feature
-for browsers that don't support it natively.
+This is an attempt to polyfill the
+[Text Fragments](https://wicg.github.io/ScrollToTextFragment/) feature for
+browsers that don't support it natively.
 
 <div align="center">
   <img width="400" src="https://user-images.githubusercontent.com/145676/79250513-02bb5800-7e7f-11ea-8e56-bd63edd31f5b.jpeg">
@@ -20,6 +21,7 @@ for browsers that don't support it natively.
   </p>
 </div>
 
-There are still **many** limitations and the code is very hacky, but it serves well as a proof of concept.
-This *could* be used in Chrome for iOS by injecting the script with
+There are still **many** limitations and the code is very hacky, but it serves
+well as a proof of concept. This _could_ be used in Chrome for iOS by injecting
+the script with
 [`WKUserScript`](https://developer.apple.com/documentation/webkit/wkuserscript).
