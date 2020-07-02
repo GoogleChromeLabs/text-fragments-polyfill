@@ -77,24 +77,27 @@ const processTextFragmentDirective = (textFragment) => {
     block: 'nearest',
     inline: 'nearest',
   };
-  if (!prefixNodes.length && !suffixNodes.length && textStartNodes.length === 1 && textStartNodes[0].parentNode) {
+  if (
+    !prefixNodes.length &&
+    !suffixNodes.length &&
+    textStartNodes.length === 1 &&
+    textStartNodes[0].parentNode
+  ) {
     // Only `textStart`
-    if (
-      !textEndNodes.length
-    ) {
+    if (!textEndNodes.length) {
       const textStartNode = textStartNodes[0].parentNode;
       const adjacentHTML = textStartNodes[0].textContent.replace(
-        new RegExp(`(^.*?)(${escapeRegExp(textFragment.textStart)})(.*?$)`),
+        new RegExp(
+          `(^.*?)(${escapeRegExp(textFragment.textStart)})(.*?$)`,
+          'm',
+        ),
         '$1<mark>$2</mark>$3',
       );
       textStartNode.textContent = '';
       textStartNode.insertAdjacentHTML('afterbegin', adjacentHTML);
       textStartNode.scrollIntoView(scrollBehavior);
-    // Only `textStart` and `textEnd`
-    } else if (
-      textEndNodes.length === 1 &&
-      textEndNodes[0].parentNode
-    ) {
+      // Only `textStart` and `textEnd`
+    } else if (textEndNodes.length === 1 && textEndNodes[0].parentNode) {
       // If `textStart` and `textEnd` are in the same node
       if (textEndNodes[0].parentNode === textStartNodes[0].parentNode) {
         const textStartNode = textStartNodes[0].parentNode;
@@ -103,20 +106,19 @@ const processTextFragmentDirective = (textFragment) => {
             `(^.*?)(${escapeRegExp(textFragment.textStart)})(.*?)(${
               textFragment.textEnd
             })(.*?$)`,
+            'm',
           ),
           '$1<mark>$2$3$4</mark>$5',
         );
         textStartNode.textContent = '';
         textStartNode.insertAdjacentHTML('afterbegin', adjacentHTML);
         textStartNode.scrollIntoView(scrollBehavior);
-      // If `textStart` and `textEnd` are in different nodes
+        // If `textStart` and `textEnd` are in different nodes
       } else {
-
       }
     }
   }
   if (prefixNodes.length) {
-
   }
 };
 
