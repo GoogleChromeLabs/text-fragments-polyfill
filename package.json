@@ -4,7 +4,7 @@
   "description": "This is an attempt to polyfill the [Text Fragments](https://wicg.github.io/ScrollToTextFragment/) feature for browsers that don't support it natively.",
   "main": "inject.js",
   "dependencies": {
-    "prettier": "^2.0.4"
+    "prettier": "^2.0.5"
   },
   "devDependencies": {},
   "scripts": {
