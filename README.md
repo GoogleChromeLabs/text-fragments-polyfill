@@ -1,7 +1,7 @@
 # Text Fragments Polyfill
 
 This is an attempt to polyfill the
-[Text Fragments](https://wicg.github.io/ScrollToTextFragment/) feature for
+[Text Fragments](https://wicg.github.io/scroll-to-text-fragment/) feature for
 browsers that don't support it natively.
 
 <div align="center">
