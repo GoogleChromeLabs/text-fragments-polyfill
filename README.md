@@ -25,3 +25,7 @@ There are still **many** limitations and the code is very hacky, but it serves
 well as a proof of concept. This _could_ be used in Chrome for iOS by injecting
 the script with
 [`WKUserScript`](https://developer.apple.com/documentation/webkit/wkuserscript).
+
+## License
+
+Apache 2.0. This is not an official Google product.
