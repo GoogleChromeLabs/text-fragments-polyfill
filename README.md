@@ -13,7 +13,7 @@ browsers that don't support it natively.
         #:~:text=This%20article%20is,kept%20as%20a%20pet
       </a>
       rendered in Safari on an iOS device, with
-      <a href="https://github.com/tomayac/text-fragments-polyfill/blob/master/inject.js">
+      <a href="https://github.com/GoogleChromeLabs/text-fragments-polyfill/blob/master/inject.js">
         <code>inject.js</code>
       </a>
       injected via Web Inspector.
