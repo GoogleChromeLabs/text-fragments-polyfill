@@ -148,15 +148,11 @@
           }
           range.surroundContents(mark);
         }
-        window.setTimeout(() => {
-          if(scrollTo) {
-            mark.scrollIntoView(scrollBehavior);
-          }
-          let sel = window.getSelection();
-          let selRange = document.createRange();
-          selRange.selectNode(mark);
-          sel.addRange(selRange);
-        }, 1);
+        if(scrollTo) {
+          window.setTimeout(() => {
+              mark.scrollIntoView(scrollBehavior);
+          }, 1);
+        }
     }
     if (prefixNodes.length) {
     }
