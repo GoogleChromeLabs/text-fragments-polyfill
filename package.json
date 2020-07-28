@@ -2,13 +2,17 @@
   "name": "text-fragments-polyfill",
   "version": "0.0.2",
   "description": "This is an attempt to polyfill the [Text Fragments](https://wicg.github.io/scroll-to-text-fragment/) feature for browsers that don't support it natively.",
-  "main": "inject.js",
+  "main": "text-fragments.js",
   "dependencies": {
     "prettier": "^2.0.5"
   },
-  "devDependencies": {},
+  "devDependencies": {
+    "rollup": "^2.23.0",
+    "rollup-plugin-terser": "6.1.0"
+  },
   "scripts": {
-    "lint": "npx prettier --write ."
+    "lint": "npx prettier --write .",
+    "prepare": "npx rollup text-fragments.js --file ./dist/text-fragments.js -p 'terser'"
   },
   "repository": {
     "type": "git",
