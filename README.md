@@ -35,7 +35,7 @@ npm install text-fragments-polyfill
 ## Usage
 
 ```js
-// Only use the polyfill on browser that need it.
+// Only load the polyfill in browsers that need it.
 if (!('fragmentDirective' in Location.prototype)) {
   import('text-fragments.js');
 }
