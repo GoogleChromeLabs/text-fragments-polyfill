@@ -26,6 +26,26 @@ well as a proof of concept. This _could_ be used in Chrome for iOS by injecting
 the script with
 [`WKUserScript`](https://developer.apple.com/documentation/webkit/wkuserscript).
 
+## Installation
+
+```bash
+npm install text-fragments-polyfill
+```
+
+## Usage
+
+```js
+// Only load the polyfill in browsers that need it.
+if (!('fragmentDirective' in Location.prototype)) {
+  import('text-fragments.js');
+}
+```
+
+## Demo
+
+Try the [demo](https://text-fragments-polyfill.glitch.me/) on a browser that
+does not support Text Fragments.
+
 ## License
 
 Apache 2.0. This is not an official Google product.

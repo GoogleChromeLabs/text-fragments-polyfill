@@ -14,26 +14,26 @@
  * limitations under the License.
  */
 
-import * as utils from './text-fragment-utils';
+import * as utils from './text-fragment-utils.js';
 
-(() => {
-  if ('fragmentDirective' in Location.prototype) {
+(async () => {
+  // Return early if Text Fragments are supported by the browser, or when there
+  // is no hash. This is fine, since later added hashes are not relevant for
+  // Text Fragments.
+  const hash = document.location.hash;
+  if ('fragmentDirective' in Location.prototype || !hash) {
     return;
   }
+
+  // Pass feature detection (https://web.dev/text-fragments/#feature-detection)
   Location.prototype.fragmentDirective = {};
 
   const init = () => {
-    const hash = document.location.hash;
-    if (!hash) {
-      return;
-    }
     const fragmentDirectives = utils.getFragmentDirectives(hash);
     const parsedFragmentDirectives = utils.parseFragmentDirectives(
       fragmentDirectives,
     );
-    const processedFragmentDirectives = utils.processFragmentDirectives(
-      parsedFragmentDirectives,
-    );
+    const processedFragmentDirectives = utils.processFragmentDirectives(parsedFragmentDirectives);
     const firstFoundMatch = processedFragmentDirectives['text'].filter(
       Boolean,
     )[0];
