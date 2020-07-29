@@ -34,7 +34,11 @@ import * as utils from './text-fragment-utils';
     const processedFragmentDirectives = utils.processFragmentDirectives(
       parsedFragmentDirectives,
     );
+    const firstFoundMatch = processedFragmentDirectives['text'].filter(
+      Boolean,
+    )[0];
+    window.setTimeout(() => utils.scrollElementIntoView(firstFoundMatch));
   };
 
-  init();
+  window.addEventListener('DOMContentLoaded', init);
 })();

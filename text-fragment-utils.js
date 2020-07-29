@@ -14,27 +14,77 @@
  * limitations under the License.
  */
 
+/**
+ * @typedef {Object} TextFragment
+ * @property {string} textStart
+ * @property {string?} textEnd
+ * @property {string?} prefix
+ * @property {string?} suffix
+ */
+
 const FRAGMENT_DIRECTIVES = ['text'];
 
+// Block elements. elements of a text fragment cannot cross the boundaries of a block element.
+// Source for the list : https://www.w3schools.com/html/html_blocks.asp
+const BLOCK_ELEMENTS = [
+  'ADDRESS',
+  'ARTICLE',
+  'ASIDE',
+  'BLOCKQUOTE',
+  'CANVAS',
+  'DD',
+  'DIV',
+  'DL',
+  'DT',
+  'FIELDSET',
+  'FIGCAPTION',
+  'FIGURE',
+  'FOOTER',
+  'FORM',
+  'H1',
+  'H2',
+  'H3',
+  'H4',
+  'H5',
+  'H6',
+  'HEADER',
+  'HR',
+  'LI',
+  'MAIN',
+  'NAV',
+  'NOSCRIPT',
+  'OL',
+  'P',
+  'PRE',
+  'SECTION',
+  'TABLE',
+  'TFOOT',
+  'UL',
+  'VIDEO',
+];
+
+/**
+ * Get all text fragments from a string
+ * @param {string} hash - string retrieved from Location#hash.
+ * @returns {{text: string[]}} Text Fragments contained in the hash.
+ */
 export const getFragmentDirectives = (hash) => {
-  const fragmentDirectivesString = hash.replace(/#.*?:~:(.*?)/, '$1');
-  if (!fragmentDirectivesString) {
-    return;
+  const fragmentDirectivesStrings = hash
+    .replace(/#.*?:~:(.*?)/, '$1')
+    .split(/&?text=/)
+    .filter(Boolean);
+  if (!fragmentDirectivesStrings.length) {
+    return {};
+  } else {
+    return { text: fragmentDirectivesStrings };
   }
-  const fragmentDirectivesParams = new URLSearchParams(
-    fragmentDirectivesString,
-  );
-  const fragmentDirectives = {};
-  FRAGMENT_DIRECTIVES.forEach((fragmentDirectiveType) => {
-    if (fragmentDirectivesParams.has(fragmentDirectiveType)) {
-      fragmentDirectives[
-        fragmentDirectiveType
-      ] = fragmentDirectivesParams.getAll(fragmentDirectiveType);
-    }
-  });
-  return fragmentDirectives;
 };
 
+/**
+ * Decompose text fragment strings into objects, describing each part of each text fragment.
+ * @param {{text: string[]}} fragmentDirectives - Text fragment to decompose into separate elements.
+ * @returns {{text: TextFragment[]}} Text Fragments, each containing textStart, textEnd, prefix and suffix.
+ */
 export const parseFragmentDirectives = (fragmentDirectives) => {
   const parsedFragmentDirectives = {};
   for (const [
@@ -52,6 +102,11 @@ export const parseFragmentDirectives = (fragmentDirectives) => {
   return parsedFragmentDirectives;
 };
 
+/**
+ * Decompose a string into an object containing all the parts of a text fragment.
+ * @param {string} textFragment - String to decompose.
+ * @returns {TextFragment} Object containing textStart, textEnd, prefix and suffix of the text fragment.
+ */
 const parseTextFragmentDirective = (textFragment) => {
   const TEXT_FRAGMENT = /^(?:(.+?)-,)?(?:(.+?))(?:,(.+?))?(?:,-(.+?))?$/;
   return {
@@ -62,6 +117,11 @@ const parseTextFragmentDirective = (textFragment) => {
   };
 };
 
+/**
+ * Highlights all the text fragments
+ * @param {{text: TextFragment[]}} parsedFragmentDirectives - Text fragments to highlight
+ * @returns {Element?[]} `<mark>` nodes created to highlight text fragments.
+ */
 export const processFragmentDirectives = (parsedFragmentDirectives) => {
   const processedFragmentDirectives = {};
   for (const [
@@ -83,68 +143,161 @@ const escapeRegExp = (s) => {
   return s.replace(/[\\^$.*+?()[\]{}|]/g, '\\$&');
 };
 
+/**
+ * Highlights a text fragment by surrounding it in a `<mark>` element.
+ *
+ * Note : If a text fragment only partially intersects an element, the text
+ * fragment will be extended to highlight the entire element.
+ * @param {TextFragment} textFragment - Text Fragment to highlight.
+ * @returns {Element?} `<mark>` element created to highlight the text fragment, if an exact and distinct match was found.
+ */
 const processTextFragmentDirective = (textFragment) => {
   const prefixNodes = findText(textFragment.prefix);
   const textStartNodes = findText(textFragment.textStart);
   const textEndNodes = findText(textFragment.textEnd);
   const suffixNodes = findText(textFragment.suffix);
-  const scrollBehavior = {
-    behavior: 'smooth',
-    block: 'nearest',
-    inline: 'nearest',
-  };
+  const mark = document.createElement('mark');
   if (
     !prefixNodes.length &&
     !suffixNodes.length &&
-    textStartNodes.length === 1 &&
-    textStartNodes[0].parentNode
+    textStartNodes.length === 1
   ) {
+    let startNode;
+    let startOffset;
+    let endNode;
+    let endOffset;
     // Only `textStart`
     if (!textEndNodes.length) {
-      const textStartNode = textStartNodes[0].parentNode;
-      const adjacentHTML = textStartNodes[0].textContent.replace(
-        new RegExp(
-          `(^.*?)(${escapeRegExp(textFragment.textStart)})(.*?$)`,
-          'm',
-        ),
-        '$1<mark>$2</mark>$3',
+      [startNode, startOffset] = findRangeNodeAndOffset(
+        textStartNodes[0],
+        textFragment.textStart,
+        true,
       );
-      textStartNode.textContent = '';
-      textStartNode.insertAdjacentHTML('afterbegin', adjacentHTML);
-      textStartNode.scrollIntoView(scrollBehavior);
+      [endNode, endOffset] = findRangeNodeAndOffset(
+        textStartNodes[0],
+        textFragment.textStart,
+        false,
+      );
       // Only `textStart` and `textEnd`
-    } else if (textEndNodes.length === 1 && textEndNodes[0].parentNode) {
-      // If `textStart` and `textEnd` are in the same node
-      if (textEndNodes[0].parentNode === textStartNodes[0].parentNode) {
-        const textStartNode = textStartNodes[0].parentNode;
-        const adjacentHTML = textStartNodes[0].textContent.replace(
-          new RegExp(
-            `(^.*?)(${escapeRegExp(textFragment.textStart)})(.*?)(${
-              textFragment.textEnd
-            })(.*?$)`,
-            'm',
-          ),
-          '$1<mark>$2$3$4</mark>$5',
-        );
-        textStartNode.textContent = '';
-        textStartNode.insertAdjacentHTML('afterbegin', adjacentHTML);
-        textStartNode.scrollIntoView(scrollBehavior);
-        // If `textStart` and `textEnd` are in different nodes
-      } else {
+    } else if (textEndNodes.length === 1) {
+      [startNode, startOffset] = findRangeNodeAndOffset(
+        textStartNodes[0],
+        textFragment.textStart,
+        true,
+      );
+      [endNode, endOffset] = findRangeNodeAndOffset(
+        textEndNodes[0],
+        textFragment.textEnd,
+        false,
+      );
+    }
+    let range = document.createRange();
+    range.setStart(startNode, startOffset);
+    range.setEnd(endNode, endOffset);
+    try {
+      range.surroundContents(mark);
+    } catch {
+      // Text to highlight does not contain entire DOM nodes.
+      // Need to extend the highlighted selection to entire nodes (Ex: entire links).
+      const commonAncestor = range.commonAncestorContainer;
+      while (startNode.parentNode !== commonAncestor) {
+        startNode = startNode.parentNode;
+        range.setStartBefore(startNode);
+      }
+      while (endNode.parentNode !== commonAncestor) {
+        endNode = endNode.parentNode;
+        range.setEndAfter(endNode);
+      }
+      try {
+        range.surroundContents(mark);
+      } catch {
+        // Text highlight still didn't work.
+        return;
       }
     }
   }
   if (prefixNodes.length) {
   }
+  if (mark.parentElement) {
+    return mark;
+  } else {
+    return;
+  }
 };
 
+/**
+ * Scrolls an element into view, folloring the recommandation of
+ * https://wicg.github.io/scroll-to-text-fragment/#navigating-to-text-fragment
+ * @param {Element} element - Element to scroll into view.
+ */
+export const scrollElementIntoView = (element) => {
+  const behavior = {
+    behavior: 'auto',
+    block: 'center',
+    inline: 'nearest',
+  };
+  element.scrollIntoView(behavior);
+};
+
+/**
+ * Finds the DOM Node and the exact offset where a string starts or ends.
+ * @param {Node} blockNode - Block element in which to search for a given text.
+ * @param {string} text - The text for which to find the position.
+ * @param {boolean} start - Whether to return the an offset for the start or the text, or the end.
+ * @returns {[Node, number]} The DOM Node and the offset where the text starts or ends.
+ */
+const findRangeNodeAndOffset = (blockNode, text, start) => {
+  let offset = blockNode.textContent.indexOf(text) + (start ? 0 : text.length);
+  let startChildren = [];
+  const treeWalker = document.createTreeWalker(blockNode, NodeFilter.SHOW_TEXT);
+  let node = treeWalker.nextNode();
+  if (node) {
+    startChildren.push({
+      node,
+      start: 0,
+      end: node.textContent.length,
+    });
+  }
+  while ((node = treeWalker.nextNode())) {
+    startChildren.push({
+      node: node,
+      start: startChildren[startChildren.length - 1].end,
+      end:
+        startChildren[startChildren.length - 1].end + node.textContent.length,
+    });
+  }
+  let anchorNode;
+  for (let { node, start, end } of startChildren) {
+    if (offset >= start && offset < end) {
+      anchorNode = node;
+      offset -= start;
+      break;
+    }
+  }
+  return [anchorNode, offset];
+};
+
+/**
+ * Finds the deepest block elements that contain the entire given text.
+ * @param {string} text - Text to find.
+ * @returns {Node[]} List of block elements that contain the text.
+ * None of the elements contain another one from the list.
+ */
 const findText = (text) => {
   if (!text) {
     return [];
   }
   const body = document.body;
-  const treeWalker = document.createTreeWalker(body, NodeFilter.SHOW_TEXT, {
+  const treeWalker = document.createTreeWalker(body, NodeFilter.SHOW_ELEMENT, {
     acceptNode: (node) => {
+      if (!BLOCK_ELEMENTS.includes(node.tagName)) {
+        return NodeFilter.FILTER_REJECT;
+      }
+      if (
+        [...node.childNodes].some((n) => BLOCK_ELEMENTS.includes(n.tagName))
+      ) {
+        return NodeFilter.FILTER_SKIP;
+      }
       if (node.textContent.includes(text)) {
         return NodeFilter.FILTER_ACCEPT;
       }
@@ -152,10 +305,9 @@ const findText = (text) => {
   });
 
   const nodeList = [];
-  let currentNode = treeWalker.currentNode;
-  while (currentNode) {
+  let currentNode;
+  while ((currentNode = treeWalker.nextNode())) {
     nodeList.push(currentNode);
-    currentNode = treeWalker.nextNode();
   }
-  return nodeList.slice(1);
+  return nodeList;
 };
