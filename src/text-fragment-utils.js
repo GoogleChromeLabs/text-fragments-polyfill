@@ -16,7 +16,7 @@
 
 /**
  * @typedef {Object} TextFragment
- * @property {string} textStart
+ * @property {string?} textStart
  * @property {string?} textEnd
  * @property {string?} prefix
  * @property {string?} suffix
