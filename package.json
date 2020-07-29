@@ -2,17 +2,26 @@
   "name": "text-fragments-polyfill",
   "version": "0.0.3",
   "description": "This is an attempt to polyfill the [Text Fragments](https://wicg.github.io/scroll-to-text-fragment/) feature for browsers that don't support it natively.",
-  "main": "text-fragments.js",
-  "dependencies": {
-    "prettier": "^2.0.5"
-  },
+  "browser": "src/text-fragments.js",
+  "module": "src/text-fragments.js",
+  "files": [
+    "src",
+    "dist"
+  ],
   "devDependencies": {
+    "eslint": "^7.5.0",
+    "eslint-config-google": "^0.14.0",
+    "eslint-config-prettier": "^6.11.0",
+    "http-server": "^0.12.3",
+    "prettier": "^2.0.5",
     "rollup": "^2.23.0",
     "rollup-plugin-terser": "6.1.0"
   },
   "scripts": {
-    "lint": "npx prettier --write .",
-    "prepare": "npx rollup text-fragments.js --file ./dist/text-fragments.js -p 'terser'"
+    "start": "npx http-server",
+    "fix": "npx prettier --write .",
+    "prepare": "npm run fix && npm run lint && npx rollup src/text-fragments.js --file dist/text-fragments.js -p 'terser'",
+    "lint": "npx eslint . --ext .js,.mjs --fix --ignore-pattern dist/"
   },
   "repository": {
     "type": "git",
@@ -23,5 +32,15 @@
   "bugs": {
     "url": "https://github.com/GoogleChromeLabs/text-fragments-polyfill/issues"
   },
-  "homepage": "https://github.com/GoogleChromeLabs/text-fragments-polyfill#readme"
+  "homepage": "https://github.com/GoogleChromeLabs/text-fragments-polyfill#readme",
+  "eslintConfig": {
+    "parserOptions": {
+      "ecmaVersion": 2020,
+      "sourceType": "module"
+    },
+    "extends": [
+      "google",
+      "prettier"
+    ]
+  }
 }
