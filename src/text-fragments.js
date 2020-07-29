@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+import * as utils from './text-fragment-utils.js';
+
 (async () => {
   // Return early if Text Fragments are supported by the browser, or when there
   // is no hash. This is fine, since later added hashes are not relevant for
@@ -22,9 +24,6 @@
   if ('fragmentDirective' in Location.prototype || !hash) {
     return;
   }
-
-  // Dynamically import required utilities.
-  const utils = await import('./text-fragment-utils.js');
 
   // Pass feature detection (https://web.dev/text-fragments/#feature-detection)
   Location.prototype.fragmentDirective = {};

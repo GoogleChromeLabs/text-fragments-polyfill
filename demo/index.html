@@ -1,6 +1,10 @@
 <!DOCTYPE html>
 <html lang="en">
   <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="dark light" />
+    <title>Text Fragments Polyfill</title>
     <style>
       body {
         font-family: system-ui, sans-serif;
@@ -9,16 +13,13 @@
         color: red;
       }
     </style>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="color-scheme" content="dark light" />
-
-    <title>Text Fragments Polyfill</title>
-    <script>
+    <script type="module">
       location.hash =
         ':~:text=This%20domain,examples&text=More%20information...';
+      if (!('fragmentDirective' in Location.prototype)) {
+        import('../src/text-fragments.js');
+      }
     </script>
-    <script type="module" src="../src/text-fragments.js"></script>
   </head>
   <body>
     <div>
