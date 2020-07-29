@@ -1,6 +1,6 @@
 {
   "name": "text-fragments-polyfill",
-  "version": "0.0.3",
+  "version": "0.0.4",
   "description": "This is an attempt to polyfill the [Text Fragments](https://wicg.github.io/scroll-to-text-fragment/) feature for browsers that don't support it natively.",
   "browser": "src/text-fragments.js",
   "module": "src/text-fragments.js",
@@ -20,7 +20,7 @@
   "scripts": {
     "start": "npx http-server",
     "fix": "npx prettier --write .",
-    "prepare": "npm run fix && npm run lint && npx rollup src/text-fragments.js --file dist/text-fragments.js -p 'terser'",
+    "prepare": "npm run fix && npm run lint && npx rollup src/text-fragments.js --dir dist -p 'terser'",
     "lint": "npx eslint . --ext .js,.mjs --fix --ignore-pattern dist/"
   },
   "repository": {
