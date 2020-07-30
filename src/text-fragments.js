@@ -33,8 +33,19 @@ import * as utils from './text-fragment-utils.js';
     const parsedFragmentDirectives = utils.parseFragmentDirectives(
       fragmentDirectives,
     );
-    utils.processFragmentDirectives(parsedFragmentDirectives);
+    const processedFragmentDirectives = utils.processFragmentDirectives(
+      parsedFragmentDirectives,
+    );
+    const firstFoundMatch = processedFragmentDirectives['text'].filter(
+      Boolean,
+    )[0];
+    if (firstFoundMatch) {
+      window.setTimeout(() => utils.scrollElementIntoView(firstFoundMatch));
+    }
   };
-
-  init();
+  if (document.readyState !== 'complete') {
+    window.addEventListener('DOMContentLoaded', init);
+  } else {
+    init();
+  }
 })();
