@@ -16,10 +16,10 @@
 
 /**
  * @typedef {Object} TextFragment
- * @property {string?} textStart
- * @property {string?} textEnd
- * @property {string?} prefix
- * @property {string?} suffix
+ * @property {string} textStart
+ * @property {string} textEnd
+ * @property {string} prefix
+ * @property {string} suffix
  */
 
 const FRAGMENT_DIRECTIVES = ['text'];
@@ -66,7 +66,7 @@ const BLOCK_ELEMENTS = [
 /**
  * Get all text fragments from a string
  * @param {string} hash - string retrieved from Location#hash.
- * @returns {{text: string[]}} Text Fragments contained in the hash.
+ * @return {{text: string[]}} Text Fragments contained in the hash.
  */
 export const getFragmentDirectives = (hash) => {
   const fragmentDirectivesStrings = hash
@@ -83,7 +83,7 @@ export const getFragmentDirectives = (hash) => {
 /**
  * Decompose text fragment strings into objects, describing each part of each text fragment.
  * @param {{text: string[]}} fragmentDirectives - Text fragment to decompose into separate elements.
- * @returns {{text: TextFragment[]}} Text Fragments, each containing textStart, textEnd, prefix and suffix.
+ * @return {{text: TextFragment[]}} Text Fragments, each containing textStart, textEnd, prefix and suffix.
  */
 export const parseFragmentDirectives = (fragmentDirectives) => {
   const parsedFragmentDirectives = {};
@@ -91,7 +91,7 @@ export const parseFragmentDirectives = (fragmentDirectives) => {
     fragmentDirectiveType,
     fragmentDirectivesOfType,
   ] of Object.entries(fragmentDirectives)) {
-    if (fragmentDirectiveType === 'text') {
+    if (FRAGMENT_DIRECTIVES.includes(fragmentDirectiveType)) {
       parsedFragmentDirectives[
         fragmentDirectiveType
       ] = fragmentDirectivesOfType.map((fragmentDirectiveOfType) => {
@@ -105,7 +105,7 @@ export const parseFragmentDirectives = (fragmentDirectives) => {
 /**
  * Decompose a string into an object containing all the parts of a text fragment.
  * @param {string} textFragment - String to decompose.
- * @returns {TextFragment} Object containing textStart, textEnd, prefix and suffix of the text fragment.
+ * @return {TextFragment} Object containing textStart, textEnd, prefix and suffix of the text fragment.
  */
 const parseTextFragmentDirective = (textFragment) => {
   const TEXT_FRAGMENT = /^(?:(.+?)-,)?(?:(.+?))(?:,(.+?))?(?:,-(.+?))?$/;
@@ -118,9 +118,9 @@ const parseTextFragmentDirective = (textFragment) => {
 };
 
 /**
- * Highlights all the text fragments
- * @param {{text: TextFragment[]}} parsedFragmentDirectives - Text fragments to highlight
- * @returns {Element?[]} `<mark>` nodes created to highlight text fragments.
+ * Mark the text fragments with `<mark>` tags.
+ * @param {{text: TextFragment[]}} parsedFragmentDirectives - Text fragments to process.
+ * @return {{text: (Element | undefined)[]}} `<mark>` elements created to highlight the text fragments.
  */
 export const processFragmentDirectives = (parsedFragmentDirectives) => {
   const processedFragmentDirectives = {};
@@ -128,7 +128,7 @@ export const processFragmentDirectives = (parsedFragmentDirectives) => {
     fragmentDirectiveType,
     fragmentDirectivesOfType,
   ] of Object.entries(parsedFragmentDirectives)) {
-    if (fragmentDirectiveType === 'text') {
+    if (FRAGMENT_DIRECTIVES.includes(fragmentDirectiveType)) {
       processedFragmentDirectives[
         fragmentDirectiveType
       ] = fragmentDirectivesOfType.map((fragmentDirectiveOfType) => {
@@ -139,17 +139,13 @@ export const processFragmentDirectives = (parsedFragmentDirectives) => {
   return processedFragmentDirectives;
 };
 
-const escapeRegExp = (s) => {
-  return s.replace(/[\\^$.*+?()[\]{}|]/g, '\\$&');
-};
-
 /**
  * Highlights a text fragment by surrounding it in a `<mark>` element.
  *
  * Note : If a text fragment only partially intersects an element, the text
  * fragment will be extended to highlight the entire element.
  * @param {TextFragment} textFragment - Text Fragment to highlight.
- * @returns {Element?} `<mark>` element created to highlight the text fragment, if an exact and distinct match was found.
+ * @return {Element?} `<mark>` element created to highlight the text fragment, if an exact and distinct match was found.
  */
 const processTextFragmentDirective = (textFragment) => {
   const prefixNodes = findText(textFragment.prefix);
@@ -191,7 +187,7 @@ const processTextFragmentDirective = (textFragment) => {
         false,
       );
     }
-    let range = document.createRange();
+    const range = document.createRange();
     range.setStart(startNode, startOffset);
     range.setEnd(endNode, endOffset);
     try {
@@ -227,7 +223,7 @@ const processTextFragmentDirective = (textFragment) => {
 };
 
 /**
- * Scrolls an element into view, folloring the recommandation of
+ * Scrolls an element into view, following the recommendation of
  * https://wicg.github.io/scroll-to-text-fragment/#navigating-to-text-fragment
  * @param {Element} element - Element to scroll into view.
  */
@@ -245,11 +241,11 @@ export const scrollElementIntoView = (element) => {
  * @param {Node} blockNode - Block element in which to search for a given text.
  * @param {string} text - The text for which to find the position.
  * @param {boolean} start - Whether to return the an offset for the start or the text, or the end.
- * @returns {[Node, number]} The DOM Node and the offset where the text starts or ends.
+ * @return {[Node, number]} The DOM Node and the offset where the text starts or ends.
  */
 const findRangeNodeAndOffset = (blockNode, text, start) => {
   let offset = blockNode.textContent.indexOf(text) + (start ? 0 : text.length);
-  let startChildren = [];
+  const startChildren = [];
   const treeWalker = document.createTreeWalker(blockNode, NodeFilter.SHOW_TEXT);
   let node = treeWalker.nextNode();
   if (node) {
@@ -268,7 +264,7 @@ const findRangeNodeAndOffset = (blockNode, text, start) => {
     });
   }
   let anchorNode;
-  for (let { node, start, end } of startChildren) {
+  for (const { node, start, end } of startChildren) {
     if (offset >= start && offset < end) {
       anchorNode = node;
       offset -= start;
@@ -281,7 +277,7 @@ const findRangeNodeAndOffset = (blockNode, text, start) => {
 /**
  * Finds the deepest block elements that contain the entire given text.
  * @param {string} text - Text to find.
- * @returns {Node[]} List of block elements that contain the text.
+ * @return {Node[]} List of block elements that contain the text.
  * None of the elements contain another one from the list.
  */
 const findText = (text) => {
