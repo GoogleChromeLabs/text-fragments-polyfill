@@ -24,14 +24,16 @@
 
 const FRAGMENT_DIRECTIVES = ['text'];
 
-// Block elements. elements of a text fragment cannot cross the boundaries of a block element.
-// Source for the list : https://www.w3schools.com/html/html_blocks.asp
+// Block elements. elements of a text fragment cannot cross the boundaries of a
+// block element. Source for the list:
+// https://developer.mozilla.org/en-US/docs/Web/HTML/Block-level_elements#Elements
 const BLOCK_ELEMENTS = [
   'ADDRESS',
   'ARTICLE',
   'ASIDE',
   'BLOCKQUOTE',
-  'CANVAS',
+  'DETAILS',
+  'DIALOG',
   'DD',
   'DIV',
   'DL',
@@ -48,19 +50,17 @@ const BLOCK_ELEMENTS = [
   'H5',
   'H6',
   'HEADER',
+  'HGROUP',
   'HR',
   'LI',
   'MAIN',
   'NAV',
-  'NOSCRIPT',
   'OL',
   'P',
   'PRE',
   'SECTION',
   'TABLE',
-  'TFOOT',
   'UL',
-  'VIDEO',
 ];
 
 /**
