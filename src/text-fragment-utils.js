@@ -211,7 +211,7 @@ const processTextFragmentDirective = (textFragment) => {
       return [mark];
     } catch {
       // Text to highlight does not contain entire DOM elements.
-      // Need to extend the highlighted selection to entire nodes (Ex: entire links).
+      // Need to create multiple <mark> elements to highlight the entire selection.
       const commonAncestor = range.commonAncestorContainer;
       const startMarks = [];
       let firstNode = startNode;
