@@ -208,6 +208,7 @@ const processTextFragmentDirective = (textFragment) => {
     range.setEnd(endNode, endOffset);
     try {
       range.surroundContents(mark);
+      return [mark];
     } catch {
       // Text to highlight does not contain entire DOM elements.
       // Need to extend the highlighted selection to entire nodes (Ex: entire links).
@@ -259,11 +260,6 @@ const processTextFragmentDirective = (textFragment) => {
   }
   if (prefixNodes.length) {
     // ToDo
-  }
-  if (mark.parentElement) {
-    return mark;
-  } else {
-    return;
   }
 };
 
