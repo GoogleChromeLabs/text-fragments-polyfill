@@ -161,7 +161,7 @@ export const processFragmentDirectives = (parsedFragmentDirectives) => {
  * Note : If a text fragment only partially intersects an element, the text
  * fragment will be extended to highlight the entire element.
  * @param {TextFragment} textFragment - Text Fragment to highlight.
- * @return {Element?} `<mark>` element created to highlight the text fragment, if an exact and distinct match was found.
+ * @return {Element[]} `<mark>` element created to highlight the text fragment, if an exact and distinct match was found.
  */
 const processTextFragmentDirective = (textFragment) => {
   const prefixNodes = findText(textFragment.prefix);
@@ -250,7 +250,11 @@ const processTextFragmentDirective = (textFragment) => {
         nodesInBetween.indexOf(firstNode) + 1,
         nodesInBetween.indexOf(lastNode),
       );
-      return [...startMarks, ...highlightNodes(nodesInBetween), ...endMarks];
+      return [
+        ...startMarks.filter(Boolean),
+        ...highlightNodes(nodesInBetween),
+        ...endMarks.filter(Boolean),
+      ];
     }
   }
   if (prefixNodes.length) {
@@ -291,7 +295,7 @@ const highlightNodes = (nodes) => {
       createMarkFor(null, { startBefore: firstNode, endAfter: lastNode }),
     );
   }
-  return createdMarks;
+  return createdMarks.filter(Boolean);
 };
 
 /**
