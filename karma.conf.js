@@ -60,7 +60,7 @@ module.exports = function (config) {
 
     html2JsPreprocessor: {
       // strip this from the file path
-      stripPrefix: 'src/test/',
+      stripPrefix: 'test/',
     },
   });
 };
