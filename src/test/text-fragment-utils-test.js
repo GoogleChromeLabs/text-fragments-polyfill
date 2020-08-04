@@ -19,4 +19,16 @@ describe('TextFragmentUtils', function () {
     expect(processedDirectives.length).toEqual(1);
     expect(marks.length).toBeGreaterThan(1);
   });
+
+  it('marks simple matching text', function () {
+    console.log(__html__);
+    
+    document.body.innerHTML = __html__['basic_test.html'];
+    
+    var directive = { text: [{textStart: 'trivial test of'}]};
+    utils.processFragmentDirectives(directive);
+    
+    expect(document.body.innerHTML)
+        .toEqual(__html__['basic_test.expected.html']);
+  });
 });
