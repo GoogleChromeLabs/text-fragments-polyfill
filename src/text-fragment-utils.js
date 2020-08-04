@@ -168,6 +168,16 @@ const processTextFragmentDirective = (textFragment) => {
   const textStartNodes = findText(textFragment.textStart);
   const textEndNodes = findText(textFragment.textEnd);
   const suffixNodes = findText(textFragment.suffix);
+
+  if (
+    prefixNodes.length > 1 ||
+    textStartNodes.length > 1 ||
+    textEndNodes.length > 1 ||
+    suffixNodes.length > 1
+  ) {
+    return [];
+  }
+
   const mark = document.createElement('mark');
   if (
     !prefixNodes.length &&
@@ -227,7 +237,7 @@ const processTextFragmentDirective = (textFragment) => {
         nodesToHighlight = nodesToHighlight.slice(
           nodesToHighlight.indexOf(firstNode) + 1,
         );
-        startMarks.concat(highlightNodes(nodesToHighlight));
+        startMarks.push(...highlightNodes(nodesToHighlight));
         firstNode = parent;
       }
       const endMarks = [];
@@ -243,7 +253,7 @@ const processTextFragmentDirective = (textFragment) => {
           0,
           nodesToHighlight.indexOf(lastNode),
         );
-        endMarks.concat(highlightNodes(nodesToHighlight));
+        endMarks.push(...highlightNodes(nodesToHighlight));
         lastNode = parent;
       }
       let nodesInBetween = Array.from(commonAncestor.childNodes);
@@ -280,16 +290,23 @@ const highlightNodes = (nodes) => {
       createdMarks.push(
         createMarkFor(null, { startBefore: firstNode, endBefore: lastNode }),
       );
-      createdMarks.concat(highlightNodes(Array.from(lastNode.childNodes)));
+      createdMarks.push(...highlightNodes(Array.from(lastNode.childNodes)));
       firstNode = nodes[i + 1];
       lastNode = firstNode;
       ++i;
     }
   }
   if (firstNode && lastNode) {
-    createdMarks.push(
-      createMarkFor(null, { startBefore: firstNode, endAfter: lastNode }),
-    );
+    if (BLOCK_ELEMENTS.includes(firstNode.tagName)) {
+      createdMarks.push(...highlightNodes(firstNode.childNodes));
+      createdMarks.push(
+        createMarkFor(null, { startAfter: firstNode, endAfter: lastNode }),
+      );
+    } else {
+      createdMarks.push(
+        createMarkFor(null, { startBefore: firstNode, endAfter: lastNode }),
+      );
+    }
   }
   return createdMarks.filter(Boolean);
 };
@@ -357,25 +374,29 @@ const findRangeNodeAndOffset = (blockNode, text, start) => {
   const treeWalker = document.createTreeWalker(blockNode, NodeFilter.SHOW_TEXT);
   let node = treeWalker.nextNode();
   if (node) {
+    const trimmedContent = node.textContent.replace(/^\s+/, '').replace(/\s+$/, '');
     startChildren.push({
       node,
-      start: 0,
-      end: node.textContent.length,
+      startOffset: 0,
+      endOffset: trimmedContent.length,
+      textStart: node.textContent.indexOf(trimmedContent),
     });
   }
   while ((node = treeWalker.nextNode())) {
+    const trimmedContent = node.textContent.replace(/^\s+/, ' ').replace(/\s+$/, '');
     startChildren.push({
       node: node,
-      start: startChildren[startChildren.length - 1].end,
-      end:
-        startChildren[startChildren.length - 1].end + node.textContent.length,
+      startOffset: startChildren[startChildren.length - 1].endOffset,
+      endOffset:
+        startChildren[startChildren.length - 1].endOffset + trimmedContent.length,
+      textStart: node.textContent.indexOf(trimmedContent),
     });
   }
   let anchorNode;
-  for (const { node, start, end } of startChildren) {
-    if (offset >= start && offset < end) {
+  for (const { node, startOffset, endOffset, textStart } of startChildren) {
+    if (offset >= startOffset && offset < endOffset) {
       anchorNode = node;
-      offset -= start;
+      offset = offset - startOffset + textStart;
       break;
     }
   }
@@ -383,9 +404,9 @@ const findRangeNodeAndOffset = (blockNode, text, start) => {
 };
 
 /**
- * Finds the deepest block elements that contain the entire given text.
+ * Finds block elements that directly contain a given text.
  * @param {string} text - Text to find.
- * @return {Node[]} List of block elements that contain the text.
+ * @return {HTMLElement[]} List of block elements that contain the text.
  * None of the elements contain another one from the list.
  */
 const findText = (text) => {
@@ -393,29 +414,38 @@ const findText = (text) => {
     return [];
   }
 
-  // Accept only block elements that do not contain other block elements and
-  // contain the entire text.
-  return Array.from(
-    getNodesIn(document.body, (node) => {
-      if (
-        [...node.childNodes].some((n) => BLOCK_ELEMENTS.includes(n.tagName))
-      ) {
-        return NodeFilter.FILTER_SKIP;
-      }
-      if (
-        node instanceof HTMLElement &&
-        node.innerText.replace(/\s/g, ' ').includes(text)
-      ) {
+  // List of block items that contain the text we're looking for.
+  const blockElements = Array.from(
+    getElementsIn(document.body, (element) => {
+      if(BLOCK_ELEMENTS.includes(element.tagName) && element.innerText.replace(/\s/g, ' ').includes(text)) {
         return NodeFilter.FILTER_ACCEPT;
+      } else {
+        return NodeFilter.FILTER_REJECT;
       }
-      return NodeFilter.FILTER_REJECT;
     }),
   );
+
+  const matches = [];
+  for(const element of blockElements) {
+    const textParts = Array.from(element.children).reduce((parts, child) => {
+      if(BLOCK_ELEMENTS.includes(child.tagName)) {
+        return [...parts.slice(0, -1), ...parts.slice(-1)[0].split(child.innerText)];
+      } else {
+        return parts;
+      }
+    }, [element.innerText]);
+    for(const textPart of textParts.map(part => part.replace(/\s/g, ' '))) {
+      if(textPart.includes(text)) {
+        matches.push(element);
+      }
+    }
+  }
+  return matches;
 };
 
 /**
- * @callback NodeFilterFunction
- * @param {Node} node - Node to accept, reject or skip.
+ * @callback ElementFilterFunction
+ * @param {HTMLElement} element - Node to accept, reject or skip.
  * @returns {number} Either NodeFilter.FILTER_ACCEPT, NodeFilter.FILTER_REJECT or NodeFilter.FILTER_SKIP.
  */
 
@@ -423,10 +453,10 @@ const findText = (text) => {
  * Returns all nodes inside root using the provided filter.
  * @generator
  * @param {Node} root - Node where to start the TreeWalker.
- * @param {NodeFilterFunction} filter - Filter provided to the TreeWalker's acceptNode filter.
- * @yield {Node} All nodes that were accepted by filter.
+ * @param {ElementFilterFunction} filter - Filter provided to the TreeWalker's acceptNode filter.
+ * @yield {HTMLElement} All elements that were accepted by filter.
  */
-function* getNodesIn(root, filter) {
+function* getElementsIn(root, filter) {
   const treeWalker = document.createTreeWalker(root, NodeFilter.SHOW_ELEMENT, {
     acceptNode: filter,
   });
