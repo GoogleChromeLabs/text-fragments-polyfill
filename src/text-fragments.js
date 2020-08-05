@@ -36,9 +36,8 @@ import * as utils from './text-fragment-utils.js';
     const processedFragmentDirectives = utils.processFragmentDirectives(
       parsedFragmentDirectives,
     );
-    const firstFoundMatch = processedFragmentDirectives['text'].filter(
-      Boolean,
-    )[0];
+    const createdMarks = processedFragmentDirectives['text'];
+    const firstFoundMatch = createdMarks.find((marks) => marks.length)[0];
     if (firstFoundMatch) {
       window.setTimeout(() => utils.scrollElementIntoView(firstFoundMatch));
     }
