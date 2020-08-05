@@ -368,7 +368,14 @@ export const scrollElementIntoView = (element) => {
  * @return {[Node, number]} The DOM Node and the offset where the text starts or ends.
  */
 const findRangeNodeAndOffset = (blockNode, text, start) => {
-  const fullText = blockNode.innerText.replace(/\s/g, ' ');
+  const textNodes = getTextNodesDirectlyIn(blockNode);
+  const wordsToSearchFor = text.match(/[\p{L}\p{P}]/gu);
+  const wordList = textNodes.map(n => n.textContent).map(s => s.match(/[\p{L}\p{P}]/gu));
+  const allWords = wordList.map(Boolean).reduce((arr, words) => [...arr, ...words], []);
+
+  const children = textNodes.map((n, i) => [n, wordList[i]]);
+
+  /* const fullText = blockNode.innerText.replace(/\s/g, ' ');
   let offset = fullText.indexOf(text) + (start ? 0 : text.length);
   const startChildren = [];
   const treeWalker = document.createTreeWalker(blockNode, NodeFilter.SHOW_TEXT);
@@ -400,14 +407,29 @@ const findRangeNodeAndOffset = (blockNode, text, start) => {
       break;
     }
   }
-  return [anchorNode, offset];
+  return [anchorNode, offset]; */
 };
+
+/**
+ * 
+ * @param {Node} rootNode
+ * @return {Node[]}
+ */
+const getTextNodesDirectlyIn = (rootNode) => {
+  if(rootNode.nodeType === Node.TEXT_NODE) return [rootNode];
+
+  return Array.from(rootNode.childNodes).reduce((textNodes, node) => {
+    if(BLOCK_ELEMENTS.includes(node.tagName)) {
+      return textNodes;
+    }
+    [...textNodes, ...getTextNodes(node)];
+  }, []);
+}
 
 /**
  * Finds block elements that directly contain a given text.
  * @param {string} text - Text to find.
  * @return {HTMLElement[]} List of block elements that contain the text.
- * None of the elements contain another one from the list.
  */
 const findText = (text) => {
   if (!text) {
@@ -435,7 +457,10 @@ const findText = (text) => {
       }
     }, [element.innerText]);
     for(const textPart of textParts.map(part => part.replace(/\s/g, ' '))) {
-      if(textPart.includes(text)) {
+      let regexMatch;
+      let lastMatchIndex = -1;
+      while (regexMatch = textPart.substring(lastMatchIndex + 1).match(new RegExp(text), )) {
+        lastMatchIndex = regexMatch.index;
         matches.push(element);
       }
     }

@@ -35,7 +35,7 @@ describe('TextFragmentUtils', function () {
   it('works with complexe layouts', function () {
     document.body.innerHTML = window.__html__['complicated-layout.html'];
     const directives = utils.getFragmentDirectives(
-      '#:~:text=is%20a%20test,And%20another%20on',
+      '#:~:text=is%20a%20test,And%20another%20one',
     );
     const parsedDirectives = utils.parseFragmentDirectives(directives);
     const processedDirectives = utils.processFragmentDirectives(
