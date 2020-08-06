@@ -222,6 +222,11 @@ const processTextFragmentDirective = (textFragment) => {
   }
 };
 
+/**
+ * Create as few marks as possible to highlight the contents of a Range.
+ * @param {Range} range - Content to highlight
+ * @return {HTMLElement[]} `<mark>` elements created to highlight the content.
+ */
 function markRange(range) {
   // If the range is entirely within a single node, just surround it.
   if (range.startContainer === range.endContainer) {
@@ -280,41 +285,6 @@ function markRange(range) {
 }
 
 /**
- * Creates a mark and surround the wanted range in it. Will not create an element if the range is collapsed.
- * @param {Node} baseNode
- * @param {MarkOptions} options
- * @return {Element | undefined} Mark created for the range, if the range is not collapsed.
- */
-const createMarkFor = (baseNode, options) => {
-  const range = document.createRange();
-  if (baseNode) range.selectNodeContents(baseNode);
-
-  if (options) {
-    if (options.startBefore) {
-      range.setStartBefore(options.startBefore);
-    } else if (options.startAfter) {
-      range.setStartAfter(options.startAfter);
-    } else if (options.start) {
-      range.setStart(options.start.node, options.start.offset);
-    }
-
-    if (options.endBefore) {
-      range.setEndBefore(options.endBefore);
-    } else if (options.endAfter) {
-      range.setEndAfter(options.endAfter);
-    } else if (options.end) {
-      range.setEnd(options.end.node, options.end.offset);
-    }
-  }
-
-  if (!range.collapsed) {
-    const mark = document.createElement('mark');
-    range.surroundContents(mark);
-    return mark;
-  }
-};
-
-/**
  * Scrolls an element into view, following the recommendation of
  * https://wicg.github.io/scroll-to-text-fragment/#navigating-to-text-fragment
  * @param {Element} element - Element to scroll into view.
@@ -336,44 +306,121 @@ export const scrollElementIntoView = (element) => {
  * @return {[Node, number]} The DOM Node and the offset where the text starts or ends.
  */
 const findRangeNodeAndOffset = (blockNode, text, start) => {
-  const fullText = blockNode.innerText.replace(/\s/g, ' ');
-  let offset = fullText.indexOf(text) + (start ? 0 : text.length);
-  const startChildren = [];
-  const treeWalker = document.createTreeWalker(blockNode, NodeFilter.SHOW_TEXT);
-  let node = treeWalker.nextNode();
-  if (node) {
-    const trimmedContent = node.textContent
-      .replace(/^\s+/, '')
-      .replace(/\s+$/, '');
-    startChildren.push({
-      node,
-      startOffset: 0,
-      endOffset: trimmedContent.length,
-      textStart: node.textContent.indexOf(trimmedContent),
-    });
-  }
-  while ((node = treeWalker.nextNode())) {
-    const trimmedContent = node.textContent
-      .replace(/^\s+/, ' ')
-      .replace(/\s+$/, '');
-    startChildren.push({
-      node: node,
-      startOffset: startChildren[startChildren.length - 1].endOffset,
-      endOffset:
-        startChildren[startChildren.length - 1].endOffset +
-        trimmedContent.length,
-      textStart: node.textContent.indexOf(trimmedContent),
-    });
-  }
-  let anchorNode;
-  for (const { node, startOffset, endOffset, textStart } of startChildren) {
-    if (offset >= startOffset && offset < endOffset) {
-      anchorNode = node;
-      offset = offset - startOffset + textStart;
-      break;
+  /**
+   * Shrink a Range in the wanted direction.
+   * If the end of a text node is reached, the range's start or end will move to the next node.
+   * @param {Range} r - Range to shrink
+   * @param {Boolean} s - Whether to move the start of the range or not
+   * @param {Node[]} textNodes - Nodes in which to iterate
+   */
+  function shrinkRange(r, s, textNodes) {
+    if (s) {
+      let offset = r.startOffset + 1;
+      let container = r.startContainer;
+      if (offset >= container.textContent.length) {
+        textNodes.shift();
+        container = textNodes[0];
+        offset = 0;
+
+      }
+      r.setStart(container, offset);
+    } else {
+      let offset = r.endOffset - 1;
+      let container = r.endContainer;
+      if (offset < 0) {
+        textNodes.pop();
+        container = textNodes[textNodes.length - 1];
+        offset = container.textContent.length;
+      }
+      r.setEnd(container, offset);
     }
   }
-  return [anchorNode, offset];
+
+  /**
+   * Returns a list of all the text nodes inside an element.
+   * null items represent a break in the text content of the element.
+   * All block elements that are rendered by the Renderer are considered a break.
+   * @param {HTMLElement} root - Element 
+   * @return {(Node|null)[]}
+   */
+  function getAllTextNodes(root) {
+    return Array.from(root.childNodes).reduce((textNodes, node) => {
+      // This node is a text node, add it and return.
+      if (node.nodeType === Node.TEXT_NODE) {
+        textNodes.push(node);
+        return textNodes;
+      }
+
+      const nodeStyle = window.getComputedStyle(node);
+      // If the node is not rendered, just skip it.
+      if(nodeStyle.visibility === 'hidden' || nodeStyle.display === 'none') {
+        return textNodes;
+      }
+
+      // This node is a block element.
+      if (node instanceof HTMLElement && BLOCK_ELEMENTS.includes(node.tagName)) {
+        textNodes.push(null);
+        return textNodes;
+      }
+
+      textNodes.push(...getAllTextNodes(node));
+      return textNodes;
+    }, []);
+  }
+
+  /**
+   * 
+   * @param {Node[]} nodes 
+   * @param {Number} startOffset 
+   * @param {Number|undefined} endOffset 
+   */
+  function getTextContent(nodes, startOffset, endOffset) {
+    let str = "";
+    if(nodes.length === 1) {
+      str = nodes[0].textContent.substring(startOffset, endOffset);
+    } else {
+      str = nodes[0].textContent.substring(startOffset) +
+        nodes.slice(1, -1).reduce((s, n) => s + n.textContent, "") +
+        nodes.slice(-1)[0].textContent.substring(0, endOffset);
+    }
+    return str.replace(/\s+/g, ' ');
+  }
+
+  const textNodes = getAllTextNodes(blockNode);
+  const textSections = textNodes
+    .reduce(
+      (textParts, textNode) => {
+        if (textNode) {
+          textParts.slice(-1)[0].push(textNode);
+        } else {
+          textParts.push([]);
+        }
+        return textParts;
+      },
+      [[]]);
+  let { range, nodes } = textSections
+    .map((section) => {
+      const r = document.createRange();
+      r.setStart(section[0], 0);
+      r.setEnd(section[section.length - 1], section[section.length - 1].textContent.length);
+      return { range: r, nodes: section };
+    })
+    .find(({ nodes }) => {
+      return getTextContent(nodes, 0).includes(text);
+    });
+
+  let container;
+  let offset;
+  let i = 0;
+  while (getTextContent(nodes, range.startOffset, range.endOffset).includes(text)) {
+    ++i;
+    container = start ? range.startContainer : range.endContainer;
+    offset = start ? range.startOffset : range.endOffset;
+    shrinkRange(range, start, nodes);
+    if(i > 20) break;
+  }
+
+  return [container, offset];
 };
 
 /**

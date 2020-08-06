@@ -8,16 +8,16 @@ describe('TextFragmentUtils', function () {
 
   it('marks simple matching text', function () {
     console.log(__html__);
-    
-    document.body.innerHTML = __html__['basic_test.html'];
-    
-    var directive = { text: [{textStart: 'trivial test of'}]};
-    utils.processFragmentDirectives(directive);
-    
-    expect(document.body.innerHTML)
-        .toEqual(__html__['basic_test.expected.html']);
-  });
 
+    document.body.innerHTML = __html__['basic_test.html'];
+
+    const directive = { text: [{ textStart: 'trivial test of' }] };
+    utils.processFragmentDirectives(directive);
+
+    expect(document.body.innerHTML).toEqual(
+      __html__['basic_test.expected.html'],
+    );
+  });
 
   it('works with complexe layouts', function () {
     document.body.innerHTML = window.__html__['complicated-layout.html'];
