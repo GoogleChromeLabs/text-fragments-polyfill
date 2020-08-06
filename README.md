@@ -61,12 +61,13 @@ does not support Text Fragments.
 ## Development
 
 1. Hack in `/src`.
-1. Run `npm run start` and open [http://localhost:8080/demo/](http://localhost:8080/demo/`)
-in a browser that does not support Text Fragments URLs directly, for example, Safari.
+1. Run `npm run start` and open
+   [http://localhost:8080/demo/](http://localhost:8080/demo/`) in a browser that
+   does not support Text Fragments URLs directly, for example, Safari.
 1. Hack, reload, hack,…
 1. You can modify the Text Fragments URLs directly in
-[`/demo/index.html`](https://github.com/GoogleChromeLabs/text-fragments-polyfill/blob/master/demo/index.html)
-(look for `location.hash`).
+   [`/demo/index.html`](https://github.com/GoogleChromeLabs/text-fragments-polyfill/blob/master/demo/index.html)
+   (look for `location.hash`).
 
 ## License
 
