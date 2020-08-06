@@ -223,16 +223,25 @@ const processTextFragmentDirective = (textFragment) => {
 };
 
 /**
- * Create as few marks as possible to highlight the contents of a Range.
- * @param {Range} range - Content to highlight
- * @return {HTMLElement[]} `<mark>` elements created to highlight the content.
+ * Given a Range, wraps its text contents in one or more <mark> elements.
+ * <mark> elements can't cross block boundaries, so this function walks the
+ * tree to find all the relevant text nodes and wraps them.
+ * @param {Range} range - the range to mark. Must start and end inside of
+ *     text nodes.
+ * @return {Node[]} The <mark> nodes that were created.
  */
-function markRange(range) {
+const markRange = (range) => {
+  if (
+    range.startContainer.nodeType != Node.TEXT_NODE ||
+    range.endContainer.nodeType != Node.TEXT_NODE
+  )
+    return [];
+
   // If the range is entirely within a single node, just surround it.
   if (range.startContainer === range.endContainer) {
     const trivialMark = document.createElement('mark');
     range.surroundContents(trivialMark);
-    return trivialMark;
+    return [trivialMark];
   }
 
   // Start node -- special case
@@ -282,7 +291,7 @@ function markRange(range) {
   endNodeSubrange.surroundContents(endMark);
 
   return [startMark, ...marks, endMark];
-}
+};
 
 /**
  * Scrolls an element into view, following the recommendation of
@@ -494,4 +503,6 @@ function* getElementsIn(root, filter) {
   while ((currentNode = treeWalker.nextNode())) {
     yield currentNode;
   }
-}
+};
+
+export const forTesting = { markRange: markRange };
