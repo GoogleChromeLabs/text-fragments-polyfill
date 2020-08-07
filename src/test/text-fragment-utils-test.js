@@ -4,7 +4,9 @@ import * as utils from '../text-fragment-utils.js';
 // that's robust-ish to reformatting/prettifying of the HTML input files.
 const marksArrayToString = (marks) => {
   // Extract text content with normalized whitespace
-  const text = marks.map((node) => node.textContent.replace(/[\t\n\r ]+/g, ' '));
+  const text = marks.map((node) =>
+    node.textContent.replace(/[\t\n\r ]+/g, ' '),
+  );
   // Join, re-normalize (because block elements can add extra whitespace if
   // HTML contains newlines), and trim.
   return text
@@ -40,9 +42,11 @@ describe('TextFragmentUtils', function () {
       parsedDirectives,
     )['text'];
     const marks = processedDirectives[0];
-    expect(marksArrayToString(marks)).toEqual('is a hard test. A list item. Another one. hey And another on');
+    expect(marksArrayToString(marks)).toEqual(
+      'is a hard test. A list item. Another one. hey And another on',
+    );
   });
-  
+
   it('can wrap a complex structure in <mark>s', function () {
     document.body.innerHTML = __html__['marks_test.html'];
     const range = document.createRange();

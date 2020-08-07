@@ -49,8 +49,10 @@ From unpkg:
 
 ```js
 // Only load the polyfill in browsers that need it.
-if (!('fragmentDirective' in Location.prototype) &&
-    !('fragmentDirective' in document)) {
+if (
+  !('fragmentDirective' in Location.prototype) &&
+  !('fragmentDirective' in document)
+) {
   import('text-fragments.js');
 }
 ```

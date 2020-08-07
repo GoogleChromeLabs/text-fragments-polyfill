@@ -312,7 +312,6 @@ const shrinkRange = (range, start, textNodes) => {
       textNodes.shift();
       container = textNodes[0];
       offset = 0;
-
     }
     range.setStart(container, offset);
   } else {
@@ -325,7 +324,7 @@ const shrinkRange = (range, start, textNodes) => {
     }
     range.setEnd(container, offset);
   }
-}
+};
 
 /**
  * Returns a list of all the text nodes inside an element.
@@ -344,13 +343,13 @@ const getAllTextNodes = (root) => {
 
     const nodeStyle = window.getComputedStyle(node);
     // If the node is not rendered, just skip it.
-    if(nodeStyle.visibility === 'hidden' || nodeStyle.display === 'none') {
+    if (nodeStyle.visibility === 'hidden' || nodeStyle.display === 'none') {
       return textNodes;
     }
 
     // This node is a block element.
     if (node instanceof HTMLElement && BLOCK_ELEMENTS.includes(node.tagName)) {
-      if(textNodes.slice(-1)[0] !== null) {
+      if (textNodes.slice(-1)[0] !== null) {
         textNodes.push(null);
       }
       return textNodes;
@@ -359,25 +358,27 @@ const getAllTextNodes = (root) => {
     textNodes.push(...getAllTextNodes(node));
     return textNodes;
   }, []);
-}
+};
 
 /**
  * Returns the textContent of all the textNodes and normalizes strings by replacing duplicated spaces with single space.
  * @param {Node[]} nodes - TextNodes to get the textContent from.
  * @param {Number} startOffset - Where to start in the first TextNode.
  * @param {Number|undefined} endOffset Where to end in the last TextNode.
+ * @return {string} Entire text content of all the nodes, with spaces normalized.
  */
 const getTextContent = (nodes, startOffset, endOffset) => {
-  let str = "";
-  if(nodes.length === 1) {
+  let str = '';
+  if (nodes.length === 1) {
     str = nodes[0].textContent.substring(startOffset, endOffset);
   } else {
-    str = nodes[0].textContent.substring(startOffset) +
-      nodes.slice(1, -1).reduce((s, n) => s + n.textContent, "") +
+    str =
+      nodes[0].textContent.substring(startOffset) +
+      nodes.slice(1, -1).reduce((s, n) => s + n.textContent, '') +
       nodes.slice(-1)[0].textContent.substring(0, endOffset);
   }
   return str.replace(/[\t\n\r ]+/g, ' ');
-}
+};
 
 /**
  * Finds the DOM Node and the exact offset where a string starts or ends.
@@ -388,22 +389,25 @@ const getTextContent = (nodes, startOffset, endOffset) => {
  */
 const findRangeNodeAndOffset = (blockNode, text, start) => {
   const textNodes = getAllTextNodes(blockNode);
-  const textSections = textNodes
-    .reduce(
-      (textParts, textNode) => {
-        if (textNode) {
-          textParts.slice(-1)[0].push(textNode);
-        } else {
-          textParts.push([]);
-        }
-        return textParts;
-      },
-      [[]]);
-  let { range, nodes } = textSections
+  const textSections = textNodes.reduce(
+    (textParts, textNode) => {
+      if (textNode) {
+        textParts.slice(-1)[0].push(textNode);
+      } else {
+        textParts.push([]);
+      }
+      return textParts;
+    },
+    [[]],
+  );
+  const { range, nodes } = textSections
     .map((section) => {
       const r = document.createRange();
       r.setStart(section[0], 0);
-      r.setEnd(section[section.length - 1], section[section.length - 1].textContent.length);
+      r.setEnd(
+        section[section.length - 1],
+        section[section.length - 1].textContent.length,
+      );
       return { range: r, nodes: section };
     })
     .find(({ nodes }) => {
@@ -413,32 +417,18 @@ const findRangeNodeAndOffset = (blockNode, text, start) => {
   let container;
   let offset;
   let i = 0;
-  while (getTextContent(nodes, range.startOffset, range.endOffset).includes(text)) {
+  while (
+    getTextContent(nodes, range.startOffset, range.endOffset).includes(text)
+  ) {
     ++i;
     container = start ? range.startContainer : range.endContainer;
     offset = start ? range.startOffset : range.endOffset;
     shrinkRange(range, start, nodes);
-    if(i > 20) break;
+    if (i > 20) break;
   }
 
   return [container, offset];
 };
-
-/**
- * 
- * @param {Node} rootNode
- * @return {Node[]}
- */
-const getTextNodesDirectlyIn = (rootNode) => {
-  if(rootNode.nodeType === Node.TEXT_NODE) return [rootNode];
-
-  return Array.from(rootNode.childNodes).reduce((textNodes, node) => {
-    if(BLOCK_ELEMENTS.includes(node.tagName)) {
-      return textNodes;
-    }
-    [...textNodes, ...getTextNodes(node)];
-  }, []);
-}
 
 /**
  * Finds block elements that directly contain a given text.
@@ -510,7 +500,7 @@ function* getElementsIn(root, filter) {
   while ((currentNode = treeWalker.nextNode())) {
     yield currentNode;
   }
-};
+}
 
 export const forTesting = { markRange: markRange };
 
