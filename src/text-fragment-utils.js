@@ -147,7 +147,7 @@ export const processFragmentDirectives = (parsedFragmentDirectives) => {
  * @param {TextFragment} textFragment - Text Fragment to highlight.
  * @return {Element?} `<mark>` element created to highlight the text fragment, if an exact and distinct match was found.
  */
-const processTextFragmentDirective = (textFragment) => {
+export const processTextFragmentDirective = (textFragment) => {
   const prefixNodes = findText(textFragment.prefix);
   const textStartNodes = findText(textFragment.textStart);
   const textEndNodes = findText(textFragment.textEnd);
@@ -381,3 +381,11 @@ const findText = (text) => {
 };
 
 export const forTesting = { markRange: markRange };
+
+// Allow importing module from closure-compiler projects that haven't migrated
+// to ES6 modules.
+if (typeof goog !== 'undefined') {
+  goog.declareModuleId(
+    'googleChromeLabs.textFragmentPolyfill.textFragmentUtils',
+  );
+}
