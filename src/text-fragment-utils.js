@@ -178,7 +178,6 @@ const processTextFragmentDirective = (textFragment) => {
     return [];
   }
 
-  const mark = document.createElement('mark');
   if (
     !prefixNodes.length &&
     !suffixNodes.length &&
@@ -216,57 +215,7 @@ const processTextFragmentDirective = (textFragment) => {
     const range = document.createRange();
     range.setStart(startNode, startOffset);
     range.setEnd(endNode, endOffset);
-    try {
-      range.surroundContents(mark);
-      return [mark];
-    } catch {
-      // Text to highlight does not contain entire DOM elements.
-      // Need to create multiple <mark> elements to highlight the entire selection.
-      const commonAncestor = range.commonAncestorContainer;
-      const startMarks = [];
-      let firstNode = startNode;
-      startMarks.push(
-        createMarkFor(firstNode, {
-          start: { node: firstNode, offset: startOffset },
-        }),
-      );
-      firstNode = startMarks[0];
-      while (firstNode.parentNode !== commonAncestor) {
-        const parent = firstNode.parentNode;
-        let nodesToHighlight = Array.from(parent.childNodes);
-        nodesToHighlight = nodesToHighlight.slice(
-          nodesToHighlight.indexOf(firstNode) + 1,
-        );
-        startMarks.push(...highlightNodes(nodesToHighlight));
-        firstNode = parent;
-      }
-      const endMarks = [];
-      let lastNode = endNode;
-      endMarks.push(
-        createMarkFor(lastNode, { end: { node: lastNode, offset: endOffset } }),
-      );
-      lastNode = endMarks[0];
-      while (lastNode.parentNode !== commonAncestor) {
-        const parent = lastNode.parentNode;
-        let nodesToHighlight = Array.from(parent.childNodes);
-        nodesToHighlight = nodesToHighlight.slice(
-          0,
-          nodesToHighlight.indexOf(lastNode),
-        );
-        endMarks.push(...highlightNodes(nodesToHighlight));
-        lastNode = parent;
-      }
-      let nodesInBetween = Array.from(commonAncestor.childNodes);
-      nodesInBetween = nodesInBetween.slice(
-        nodesInBetween.indexOf(firstNode) + 1,
-        nodesInBetween.indexOf(lastNode),
-      );
-      return [
-        ...startMarks.filter(Boolean),
-        ...highlightNodes(nodesInBetween),
-        ...endMarks.filter(Boolean),
-      ];
-    }
+    return markRange(range);
   }
   if (prefixNodes.length) {
     // ToDo
@@ -274,76 +223,74 @@ const processTextFragmentDirective = (textFragment) => {
 };
 
 /**
- * Highlights the provided nodes entirely. Creates as few `<mark>` elements as possible.
- * @param {Node[]} nodes
- * @return {Element[]} mark elements created.
+ * Given a Range, wraps its text contents in one or more <mark> elements.
+ * <mark> elements can't cross block boundaries, so this function walks the
+ * tree to find all the relevant text nodes and wraps them.
+ * @param {Range} range - the range to mark. Must start and end inside of
+ *     text nodes.
+ * @return {Node[]} The <mark> nodes that were created.
  */
-const highlightNodes = (nodes) => {
-  if (!nodes || !nodes.length) return [];
+const markRange = (range) => {
+  if (
+    range.startContainer.nodeType != Node.TEXT_NODE ||
+    range.endContainer.nodeType != Node.TEXT_NODE
+  )
+    return [];
 
-  const createdMarks = [];
-  let firstNode = nodes[0];
-  let lastNode = firstNode;
-  for (let i = 0; i < nodes.length; ++i) {
-    lastNode = nodes[i];
-    if (BLOCK_ELEMENTS.includes(lastNode.tagName)) {
-      createdMarks.push(
-        createMarkFor(null, { startBefore: firstNode, endBefore: lastNode }),
-      );
-      createdMarks.push(...highlightNodes(Array.from(lastNode.childNodes)));
-      firstNode = nodes[i + 1];
-      lastNode = firstNode;
-      ++i;
-    }
-  }
-  if (firstNode && lastNode) {
-    if (BLOCK_ELEMENTS.includes(firstNode.tagName)) {
-      createdMarks.push(...highlightNodes(firstNode.childNodes));
-      createdMarks.push(
-        createMarkFor(null, { startAfter: firstNode, endAfter: lastNode }),
-      );
-    } else {
-      createdMarks.push(
-        createMarkFor(null, { startBefore: firstNode, endAfter: lastNode }),
-      );
-    }
-  }
-  return createdMarks.filter(Boolean);
-};
-
-/**
- * Creates a mark and surround the wanted range in it. Will not create an element if the range is collapsed.
- * @param {Node} baseNode
- * @param {MarkOptions} options
- * @return {Element | undefined} Mark created for the range, if the range is not collapsed.
- */
-const createMarkFor = (baseNode, options) => {
-  const range = document.createRange();
-  if (baseNode) range.selectNodeContents(baseNode);
-
-  if (options) {
-    if (options.startBefore) {
-      range.setStartBefore(options.startBefore);
-    } else if (options.startAfter) {
-      range.setStartAfter(options.startAfter);
-    } else if (options.start) {
-      range.setStart(options.start.node, options.start.offset);
-    }
-
-    if (options.endBefore) {
-      range.setEndBefore(options.endBefore);
-    } else if (options.endAfter) {
-      range.setEndAfter(options.endAfter);
-    } else if (options.end) {
-      range.setEnd(options.end.node, options.end.offset);
-    }
+  // If the range is entirely within a single node, just surround it.
+  if (range.startContainer === range.endContainer) {
+    const trivialMark = document.createElement('mark');
+    range.surroundContents(trivialMark);
+    return [trivialMark];
   }
 
-  if (!range.collapsed) {
-    const mark = document.createElement('mark');
-    range.surroundContents(mark);
-    return mark;
+  // Start node -- special case
+  const startNode = range.startContainer;
+  const startNodeSubrange = range.cloneRange();
+  startNodeSubrange.setEndAfter(startNode);
+
+  // End node -- special case
+  const endNode = range.endContainer;
+  const endNodeSubrange = range.cloneRange();
+  endNodeSubrange.setStartBefore(endNode);
+
+  // In between nodes
+  const marks = [];
+  range.setStartAfter(startNode);
+  range.setEndBefore(endNode);
+  const walker = document.createTreeWalker(
+    range.commonAncestorContainer,
+    NodeFilter.SHOW_ELEMENT | NodeFilter.SHOW_TEXT,
+    {
+      acceptNode: function (node) {
+        if (!range.intersectsNode(node)) return NodeFilter.FILTER_REJECT;
+
+        if (
+          BLOCK_ELEMENTS.includes(node.tagName) ||
+          node.nodeType === Node.TEXT_NODE
+        )
+          return NodeFilter.FILTER_ACCEPT;
+        return NodeFilter.FILTER_SKIP;
+      },
+    },
+  );
+  let node = walker.nextNode();
+  while (node) {
+    if (node.nodeType === Node.TEXT_NODE) {
+      const mark = document.createElement('mark');
+      node.parentNode.insertBefore(mark, node);
+      mark.appendChild(node);
+      marks.push(mark);
+    }
+    node = walker.nextNode();
   }
+
+  const startMark = document.createElement('mark');
+  startNodeSubrange.surroundContents(startMark);
+  const endMark = document.createElement('mark');
+  endNodeSubrange.surroundContents(endMark);
+
+  return [startMark, ...marks, endMark];
 };
 
 /**
@@ -368,46 +315,121 @@ export const scrollElementIntoView = (element) => {
  * @return {[Node, number]} The DOM Node and the offset where the text starts or ends.
  */
 const findRangeNodeAndOffset = (blockNode, text, start) => {
-  const textNodes = getTextNodesDirectlyIn(blockNode);
-  const wordsToSearchFor = text.match(/[\p{L}\p{P}]/gu);
-  const wordList = textNodes.map(n => n.textContent).map(s => s.match(/[\p{L}\p{P}]/gu));
-  const allWords = wordList.map(Boolean).reduce((arr, words) => [...arr, ...words], []);
+  /**
+   * Shrink a Range in the wanted direction.
+   * If the end of a text node is reached, the range's start or end will move to the next node.
+   * @param {Range} r - Range to shrink
+   * @param {Boolean} s - Whether to move the start of the range or not
+   * @param {Node[]} textNodes - Nodes in which to iterate
+   */
+  function shrinkRange(r, s, textNodes) {
+    if (s) {
+      let offset = r.startOffset + 1;
+      let container = r.startContainer;
+      if (offset >= container.textContent.length) {
+        textNodes.shift();
+        container = textNodes[0];
+        offset = 0;
 
-  const children = textNodes.map((n, i) => [n, wordList[i]]);
-
-  /* const fullText = blockNode.innerText.replace(/\s/g, ' ');
-  let offset = fullText.indexOf(text) + (start ? 0 : text.length);
-  const startChildren = [];
-  const treeWalker = document.createTreeWalker(blockNode, NodeFilter.SHOW_TEXT);
-  let node = treeWalker.nextNode();
-  if (node) {
-    const trimmedContent = node.textContent.replace(/^\s+/, '').replace(/\s+$/, '');
-    startChildren.push({
-      node,
-      startOffset: 0,
-      endOffset: trimmedContent.length,
-      textStart: node.textContent.indexOf(trimmedContent),
-    });
-  }
-  while ((node = treeWalker.nextNode())) {
-    const trimmedContent = node.textContent.replace(/^\s+/, ' ').replace(/\s+$/, '');
-    startChildren.push({
-      node: node,
-      startOffset: startChildren[startChildren.length - 1].endOffset,
-      endOffset:
-        startChildren[startChildren.length - 1].endOffset + trimmedContent.length,
-      textStart: node.textContent.indexOf(trimmedContent),
-    });
-  }
-  let anchorNode;
-  for (const { node, startOffset, endOffset, textStart } of startChildren) {
-    if (offset >= startOffset && offset < endOffset) {
-      anchorNode = node;
-      offset = offset - startOffset + textStart;
-      break;
+      }
+      r.setStart(container, offset);
+    } else {
+      let offset = r.endOffset - 1;
+      let container = r.endContainer;
+      if (offset < 0) {
+        textNodes.pop();
+        container = textNodes[textNodes.length - 1];
+        offset = container.textContent.length;
+      }
+      r.setEnd(container, offset);
     }
   }
-  return [anchorNode, offset]; */
+
+  /**
+   * Returns a list of all the text nodes inside an element.
+   * null items represent a break in the text content of the element.
+   * All block elements that are rendered by the Renderer are considered a break.
+   * @param {HTMLElement} root - Element 
+   * @return {(Node|null)[]}
+   */
+  function getAllTextNodes(root) {
+    return Array.from(root.childNodes).reduce((textNodes, node) => {
+      // This node is a text node, add it and return.
+      if (node.nodeType === Node.TEXT_NODE) {
+        textNodes.push(node);
+        return textNodes;
+      }
+
+      const nodeStyle = window.getComputedStyle(node);
+      // If the node is not rendered, just skip it.
+      if(nodeStyle.visibility === 'hidden' || nodeStyle.display === 'none') {
+        return textNodes;
+      }
+
+      // This node is a block element.
+      if (node instanceof HTMLElement && BLOCK_ELEMENTS.includes(node.tagName)) {
+        textNodes.push(null);
+        return textNodes;
+      }
+
+      textNodes.push(...getAllTextNodes(node));
+      return textNodes;
+    }, []);
+  }
+
+  /**
+   * 
+   * @param {Node[]} nodes 
+   * @param {Number} startOffset 
+   * @param {Number|undefined} endOffset 
+   */
+  function getTextContent(nodes, startOffset, endOffset) {
+    let str = "";
+    if(nodes.length === 1) {
+      str = nodes[0].textContent.substring(startOffset, endOffset);
+    } else {
+      str = nodes[0].textContent.substring(startOffset) +
+        nodes.slice(1, -1).reduce((s, n) => s + n.textContent, "") +
+        nodes.slice(-1)[0].textContent.substring(0, endOffset);
+    }
+    return str.replace(/\s+/g, ' ');
+  }
+
+  const textNodes = getAllTextNodes(blockNode);
+  const textSections = textNodes
+    .reduce(
+      (textParts, textNode) => {
+        if (textNode) {
+          textParts.slice(-1)[0].push(textNode);
+        } else {
+          textParts.push([]);
+        }
+        return textParts;
+      },
+      [[]]);
+  let { range, nodes } = textSections
+    .map((section) => {
+      const r = document.createRange();
+      r.setStart(section[0], 0);
+      r.setEnd(section[section.length - 1], section[section.length - 1].textContent.length);
+      return { range: r, nodes: section };
+    })
+    .find(({ nodes }) => {
+      return getTextContent(nodes, 0).includes(text);
+    });
+
+  let container;
+  let offset;
+  let i = 0;
+  while (getTextContent(nodes, range.startOffset, range.endOffset).includes(text)) {
+    ++i;
+    container = start ? range.startContainer : range.endContainer;
+    offset = start ? range.startOffset : range.endOffset;
+    shrinkRange(range, start, nodes);
+    if(i > 20) break;
+  }
+
+  return [container, offset];
 };
 
 /**
@@ -439,7 +461,10 @@ const findText = (text) => {
   // List of block items that contain the text we're looking for.
   const blockElements = Array.from(
     getElementsIn(document.body, (element) => {
-      if(BLOCK_ELEMENTS.includes(element.tagName) && element.innerText.replace(/\s/g, ' ').includes(text)) {
+      if (
+        BLOCK_ELEMENTS.includes(element.tagName) &&
+        element.innerText.replace(/\s/g, ' ').includes(text)
+      ) {
         return NodeFilter.FILTER_ACCEPT;
       } else {
         return NodeFilter.FILTER_REJECT;
@@ -448,19 +473,22 @@ const findText = (text) => {
   );
 
   const matches = [];
-  for(const element of blockElements) {
-    const textParts = Array.from(element.children).reduce((parts, child) => {
-      if(BLOCK_ELEMENTS.includes(child.tagName)) {
-        return [...parts.slice(0, -1), ...parts.slice(-1)[0].split(child.innerText)];
-      } else {
-        return parts;
-      }
-    }, [element.innerText]);
-    for(const textPart of textParts.map(part => part.replace(/\s/g, ' '))) {
-      let regexMatch;
-      let lastMatchIndex = -1;
-      while (regexMatch = textPart.substring(lastMatchIndex + 1).match(new RegExp(text), )) {
-        lastMatchIndex = regexMatch.index;
+  for (const element of blockElements) {
+    const textParts = Array.from(element.children).reduce(
+      (parts, child) => {
+        if (BLOCK_ELEMENTS.includes(child.tagName)) {
+          return [
+            ...parts.slice(0, -1),
+            ...parts.slice(-1)[0].split(child.innerText),
+          ];
+        } else {
+          return parts;
+        }
+      },
+      [element.innerText],
+    );
+    for (const textPart of textParts.map((part) => part.replace(/\s/g, ' '))) {
+      if (textPart.includes(text)) {
         matches.push(element);
       }
     }
@@ -490,4 +518,6 @@ function* getElementsIn(root, filter) {
   while ((currentNode = treeWalker.nextNode())) {
     yield currentNode;
   }
-}
+};
+
+export const forTesting = { markRange: markRange };
