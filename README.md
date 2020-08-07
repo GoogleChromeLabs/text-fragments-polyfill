@@ -38,7 +38,8 @@ From unpkg:
 
 ```html
 <script type="module>
-  if (!('fragmentDirective' in Location.prototype)) {
+  if (!('fragmentDirective' in Location.prototype) &&
+      !('fragmentDirective' in document)) {
     import('https://unpkg.com/text-fragments-polyfill');
   }
 </script>
@@ -48,7 +49,8 @@ From unpkg:
 
 ```js
 // Only load the polyfill in browsers that need it.
-if (!('fragmentDirective' in Location.prototype)) {
+if (!('fragmentDirective' in Location.prototype) &&
+    !('fragmentDirective' in document)) {
   import('text-fragments.js');
 }
 ```
