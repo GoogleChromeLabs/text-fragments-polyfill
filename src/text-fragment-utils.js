@@ -22,22 +22,6 @@
  * @property {string} suffix
  */
 
-/**
- * @typedef NodeAndOffset
- * @property {Node} node
- * @property {number} offset
- */
-
-/**
- * @typedef MarkOptions
- * @property {NodeAndOffset?} start
- * @property {NodeAndOffset?} end
- * @property {Node?} startBefore
- * @property {Node?} startAfter
- * @property {Node?} endBefore
- * @property {Node?} endAfter
- */
-
 const FRAGMENT_DIRECTIVES = ['text'];
 
 // Block elements. elements of a text fragment cannot cross the boundaries of a
