@@ -30,9 +30,9 @@
     "start": "npx http-server",
     "clean": "shx rm -rf dist",
     "fix": "npx prettier --write .",
-    "prepare": "npm run clean && npm run fix && npm run lint && npx rollup src/text-fragments.js --dir dist",
+    "prepare": "npm run clean && npm run fix && npm run lint && npx rollup src/text-fragments.js --dir dist -p 'terser'",
     "lint": "npx eslint . --ext .js,.mjs --fix --ignore-pattern dist/",
-    "test": "./node_modules/karma/bin/karma start"
+    "test": "./node_modules/karma/bin/karma start --single-run"
   },
   "repository": {
     "type": "git",
