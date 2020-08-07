@@ -297,6 +297,89 @@ export const scrollElementIntoView = (element) => {
 };
 
 /**
+ * Shrink a Range in the wanted direction.
+ * If the end of a text node is reached, the range's start or end will move to the next node.
+ * When a TextNode goes outside the Range, it is removed from the provided array.
+ * @param {Range} range - Range to shrink
+ * @param {Boolean} start - Whether to move the start of the range or not
+ * @param {Node[]} textNodes - Nodes in which to iterate
+ */
+const shrinkRange = (range, start, textNodes) => {
+  if (start) {
+    let offset = range.startOffset + 1;
+    let container = range.startContainer;
+    if (offset >= container.textContent.length) {
+      textNodes.shift();
+      container = textNodes[0];
+      offset = 0;
+
+    }
+    range.setStart(container, offset);
+  } else {
+    let offset = range.endOffset - 1;
+    let container = range.endContainer;
+    if (offset < 0) {
+      textNodes.pop();
+      container = textNodes[textNodes.length - 1];
+      offset = container.textContent.length;
+    }
+    range.setEnd(container, offset);
+  }
+}
+
+/**
+ * Returns a list of all the text nodes inside an element.
+ * null items represent a break in the text content of the element.
+ * All block elements that are rendered by the Renderer are considered a break.
+ * @param {HTMLElement} root - Root Element
+ * @return {(Node|null)[]} All the TextNodes inside the root element. Text breaks are represented by a null value.
+ */
+const getAllTextNodes = (root) => {
+  return Array.from(root.childNodes).reduce((textNodes, node) => {
+    // This node is a text node, add it and return.
+    if (node.nodeType === Node.TEXT_NODE) {
+      textNodes.push(node);
+      return textNodes;
+    }
+
+    const nodeStyle = window.getComputedStyle(node);
+    // If the node is not rendered, just skip it.
+    if(nodeStyle.visibility === 'hidden' || nodeStyle.display === 'none') {
+      return textNodes;
+    }
+
+    // This node is a block element.
+    if (node instanceof HTMLElement && BLOCK_ELEMENTS.includes(node.tagName)) {
+      if(textNodes.slice(-1)[0] !== null) {
+        textNodes.push(null);
+      }
+      return textNodes;
+    }
+
+    textNodes.push(...getAllTextNodes(node));
+    return textNodes;
+  }, []);
+}
+
+/**
+ * Returns the textContent of all the textNodes and normalizes strings by replacing duplicated spaces with single space.
+ * @param {Node[]} nodes - TextNodes to get the textContent from.
+ * @param {Number} startOffset - Where to start in the first TextNode.
+ * @param {Number|undefined} endOffset Where to end in the last TextNode.
+ */
+const getTextContent = (nodes, startOffset, endOffset) => {
+  let str = "";
+  if(nodes.length === 1) {
+    str = nodes[0].textContent.substring(startOffset, endOffset);
+  } else {
+    str = nodes[0].textContent.substring(startOffset) +
+      nodes.slice(1, -1).reduce((s, n) => s + n.textContent, "") +
+      nodes.slice(-1)[0].textContent.substring(0, endOffset);
+  }
+  return str.replace(/[\t\n\r ]+/g, ' ');
+}
+
+/**
  * Finds the DOM Node and the exact offset where a string starts or ends.
  * @param {HTMLElement} blockNode - Block element in which to search for a given text.
  * @param {string} text - The text for which to find the position.
@@ -304,86 +387,6 @@ export const scrollElementIntoView = (element) => {
  * @return {[Node, number]} The DOM Node and the offset where the text starts or ends.
  */
 const findRangeNodeAndOffset = (blockNode, text, start) => {
-  /**
-   * Shrink a Range in the wanted direction.
-   * If the end of a text node is reached, the range's start or end will move to the next node.
-   * @param {Range} r - Range to shrink
-   * @param {Boolean} s - Whether to move the start of the range or not
-   * @param {Node[]} textNodes - Nodes in which to iterate
-   */
-  function shrinkRange(r, s, textNodes) {
-    if (s) {
-      let offset = r.startOffset + 1;
-      let container = r.startContainer;
-      if (offset >= container.textContent.length) {
-        textNodes.shift();
-        container = textNodes[0];
-        offset = 0;
-
-      }
-      r.setStart(container, offset);
-    } else {
-      let offset = r.endOffset - 1;
-      let container = r.endContainer;
-      if (offset < 0) {
-        textNodes.pop();
-        container = textNodes[textNodes.length - 1];
-        offset = container.textContent.length;
-      }
-      r.setEnd(container, offset);
-    }
-  }
-
-  /**
-   * Returns a list of all the text nodes inside an element.
-   * null items represent a break in the text content of the element.
-   * All block elements that are rendered by the Renderer are considered a break.
-   * @param {HTMLElement} root - Element 
-   * @return {(Node|null)[]}
-   */
-  function getAllTextNodes(root) {
-    return Array.from(root.childNodes).reduce((textNodes, node) => {
-      // This node is a text node, add it and return.
-      if (node.nodeType === Node.TEXT_NODE) {
-        textNodes.push(node);
-        return textNodes;
-      }
-
-      const nodeStyle = window.getComputedStyle(node);
-      // If the node is not rendered, just skip it.
-      if(nodeStyle.visibility === 'hidden' || nodeStyle.display === 'none') {
-        return textNodes;
-      }
-
-      // This node is a block element.
-      if (node instanceof HTMLElement && BLOCK_ELEMENTS.includes(node.tagName)) {
-        textNodes.push(null);
-        return textNodes;
-      }
-
-      textNodes.push(...getAllTextNodes(node));
-      return textNodes;
-    }, []);
-  }
-
-  /**
-   * 
-   * @param {Node[]} nodes 
-   * @param {Number} startOffset 
-   * @param {Number|undefined} endOffset 
-   */
-  function getTextContent(nodes, startOffset, endOffset) {
-    let str = "";
-    if(nodes.length === 1) {
-      str = nodes[0].textContent.substring(startOffset, endOffset);
-    } else {
-      str = nodes[0].textContent.substring(startOffset) +
-        nodes.slice(1, -1).reduce((s, n) => s + n.textContent, "") +
-        nodes.slice(-1)[0].textContent.substring(0, endOffset);
-    }
-    return str.replace(/[\t\n\r ]+/g, ' ');
-  }
-
   const textNodes = getAllTextNodes(blockNode);
   const textSections = textNodes
     .reduce(
