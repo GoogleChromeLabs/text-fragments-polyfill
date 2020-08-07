@@ -163,7 +163,7 @@ export const processFragmentDirectives = (parsedFragmentDirectives) => {
  * @param {TextFragment} textFragment - Text Fragment to highlight.
  * @return {Element[]} `<mark>` element created to highlight the text fragment, if an exact and distinct match was found.
  */
-const processTextFragmentDirective = (textFragment) => {
+export const processTextFragmentDirective = (textFragment) => {
   const prefixNodes = findText(textFragment.prefix);
   const textStartNodes = findText(textFragment.textStart);
   const textEndNodes = findText(textFragment.textEnd);
@@ -220,6 +220,77 @@ const processTextFragmentDirective = (textFragment) => {
   if (prefixNodes.length) {
     // ToDo
   }
+};
+
+/**
+ * Given a Range, wraps its text contents in one or more <mark> elements.
+ * <mark> elements can't cross block boundaries, so this function walks the
+ * tree to find all the relevant text nodes and wraps them.
+ * @param {Range} range - the range to mark. Must start and end inside of
+ *     text nodes.
+ * @return {Node[]} The <mark> nodes that were created.
+ */
+const markRange = (range) => {
+  if (
+    range.startContainer.nodeType != Node.TEXT_NODE ||
+    range.endContainer.nodeType != Node.TEXT_NODE
+  )
+    return [];
+
+  // If the range is entirely within a single node, just surround it.
+  if (range.startContainer === range.endContainer) {
+    const trivialMark = document.createElement('mark');
+    range.surroundContents(trivialMark);
+    return [trivialMark];
+  }
+
+  // Start node -- special case
+  const startNode = range.startContainer;
+  const startNodeSubrange = range.cloneRange();
+  startNodeSubrange.setEndAfter(startNode);
+
+  // End node -- special case
+  const endNode = range.endContainer;
+  const endNodeSubrange = range.cloneRange();
+  endNodeSubrange.setStartBefore(endNode);
+
+  // In between nodes
+  const marks = [];
+  range.setStartAfter(startNode);
+  range.setEndBefore(endNode);
+  const walker = document.createTreeWalker(
+    range.commonAncestorContainer,
+    NodeFilter.SHOW_ELEMENT | NodeFilter.SHOW_TEXT,
+    {
+      acceptNode: function (node) {
+        if (!range.intersectsNode(node)) return NodeFilter.FILTER_REJECT;
+
+        if (
+          BLOCK_ELEMENTS.includes(node.tagName) ||
+          node.nodeType === Node.TEXT_NODE
+        )
+          return NodeFilter.FILTER_ACCEPT;
+        return NodeFilter.FILTER_SKIP;
+      },
+    },
+  );
+  let node = walker.nextNode();
+  while (node) {
+    if (node.nodeType === Node.TEXT_NODE) {
+      const mark = document.createElement('mark');
+      node.parentNode.insertBefore(mark, node);
+      mark.appendChild(node);
+      marks.push(mark);
+    }
+    node = walker.nextNode();
+  }
+
+  const startMark = document.createElement('mark');
+  startNodeSubrange.surroundContents(startMark);
+  const endMark = document.createElement('mark');
+  endNodeSubrange.surroundContents(endMark);
+
+  return [startMark, ...marks, endMark];
 };
 
 /**
@@ -521,3 +592,11 @@ function* getElementsIn(root, filter) {
 };
 
 export const forTesting = { markRange: markRange };
+
+// Allow importing module from closure-compiler projects that haven't migrated
+// to ES6 modules.
+if (typeof goog !== 'undefined') {
+  goog.declareModuleId(
+    'googleChromeLabs.textFragmentPolyfill.textFragmentUtils',
+  );
+}

@@ -26,7 +26,7 @@ import * as utils from './text-fragment-utils.js';
   }
 
   // Pass feature detection (https://web.dev/text-fragments/#feature-detection)
-  Location.prototype.fragmentDirective = {};
+  document.fragmentDirective = {};
 
   const init = () => {
     const fragmentDirectives = utils.getFragmentDirectives(hash);

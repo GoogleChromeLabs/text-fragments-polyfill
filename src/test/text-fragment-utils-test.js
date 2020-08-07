@@ -20,8 +20,6 @@ describe('TextFragmentUtils', function () {
   });
 
   it('marks simple matching text', function () {
-    console.log(__html__);
-
     document.body.innerHTML = __html__['basic_test.html'];
 
     const directive = { text: [{ textStart: 'trivial test of' }] };
