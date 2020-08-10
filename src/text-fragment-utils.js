@@ -502,12 +502,81 @@ function* getElementsIn(root, filter) {
   }
 }
 
-export const forTesting = { markRange: markRange };
+// The remaining functions are a WIP reorganization of the code to more closely
+// match the spec. They may be incomplete or partially duplicate code above.
+
+/**
+ * Returns a range pointing to the first instance of |query| within |range|.
+ * @param {String} query - the string to find
+ * @param {Range} range - the range in which to search
+ */
+const findTextInRange = (query, range) => {
+  const searchRange = range.cloneRange();
+  while (!searchRange.collapsed) {
+    // const curNode = searchRange.startNode;
+    // Check if searchable and visible
+    // Calculate block ancestor
+    // Make node list from all children of block ancestor
+    // Find range from node list
+    // Advance if needed
+  }
+};
+
+/**
+ * Returns a range pointing to the first instance of |query| within |range|,
+ * searching over the text contained in a list |nodeList| of relevant textNodes.
+ * @param {String} query - the string to find
+ * @param {Range} range - the range in which to search
+ * @param {Node[]} textNodes - the visible text nodes within |range|
+ */
+const findRangeFromNodeList = (query, range, textNodes) => {
+  // Concatenate data
+  // Find match (word-bounded, case-insensitive, normalized) using
+  //     getBoundaryPointAtIndex
+  // return range
+};
+
+/**
+ * Generates a boundary point pointing to the given text position.
+ * @param {Number} index - the text offset indicating the start/end of a
+ *     substring of the concatenated text of |textNodes|
+ * @param {Node[]} textNodes - the text Nodes whose contents make up the search
+ *     space
+ * @param {bool} isEnd - indicates whether the offset is the start or end of the
+ *     substring
+ * @return {[Node, Number]} - a boundary point suitable for setting as the start
+ *     or end of a Range
+ */
+const getBoundaryPointAtIndex = (index, textNodes, isEnd) => {
+  // Iterate over lengths
+  return [];
+};
+
+/**
+ * Returns true iff startPos and length point to a word-bounded substring of
+ * |text|.
+ * @param {String} text - the text to search
+ * @param {Number} startPos - the index of the start of the substring
+ * @param {Number} length - the length of the substring
+ */
+const isWordBounded = (text, startPos, length) => {
+  // Not feasible to match spec exactly. Instead, returns true iff:
+  //   * startPos == 0 OR char before start is a boundary char, AND
+  //   * length indicates end of string OR char after end is a boundary char
+  // Where boundary chars are whitespace/punctuation.
+};
+
+export const forTesting = {
+  markRange: markRange,
+  findTextInRange: findTextInRange,
+  findRangeFromNodeList: findRangeFromNodeList,
+  getBoundaryPointAtIndex: getBoundaryPointAtIndex,
+  isWordBounded: isWordBounded,
+};
 
 // Allow importing module from closure-compiler projects that haven't migrated
 // to ES6 modules.
 if (typeof goog !== 'undefined') {
-  goog.declareModuleId(
-    'googleChromeLabs.textFragmentPolyfill.textFragmentUtils',
-  );
+  // prettier-ignore
+  goog.declareModuleId('googleChromeLabs.textFragmentPolyfill.textFragmentUtils');
 }
