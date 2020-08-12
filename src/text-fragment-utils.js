@@ -537,19 +537,88 @@ const findRangeFromNodeList = (query, range, textNodes) => {
 };
 
 /**
+ * Provides the data needed for calling setStart/setEnd on a Range.
+ * @typedef {Object} BoundaryPoint
+ * @property {Node} node
+ * @property {Number} offset
+ */
+
+/**
  * Generates a boundary point pointing to the given text position.
  * @param {Number} index - the text offset indicating the start/end of a
- *     substring of the concatenated text of |textNodes|
+ *     substring of the concatenated, normalized text in |textNodes|
  * @param {Node[]} textNodes - the text Nodes whose contents make up the search
  *     space
  * @param {bool} isEnd - indicates whether the offset is the start or end of the
  *     substring
- * @return {[Node, Number]} - a boundary point suitable for setting as the start
- *     or end of a Range
+ * @return {BoundaryPoint} - a boundary point suitable for setting as the start
+ *     or end of a Range, or undefined if it couldn't be computed.
  */
 const getBoundaryPointAtIndex = (index, textNodes, isEnd) => {
-  // Iterate over lengths
-  return [];
+  let counted = 0;
+  let normalizedData;
+  for (let i = 0; i < textNodes.length; i++) {
+    const node = textNodes[i];
+    if (!normalizedData) normalizedData = normalizeString(node.data);
+    let nodeEnd = counted + normalizedData.length;
+    if (isEnd) nodeEnd += 1;
+    if (nodeEnd > index) {
+      // |index| falls within this node, but we need to turn the offset in the
+      // normalized data into an offset in the real node data.
+      const normalizedOffset = index - counted;
+      let denormalizedOffset = Math.min(index - counted, node.data.length);
+
+      // Walk through the string until denormalizedOffset produces a substring
+      // that corresponds to the target from the normalized data.
+      const targetSubstring = isEnd
+        ? normalizedData.substring(0, normalizedOffset)
+        : normalizedData.substring(normalizedOffset);
+
+      let candidateSubstring = isEnd
+        ? normalizeString(node.data.substring(0, denormalizedOffset))
+        : normalizeString(node.data.substring(denormalizedOffset));
+
+      // We will either lengthen or shrink the candidate string to approach the
+      // length of the target string. If we're looking for the start, adding 1
+      // makes the candidate shorter; if we're looking for the end, it makes the
+      // candidate longer.
+      const direction =
+        (isEnd ? -1 : 1) *
+        (targetSubstring.length > candidateSubstring.length ? -1 : 1);
+
+      while (
+        denormalizedOffset >= 0 &&
+        denormalizedOffset <= node.data.length
+      ) {
+        if (candidateSubstring.length === targetSubstring.length)
+          return { node: node, offset: denormalizedOffset };
+
+        denormalizedOffset += direction;
+
+        candidateSubstring = isEnd
+          ? normalizeString(node.data.substring(0, denormalizedOffset))
+          : normalizeString(node.data.substring(denormalizedOffset));
+      }
+    }
+    counted += normalizedData.length;
+
+    if (i + 1 < textNodes.length) {
+      // Edge case: if this node ends with a whitespace character and the next
+      // node starts with one, they'll be double-counted relative to the
+      // normalized version. Subtract 1 from |counted| to compensate.
+      const nextNormalizedData = normalizeString(textNodes[i + 1].data);
+      if (
+        normalizedData.slice(-1) === ' ' &&
+        nextNormalizedData.slice(0, 1) === ' '
+      ) {
+        counted -= 1;
+      }
+      // Since we already normalized the next node's data, hold on to it for the
+      // next iteration.
+      normalizedData = nextNormalizedData;
+    }
+  }
+  return undefined;
 };
 
 /**
@@ -566,12 +635,30 @@ const isWordBounded = (text, startPos, length) => {
   // Where boundary chars are whitespace/punctuation.
 };
 
+/**
+ * @param {String} str - a string to be normalized
+ * @return {String} - a normalized version of |str| with all consecutive
+ *     whitespace chars converted to a single ' ' and all diacriticals removed
+ *     (e.g., 'é' -> 'e').
+ */
+const normalizeString = (str) => {
+  // First, decompose any characters with diacriticals. Then, turn all
+  // consecutive whitespace characters into a standard " ", and strip out
+  // anything in the Unicode U+0300..U+036F (Combining Diacritical Marks) range.
+  // This may change the length of the string.
+  return (str || '')
+    .normalize('NFKD')
+    .replace(/\s+/g, ' ')
+    .replace(/[\u0300-\u036f]/g, '');
+};
+
 export const forTesting = {
   markRange: markRange,
   findTextInRange: findTextInRange,
   findRangeFromNodeList: findRangeFromNodeList,
   getBoundaryPointAtIndex: getBoundaryPointAtIndex,
   isWordBounded: isWordBounded,
+  normalizeString: normalizeString,
 };
 
 // Allow importing module from closure-compiler projects that haven't migrated
