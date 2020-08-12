@@ -537,6 +537,13 @@ const findRangeFromNodeList = (query, range, textNodes) => {
 };
 
 /**
+ * Provides the data needed for calling setStart/setEnd on a Range.
+ * @typedef {Object} BoundaryPoint
+ * @property {Node} node
+ * @property {Number} offset
+ */
+
+/**
  * Generates a boundary point pointing to the given text position.
  * @param {Number} index - the text offset indicating the start/end of a
  *     substring of the concatenated, normalized text in |textNodes|
@@ -544,8 +551,8 @@ const findRangeFromNodeList = (query, range, textNodes) => {
  *     space
  * @param {bool} isEnd - indicates whether the offset is the start or end of the
  *     substring
- * @return {[Node, Number]} - a boundary point suitable for setting as the start
- *     or end of a Range, or an empty tuple if it couldn't be computed.
+ * @return {BoundaryPoint} - a boundary point suitable for setting as the start
+ *     or end of a Range, or undefined if it couldn't be computed.
  */
 const getBoundaryPointAtIndex = (index, textNodes, isEnd) => {
   let counted = 0;
@@ -584,7 +591,7 @@ const getBoundaryPointAtIndex = (index, textNodes, isEnd) => {
         denormalizedOffset <= node.data.length
       ) {
         if (candidateSubstring.length === targetSubstring.length)
-          return [node, denormalizedOffset];
+          return { node: node, offset: denormalizedOffset };
 
         denormalizedOffset += direction;
 
@@ -611,7 +618,7 @@ const getBoundaryPointAtIndex = (index, textNodes, isEnd) => {
       normalizedData = nextNormalizedData;
     }
   }
-  return [];
+  return undefined;
 };
 
 /**
@@ -639,7 +646,7 @@ const normalizeString = (str) => {
   // consecutive whitespace characters into a standard " ", and strip out
   // anything in the Unicode U+0300..U+036F (Combining Diacritical Marks) range.
   // This may change the length of the string.
-  return str
+  return (str || '')
     .normalize('NFKD')
     .replace(/\s+/g, ' ')
     .replace(/[\u0300-\u036f]/g, '');

@@ -137,8 +137,8 @@ describe('TextFragmentUtils', function () {
         /* isEnd= */ true,
       );
       const range = document.createRange();
-      range.setStart(start[0], start[1]);
-      range.setEnd(end[0], end[1]);
+      range.setStart(start.node, start.offset);
+      range.setEnd(end.node, end.offset);
       expect(utils.forTesting.normalizeString(range.toString())).toEqual(input);
     }
   });
