@@ -523,17 +523,46 @@ const findTextInRange = (query, range) => {
 };
 
 /**
- * Returns a range pointing to the first instance of |query| within |range|,
+ * Finds a range pointing to the first instance of |query| within |range|,
  * searching over the text contained in a list |nodeList| of relevant textNodes.
  * @param {String} query - the string to find
  * @param {Range} range - the range in which to search
  * @param {Node[]} textNodes - the visible text nodes within |range|
+ * @param {Range} the found range, or undefined if no such range could be found
  */
 const findRangeFromNodeList = (query, range, textNodes) => {
-  // Concatenate data
-  // Find match (word-bounded, case-insensitive, normalized) using
-  //     getBoundaryPointAtIndex
-  // return range
+  if (!textNodes.length)
+    return undefined;
+  let data = normalizeString(getTextContent(textNodes, 0, undefined));
+  let normalizedQuery = normalizeString(query);
+  let searchStart = (textNodes[0] === range.startNode) ? range.startOffset : 0;
+  let start, end, matchIndex;
+  while (!matchIndex) {
+    matchIndex = data.indexOf(normalizedQuery, searchStart);
+    if (matchIndex === -1)
+      return undefined;
+    if (isWordBounded(data, matchIndex, normalizedQuery.length)) {
+      start = getBoundaryPointAtIndex(matchIndex, textNodes, /*isEnd=*/ false);
+      end = getBoundaryPointAtIndex(matchIndex + normalizedQuery.length,
+                                    textNodes,
+                                    /*isEnd=*/ true);
+      if (!start || !end)
+        return undefined;
+    } else {
+      searchStart = matchIndex + 1;
+      matchIndex = undefined;
+    }
+  }
+  let foundRange = document.createRange();
+  foundRange.setStart(start.node, start.offset);
+  foundRange.setEnd(end.node, end.offset);
+  
+  // Verify that |foundRange| is a subrange of |range|
+  if (range.compareBoundaryPoints(Range.START_TO_START, foundRange) <= 0 &&
+      range.compareBoundaryPoints(Range.END_TO_END, foundRange) >= 0) {
+    return foundRange;
+  }
+  return undefined;
 };
 
 /**
@@ -629,6 +658,7 @@ const getBoundaryPointAtIndex = (index, textNodes, isEnd) => {
  * @param {Number} length - the length of the substring
  */
 const isWordBounded = (text, startPos, length) => {
+  return true;
   // Not feasible to match spec exactly. Instead, returns true iff:
   //   * startPos == 0 OR char before start is a boundary char, AND
   //   * length indicates end of string OR char after end is a boundary char
@@ -649,7 +679,8 @@ const normalizeString = (str) => {
   return (str || '')
     .normalize('NFKD')
     .replace(/\s+/g, ' ')
-    .replace(/[\u0300-\u036f]/g, '');
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase();
 };
 
 export const forTesting = {
