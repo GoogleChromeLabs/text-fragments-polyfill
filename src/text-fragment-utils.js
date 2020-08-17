@@ -528,39 +528,44 @@ const findTextInRange = (query, range) => {
  * @param {String} query - the string to find
  * @param {Range} range - the range in which to search
  * @param {Node[]} textNodes - the visible text nodes within |range|
- * @param {Range} the found range, or undefined if no such range could be found
+ * @return {Range} - the found range, or undefined if no such range could be
+ *     found
  */
 const findRangeFromNodeList = (query, range, textNodes) => {
-  if (!textNodes.length)
-    return undefined;
-  let data = normalizeString(getTextContent(textNodes, 0, undefined));
-  let normalizedQuery = normalizeString(query);
-  let searchStart = (textNodes[0] === range.startNode) ? range.startOffset : 0;
-  let start, end, matchIndex;
-  while (!matchIndex) {
+  if (!textNodes.length) return undefined;
+  const data = normalizeString(getTextContent(textNodes, 0, undefined));
+  const normalizedQuery = normalizeString(query);
+  let searchStart = textNodes[0] === range.startNode ? range.startOffset : 0;
+  let start;
+  let end;
+  let matchIndex;
+  while (matchIndex === undefined) {
     matchIndex = data.indexOf(normalizedQuery, searchStart);
-    if (matchIndex === -1)
-      return undefined;
+    if (matchIndex === -1) return undefined;
     if (isWordBounded(data, matchIndex, normalizedQuery.length)) {
-      start = getBoundaryPointAtIndex(matchIndex, textNodes, /*isEnd=*/ false);
-      end = getBoundaryPointAtIndex(matchIndex + normalizedQuery.length,
-                                    textNodes,
-                                    /*isEnd=*/ true);
-      if (!start || !end)
-        return undefined;
+      start = getBoundaryPointAtIndex(matchIndex, textNodes, /* isEnd=*/ false);
+      end = getBoundaryPointAtIndex(
+        matchIndex + normalizedQuery.length,
+        textNodes,
+        /* isEnd=*/ true,
+      );
     } else {
       searchStart = matchIndex + 1;
       matchIndex = undefined;
     }
   }
-  let foundRange = document.createRange();
-  foundRange.setStart(start.node, start.offset);
-  foundRange.setEnd(end.node, end.offset);
-  
-  // Verify that |foundRange| is a subrange of |range|
-  if (range.compareBoundaryPoints(Range.START_TO_START, foundRange) <= 0 &&
-      range.compareBoundaryPoints(Range.END_TO_END, foundRange) >= 0) {
-    return foundRange;
+  if (start !== undefined && end !== undefined) {
+    const foundRange = document.createRange();
+    foundRange.setStart(start.node, start.offset);
+    foundRange.setEnd(end.node, end.offset);
+
+    // Verify that |foundRange| is a subrange of |range|
+    if (
+      range.compareBoundaryPoints(Range.START_TO_START, foundRange) <= 0 &&
+      range.compareBoundaryPoints(Range.END_TO_END, foundRange) >= 0
+    ) {
+      return foundRange;
+    }
   }
   return undefined;
 };
@@ -651,11 +656,12 @@ const getBoundaryPointAtIndex = (index, textNodes, isEnd) => {
 };
 
 /**
- * Returns true iff startPos and length point to a word-bounded substring of
- * |text|.
+ * Checks if a substring is word-bounded in the context of a longer string.
  * @param {String} text - the text to search
  * @param {Number} startPos - the index of the start of the substring
  * @param {Number} length - the length of the substring
+ * @return {bool} - true iff startPos and length point to a word-bounded
+ *     substring of |text|.
  */
 const isWordBounded = (text, startPos, length) => {
   return true;

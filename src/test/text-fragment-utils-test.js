@@ -84,16 +84,17 @@ describe('TextFragmentUtils', function () {
     const testCases = {
       '': '',
       ' foo123 ': ' foo123 ',
-      // Various whitespace is collapsed
-      '\n Kirby\t Puckett   ': ' Kirby Puckett ',
+      // Various whitespace is collapsed; capitals become lowercase
+      '\n Kirby\t Puckett   ': ' kirby puckett ',
       // Latin accent characters are removed
       ñîçè: 'nice',
       // Some Japanese characters like パ can be rendered with 1 or 2 code
       // points; the normalized version will always use two.
       '『パープル・レイン』': '『ハ\u309Aーフ\u309Aル・レイン』',
-      // Chinese and Russian don't use diacritics and are unchanged.
+      // Chinese doesn't use diacritics and is unchanged.
       紫雨: '紫雨',
-      'Кирилл Капризов': 'Кирилл Капризов',
+      // Cyrilic has lower case
+      'Кирилл Капризов': 'кирилл капризов',
     };
 
     for (const input of Object.getOwnPropertyNames(testCases)) {
@@ -101,11 +102,11 @@ describe('TextFragmentUtils', function () {
     }
   });
 
-  it('can find boundary points', function () {
+  // Internally, this also tests the boundary point finding logic.
+  it('can find a range from a node list', function () {
     document.body.innerHTML = __html__['boundary-points.html'];
     const rootNode = document.getElementById('root');
     const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
-    const textContent = utils.forTesting.normalizeString(rootNode.textContent);
     const allTextNodes = [];
     let textNode = walker.nextNode();
     while (textNode != null) {
@@ -116,29 +117,23 @@ describe('TextFragmentUtils', function () {
     // Test cases are substrings of the normalized text content of the document.
     // The goal in each case is to produce a range pointing to the substring.
     const testCases = [
+      // Starts at range boundary + ends at a deeper level
       ' this text has a',
+      // Ends at a shallower level, and immediately after a decomposed char
       ' has a lot of ハ\u309A,',
-      ' フ\u309A stuff gøing on ',
+      // Starts immediately before a decomposed char, and is entirely within
+      // one text node
+      'フ\u309A stuff gøing on ',
     ];
 
     for (const input of testCases) {
-      const startIndex = textContent.search(input);
-      expect(startIndex).not.toEqual(-1);
-      const endIndex = startIndex + input.length;
-
-      const start = utils.forTesting.getBoundaryPointAtIndex(
-        startIndex,
+      const docRange = document.createRange();
+      docRange.selectNodeContents(rootNode);
+      const range = utils.forTesting.findRangeFromNodeList(
+        input,
+        docRange,
         allTextNodes,
-        /* isEnd= */ false,
       );
-      const end = utils.forTesting.getBoundaryPointAtIndex(
-        endIndex,
-        allTextNodes,
-        /* isEnd= */ true,
-      );
-      const range = document.createRange();
-      range.setStart(start.node, start.offset);
-      range.setEnd(end.node, end.offset);
       expect(utils.forTesting.normalizeString(range.toString())).toEqual(input);
     }
   });
