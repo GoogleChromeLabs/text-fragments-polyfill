@@ -119,25 +119,107 @@ describe('TextFragmentUtils', function () {
 
     // Test cases are substrings of the normalized text content of the document.
     // The goal in each case is to produce a range pointing to the substring.
-    const testCases = [
+    const simpleTestCases = [
       // Starts at range boundary + ends at a deeper level
       ' this text has a',
       // Ends at a shallower level, and immediately after a decomposed char
-      ' has a lot of ハ\u309A,',
+      'has a lot of ハ\u309A',
       // Starts immediately before a decomposed char, and is entirely within
       // one text node
       'フ\u309A stuff gøing on ',
     ];
 
-    for (const input of testCases) {
-      const docRange = document.createRange();
-      docRange.selectNodeContents(rootNode);
+    const docRange = document.createRange();
+    docRange.selectNodeContents(rootNode);
+
+    for (const input of simpleTestCases) {
       const range = utils.forTesting.findRangeFromNodeList(
         input,
         docRange,
         allTextNodes,
       );
+      expect(range)
+        .withContext('No range found for <' + input + '>')
+        .not.toBeUndefined();
       expect(utils.forTesting.normalizeString(range.toString())).toEqual(input);
+    }
+
+    // We expect a match for 'a' to find the word 'a', but not the letter inside
+    // the word 'has'. We verify this by checking that the range's common
+    // ancestor is the <b> tag, which in the HTML doc contains the word 'a'.
+    const aRange = utils.forTesting.findRangeFromNodeList(
+      'a',
+      docRange,
+      allTextNodes,
+    );
+    expect(aRange).withContext('No range found for <a>').not.toBeUndefined();
+    expect(aRange.commonAncestorContainer.parentElement.nodeName).toEqual('B');
+
+    // We expect no match to be found for a partial-word substring ("tüf" should
+    // not match "stüff" in the document).
+    const nullRange = utils.forTesting.findRangeFromNodeList(
+      'tüf',
+      docRange,
+      allTextNodes,
+    );
+    expect(nullRange)
+      .withContext('Unexpectedly found match for <tüf>')
+      .toBeUndefined();
+  });
+
+  it('can detect if a substring is word-bounded', function () {
+    const trueCases = [
+      { data: 'test', substring: 'test' },
+      { data: 'multiword test string', substring: 'test' },
+      { data: 'the quick, brown dog', substring: 'the quick' },
+      { data: 'a "quotation" works', substring: 'quotation' },
+      { data: 'other\nspacing\t', substring: 'spacing' },
+      // Japanese has no spaces, so only punctuation works as a boundary.
+      { data: 'はい。いいえ。', substring: 'いいえ' },
+      { data: '『パープル・レイン』', substring: 'パープル' },
+    ];
+
+    const falseCases = [
+      { data: 'testing', substring: 'test' },
+      { data: 'attest', substring: 'test' },
+      { data: 'untested', substring: 'test' },
+      // アルバム is an actual word. With proper Japanese word segmenting we
+      // could move this to the true cases, but for now we expect it to be
+      // rejected.
+      {
+        data:
+          'プリンス・アンド・ザ・レヴォリューションによる1984年のアルバム。',
+        substring: 'アルバム',
+      },
+    ];
+
+    for (const input of trueCases) {
+      const index = input.data.search(input.substring);
+      expect(
+        utils.forTesting.isWordBounded(
+          input.data,
+          index,
+          input.substring.length,
+        ),
+      )
+        .withContext(
+          'Is <' + input.substring + '> word-bounded in <' + input.data + '>',
+        )
+        .toEqual(true);
+    }
+    for (const input of falseCases) {
+      const index = input.data.search(input.substring);
+      expect(
+        utils.forTesting.isWordBounded(
+          input.data,
+          index,
+          input.substring.length,
+        ),
+      )
+        .withContext(
+          'Is <' + input.substring + '> word-bounded in <' + input.data + '>',
+        )
+        .toEqual(false);
     }
   });
 });
