@@ -95,6 +95,9 @@ describe('TextFragmentUtils', function () {
       紫雨: '紫雨',
       // Cyrilic has lower case
       'Кирилл Капризов': 'кирилл капризов',
+      // Turkish has separate letters I/İ; since we don't have a
+      // high-confidence locale, we normalize both of these to 'i'.
+      'İstanbul Istanbul': 'istanbul istanbul',
     };
 
     for (const input of Object.getOwnPropertyNames(testCases)) {
