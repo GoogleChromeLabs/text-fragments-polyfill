@@ -63,6 +63,10 @@ const BLOCK_ELEMENTS = [
   'UL',
 ];
 
+// Characters that indicate a word boundary (anything in the JS whitespace class
+// or the Unicode Punctuation category).
+const BOUNDARY_CHARS = /\s|\p{P}/u;
+
 /**
  * Get all text fragments from a string
  * @param {string} hash - string retrieved from Location#hash.
@@ -657,6 +661,14 @@ const getBoundaryPointAtIndex = (index, textNodes, isEnd) => {
 
 /**
  * Checks if a substring is word-bounded in the context of a longer string.
+ * It's not feasible to match the spec exactly as Intl.Segmenter is not yet
+ * widely supported. Instead, returns true iff:
+ *  - startPos == 0 OR char before start is a boundary char, AND
+ *  - length indicates end of string OR char after end is a boundary char
+ * Where boundary chars are whitespace/punctuation defined in the const above.
+ *
+ * This causes the known issue that some languages, notably Japanese, only match
+ * at the level of roughly a full clause or sentence, rather than a word.
  * @param {String} text - the text to search
  * @param {Number} startPos - the index of the start of the substring
  * @param {Number} length - the length of the substring
@@ -664,11 +676,24 @@ const getBoundaryPointAtIndex = (index, textNodes, isEnd) => {
  *     substring of |text|.
  */
 const isWordBounded = (text, startPos, length) => {
+  if (
+    startPos < 0 ||
+    startPos >= text.length ||
+    length <= 0 ||
+    startPos + length > text.length
+  ) {
+    return false;
+  }
+
+  if (startPos !== 0 && !text[startPos - 1].match(BOUNDARY_CHARS)) return false;
+
+  if (
+    startPos + length !== text.length &&
+    !text[startPos + length].match(BOUNDARY_CHARS)
+  )
+    return false;
+
   return true;
-  // Not feasible to match spec exactly. Instead, returns true iff:
-  //   * startPos == 0 OR char before start is a boundary char, AND
-  //   * length indicates end of string OR char after end is a boundary char
-  // Where boundary chars are whitespace/punctuation.
 };
 
 /**
