@@ -207,9 +207,7 @@ export const processTextFragmentDirective = (textFragment) => {
     range.setEnd(endNode, endOffset);
     return markRange(range);
   }
-  if (prefixNodes.length) {
-    // ToDo
-  }
+
   if (mark.parentElement) {
     return mark;
   } else {
