@@ -251,6 +251,11 @@ export const scrollElementIntoView = (element) => {
 
 /**
  * Extracts all the text nodes within the given range.
+ * @param {Node} root - the root node in which to search
+ * @param {Range} range - a range restricting the scope of extraction
+ * @return {TextNode[][]} - a list of lists of text nodes, in document order.
+ *     Lists represent block boundaries; i.e., two nodes appear in the same list
+ *     iff there are no block element starts or ends in between them.
  */
 const getAllTextNodes = (root, range) => {
   const blocks = [];
@@ -336,9 +341,6 @@ function* getElementsIn(root, filter) {
     yield currentNode;
   }
 }
-
-// The remaining functions are a WIP reorganization of the code to more closely
-// match the spec. They may be incomplete or partially duplicate code above.
 
 /**
  * Returns a range pointing to the first instance of |query| within |range|.
