@@ -32,7 +32,8 @@ describe('TextFragmentUtils', function () {
     );
   });
 
-  it('works with complex layouts', function () {
+  // This test is disabled until textEnd support is back in place.
+  xit('works with complex layouts', function () {
     document.body.innerHTML = window.__html__['complicated-layout.html'];
     const directives = utils.getFragmentDirectives(
       '#:~:text=is%20a%20test,And%20another%20on',
