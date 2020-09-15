@@ -32,11 +32,10 @@ describe('TextFragmentUtils', function () {
     );
   });
 
-  // This test is disabled until textEnd support is back in place.
-  xit('works with complex layouts', function () {
+  it('works with range-based matches across block boundaries', function () {
     document.body.innerHTML = window.__html__['complicated-layout.html'];
     const directives = utils.getFragmentDirectives(
-      '#:~:text=is%20a%20test,And%20another%20on',
+      '#:~:text=is%20a%20test,And%20another%20one',
     );
     const parsedDirectives = utils.parseFragmentDirectives(directives);
     const processedDirectives = utils.processFragmentDirectives(
@@ -44,8 +43,19 @@ describe('TextFragmentUtils', function () {
     )['text'];
     const marks = processedDirectives[0];
     expect(marksArrayToString(marks)).toEqual(
-      'is a hard test. A list item. Another one. hey And another on',
+      'is a hard test. A list item. Another one. hey And another one',
     );
+  });
+
+  it('works with range-based matches within block boundaries', function () {
+    document.body.innerHTML = window.__html__['complicated-layout.html'];
+    const directives = utils.getFragmentDirectives('#:~:text=And,one');
+    const parsedDirectives = utils.parseFragmentDirectives(directives);
+    const processedDirectives = utils.processFragmentDirectives(
+      parsedDirectives,
+    )['text'];
+    const marks = processedDirectives[0];
+    expect(marksArrayToString(marks)).toEqual('And another one');
   });
 
   it('can wrap a complex structure in <mark>s', function () {
@@ -104,6 +114,30 @@ describe('TextFragmentUtils', function () {
     for (const input of Object.getOwnPropertyNames(testCases)) {
       expect(utils.forTesting.normalizeString(input)).toEqual(testCases[input]);
     }
+  });
+
+  it('can advance a range start', function () {
+    document.body.innerHTML = __html__['marks_test.html'];
+    const range = document.createRange();
+    const elt = document.getElementById('a').firstChild;
+    range.setStart(elt, 0);
+    range.setEndAfter(document.getElementById('b').firstChild);
+    expect(utils.forTesting.normalizeString(range.toString())).toEqual(
+      ' this is a really ',
+    );
+
+    // Offset 3 is between whitespace and 'T'. Advancing past it should
+    // chop off the 'T'
+    utils.forTesting.advanceRangeStart(range, elt, 3);
+    expect(utils.forTesting.normalizeString(range.toString())).toEqual(
+      'his is a really ',
+    );
+
+    // 999 is way out of range, so this should just move to after the node.
+    utils.forTesting.advanceRangeStart(range, elt, 999);
+    expect(utils.forTesting.normalizeString(range.toString())).toEqual(
+      ' a really ',
+    );
   });
 
   // Internally, this also tests the boundary point finding logic.

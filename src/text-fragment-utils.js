@@ -154,14 +154,56 @@ export const processFragmentDirectives = (parsedFragmentDirectives) => {
  *     if an exact match was found.
  */
 export const processTextFragmentDirective = (textFragment) => {
-  // TODO: currently this only supports textStart matches.
-  const range = document.createRange();
-  range.selectNodeContents(document.body);
-  const match = findTextInRange(textFragment.textStart, range);
-  if (match != null) {
-    return markRange(match);
+  const searchRange = document.createRange();
+  searchRange.selectNodeContents(document.body);
+
+  while (!searchRange.collapsed) {
+    // TODO: add a branch for prefix match
+    const potentialMatch = findTextInRange(textFragment.textStart, searchRange);
+    if (potentialMatch == null) {
+      return [];
+    }
+    advanceRangeStart(
+      searchRange,
+      potentialMatch.startContainer,
+      potentialMatch.startOffset,
+    );
+
+    if (textFragment.textEnd) {
+      const textEndRange = document.createRange();
+      textEndRange.setStart(
+        potentialMatch.endContainer,
+        potentialMatch.endOffset,
+      );
+      textEndRange.setEnd(searchRange.endContainer, searchRange.endOffset);
+      const textEndMatch = findTextInRange(textFragment.textEnd, textEndRange);
+      if (textEndMatch == null) {
+        return [];
+      }
+      potentialMatch.setEnd(textEndMatch.endContainer, textEndMatch.endOffset);
+    }
+
+    // TODO: add a branch for suffix match
+
+    return markRange(potentialMatch);
   }
   return [];
+};
+
+/**
+ * Sets the start of |range| to be the first boundary point after |offset| in
+ * |node|--either at offset+1, or after the node.
+ * @param {Range} range - the range to mutate
+ * @param {Node} node - the node used to determine the new range start
+ * @param {Number} offset - the offset immediately before the desired new
+ *     boundary point.
+ */
+const advanceRangeStart = (range, node, offset) => {
+  try {
+    range.setStart(node, offset + 1);
+  } catch (err) {
+    range.setStartAfter(node);
+  }
 };
 
 /**
@@ -253,7 +295,7 @@ export const scrollElementIntoView = (element) => {
  * Extracts all the text nodes within the given range.
  * @param {Node} root - the root node in which to search
  * @param {Range} range - a range restricting the scope of extraction
- * @return {TextNode[][]} - a list of lists of text nodes, in document order.
+ * @return {Array<String[]>} - a list of lists of text nodes, in document order.
  *     Lists represent block boundaries; i.e., two nodes appear in the same list
  *     iff there are no block element starts or ends in between them.
  */
@@ -460,8 +502,9 @@ const getBoundaryPointAtIndex = (index, textNodes, isEnd) => {
         denormalizedOffset >= 0 &&
         denormalizedOffset <= node.data.length
       ) {
-        if (candidateSubstring.length === targetSubstring.length)
+        if (candidateSubstring.length === targetSubstring.length) {
           return { node: node, offset: denormalizedOffset };
+        }
 
         denormalizedOffset += direction;
 
@@ -547,11 +590,12 @@ const normalizeString = (str) => {
 };
 
 export const forTesting = {
-  markRange: markRange,
-  findTextInRange: findTextInRange,
+  advanceRangeStart: advanceRangeStart,
   findRangeFromNodeList: findRangeFromNodeList,
+  findTextInRange: findTextInRange,
   getBoundaryPointAtIndex: getBoundaryPointAtIndex,
   isWordBounded: isWordBounded,
+  markRange: markRange,
   normalizeString: normalizeString,
 };
 
