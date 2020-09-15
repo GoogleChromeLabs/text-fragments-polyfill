@@ -146,73 +146,22 @@ export const processFragmentDirectives = (parsedFragmentDirectives) => {
 };
 
 /**
- * Highlights a text fragment by surrounding it in a `<mark>` element.
+ * Searches the document for a given text fragment and, if found, wraps the
+ * corresponding text in one or more `<mark>` element(s).
  *
- * Note : If a text fragment only partially intersects an element, the text
- * fragment will be extended to highlight the entire element.
  * @param {TextFragment} textFragment - Text Fragment to highlight.
- * @return {Element[]} `<mark>` element created to highlight the text fragment, if an exact and distinct match was found.
+ * @return {Element[]} `<mark>` elements created to highlight the text fragment,
+ *     if an exact match was found.
  */
 export const processTextFragmentDirective = (textFragment) => {
-  const prefixNodes = findText(textFragment.prefix);
-  const textStartNodes = findText(textFragment.textStart);
-  const textEndNodes = findText(textFragment.textEnd);
-  const suffixNodes = findText(textFragment.suffix);
-
-  if (
-    prefixNodes.length > 1 ||
-    textStartNodes.length > 1 ||
-    textEndNodes.length > 1 ||
-    suffixNodes.length > 1
-  ) {
-    return [];
+  // TODO: currently this only supports textStart matches.
+  const range = document.createRange();
+  range.selectNodeContents(document.body);
+  const match = findTextInRange(textFragment.textStart, range);
+  if (match != null) {
+    return markRange(match);
   }
-
-  if (
-    !prefixNodes.length &&
-    !suffixNodes.length &&
-    textStartNodes.length === 1
-  ) {
-    let startNode;
-    let startOffset;
-    let endNode;
-    let endOffset;
-    // Only `textStart`
-    if (!textEndNodes.length) {
-      [startNode, startOffset] = findRangeNodeAndOffset(
-        textStartNodes[0],
-        textFragment.textStart,
-        true,
-      );
-      [endNode, endOffset] = findRangeNodeAndOffset(
-        textStartNodes[0],
-        textFragment.textStart,
-        false,
-      );
-      // Only `textStart` and `textEnd`
-    } else if (textEndNodes.length === 1) {
-      [startNode, startOffset] = findRangeNodeAndOffset(
-        textStartNodes[0],
-        textFragment.textStart,
-        true,
-      );
-      [endNode, endOffset] = findRangeNodeAndOffset(
-        textEndNodes[0],
-        textFragment.textEnd,
-        false,
-      );
-    }
-    const range = document.createRange();
-    range.setStart(startNode, startOffset);
-    range.setEnd(endNode, endOffset);
-    return markRange(range);
-  }
-
-  if (mark.parentElement) {
-    return mark;
-  } else {
-    return;
-  }
+  return [];
 };
 
 /**
@@ -221,7 +170,7 @@ export const processTextFragmentDirective = (textFragment) => {
  * tree to find all the relevant text nodes and wraps them.
  * @param {Range} range - the range to mark. Must start and end inside of
  *     text nodes.
- * @return {Node[]} The <mark> nodes that were created.
+ * @return {Element[]} The <mark> nodes that were created.
  */
 const markRange = (range) => {
   if (
@@ -301,67 +250,50 @@ export const scrollElementIntoView = (element) => {
 };
 
 /**
- * Shrink a Range in the wanted direction.
- * If the end of a text node is reached, the range's start or end will move to the next node.
- * When a TextNode goes outside the Range, it is removed from the provided array.
- * @param {Range} range - Range to shrink
- * @param {Boolean} start - Whether to move the start of the range or not
- * @param {Node[]} textNodes - Nodes in which to iterate
+ * Extracts all the text nodes within the given range.
+ * @param {Node} root - the root node in which to search
+ * @param {Range} range - a range restricting the scope of extraction
+ * @return {TextNode[][]} - a list of lists of text nodes, in document order.
+ *     Lists represent block boundaries; i.e., two nodes appear in the same list
+ *     iff there are no block element starts or ends in between them.
  */
-const shrinkRange = (range, start, textNodes) => {
-  if (start) {
-    let offset = range.startOffset + 1;
-    let container = range.startContainer;
-    if (offset >= container.textContent.length) {
-      textNodes.shift();
-      container = textNodes[0];
-      offset = 0;
-    }
-    range.setStart(container, offset);
-  } else {
-    let offset = range.endOffset - 1;
-    let container = range.endContainer;
-    if (offset < 0) {
-      textNodes.pop();
-      container = textNodes[textNodes.length - 1];
-      offset = container.textContent.length;
-    }
-    range.setEnd(container, offset);
-  }
-};
+const getAllTextNodes = (root, range) => {
+  const blocks = [];
+  let tmp = [];
 
-/**
- * Returns a list of all the text nodes inside an element.
- * null items represent a break in the text content of the element.
- * All block elements that are rendered by the Renderer are considered a break.
- * @param {HTMLElement} root - Root Element
- * @return {(Node|null)[]} All the TextNodes inside the root element. Text breaks are represented by a null value.
- */
-const getAllTextNodes = (root) => {
-  return Array.from(root.childNodes).reduce((textNodes, node) => {
-    // This node is a text node, add it and return.
-    if (node.nodeType === Node.TEXT_NODE) {
-      textNodes.push(node);
-      return textNodes;
-    }
+  const nodes = Array.from(
+    getElementsIn(root, (node) => {
+      if (range !== undefined && !range.intersectsNode(node))
+        return NodeFilter.FILTER_REJECT;
 
-    const nodeStyle = window.getComputedStyle(node);
-    // If the node is not rendered, just skip it.
-    if (nodeStyle.visibility === 'hidden' || nodeStyle.display === 'none') {
-      return textNodes;
-    }
-
-    // This node is a block element.
-    if (node instanceof HTMLElement && BLOCK_ELEMENTS.includes(node.tagName)) {
-      if (textNodes.slice(-1)[0] !== null) {
-        textNodes.push(null);
+      if (node instanceof HTMLElement) {
+        const nodeStyle = window.getComputedStyle(node);
+        // If the node is not rendered, just skip it.
+        if (nodeStyle.visibility === 'hidden' || nodeStyle.display === 'none') {
+          return NodeFilter.FILTER_REJECT;
+        }
       }
-      return textNodes;
-    }
+      return NodeFilter.FILTER_ACCEPT;
+    }),
+  );
 
-    textNodes.push(...getAllTextNodes(node));
-    return textNodes;
-  }, []);
+  for (const node of nodes) {
+    if (node.nodeType === Node.TEXT_NODE) {
+      tmp.push(node);
+    } else if (
+      node instanceof HTMLElement &&
+      BLOCK_ELEMENTS.includes(node.tagName) &&
+      tmp.length > 0
+    ) {
+      // If this is a block element, the current set of text nodes in |tmp| is
+      // complete, and we need to move on to a new one.
+      blocks.push(tmp);
+      tmp = [];
+    }
+  }
+  if (tmp.length > 0) blocks.push(tmp);
+
+  return blocks;
 };
 
 /**
@@ -385,104 +317,6 @@ const getTextContent = (nodes, startOffset, endOffset) => {
 };
 
 /**
- * Finds the DOM Node and the exact offset where a string starts or ends.
- * @param {HTMLElement} blockNode - Block element in which to search for a given text.
- * @param {string} text - The text for which to find the position.
- * @param {boolean} start - Whether to return the an offset for the start or the text, or the end.
- * @return {[Node, number]} The DOM Node and the offset where the text starts or ends.
- */
-const findRangeNodeAndOffset = (blockNode, text, start) => {
-  const textNodes = getAllTextNodes(blockNode);
-  const textSections = textNodes.reduce(
-    (textParts, textNode) => {
-      if (textNode) {
-        textParts.slice(-1)[0].push(textNode);
-      } else {
-        textParts.push([]);
-      }
-      return textParts;
-    },
-    [[]],
-  );
-  const { range, nodes } = textSections
-    .map((section) => {
-      const r = document.createRange();
-      r.setStart(section[0], 0);
-      r.setEnd(
-        section[section.length - 1],
-        section[section.length - 1].textContent.length,
-      );
-      return { range: r, nodes: section };
-    })
-    .find(({ nodes }) => {
-      return getTextContent(nodes, 0).includes(text);
-    });
-
-  let container;
-  let offset;
-  let i = 0;
-  while (
-    getTextContent(nodes, range.startOffset, range.endOffset).includes(text)
-  ) {
-    ++i;
-    container = start ? range.startContainer : range.endContainer;
-    offset = start ? range.startOffset : range.endOffset;
-    shrinkRange(range, start, nodes);
-    if (i > 20) break;
-  }
-
-  return [container, offset];
-};
-
-/**
- * Finds block elements that directly contain a given text.
- * @param {string} text - Text to find.
- * @return {HTMLElement[]} List of block elements that contain the text.
- */
-const findText = (text) => {
-  if (!text) {
-    return [];
-  }
-
-  // List of block items that contain the text we're looking for.
-  const blockElements = Array.from(
-    getElementsIn(document.body, (element) => {
-      if (
-        BLOCK_ELEMENTS.includes(element.tagName) &&
-        element.innerText.replace(/\s/g, ' ').includes(text)
-      ) {
-        return NodeFilter.FILTER_ACCEPT;
-      } else {
-        return NodeFilter.FILTER_REJECT;
-      }
-    }),
-  );
-
-  const matches = [];
-  for (const element of blockElements) {
-    const textParts = Array.from(element.children).reduce(
-      (parts, child) => {
-        if (BLOCK_ELEMENTS.includes(child.tagName)) {
-          return [
-            ...parts.slice(0, -1),
-            ...parts.slice(-1)[0].split(child.innerText),
-          ];
-        } else {
-          return parts;
-        }
-      },
-      [element.innerText],
-    );
-    for (const textPart of textParts) {
-      if (textPart.includes(text)) {
-        matches.push(element);
-      }
-    }
-  }
-  return matches;
-};
-
-/**
  * @callback ElementFilterFunction
  * @param {HTMLElement} element - Node to accept, reject or skip.
  * @returns {number} Either NodeFilter.FILTER_ACCEPT, NodeFilter.FILTER_REJECT or NodeFilter.FILTER_SKIP.
@@ -496,9 +330,11 @@ const findText = (text) => {
  * @yield {HTMLElement} All elements that were accepted by filter.
  */
 function* getElementsIn(root, filter) {
-  const treeWalker = document.createTreeWalker(root, NodeFilter.SHOW_ELEMENT, {
-    acceptNode: filter,
-  });
+  const treeWalker = document.createTreeWalker(
+    root,
+    NodeFilter.SHOW_ELEMENT | NodeFilter.SHOW_TEXT,
+    { acceptNode: filter },
+  );
 
   let currentNode;
   while ((currentNode = treeWalker.nextNode())) {
@@ -506,24 +342,20 @@ function* getElementsIn(root, filter) {
   }
 }
 
-// The remaining functions are a WIP reorganization of the code to more closely
-// match the spec. They may be incomplete or partially duplicate code above.
-
 /**
  * Returns a range pointing to the first instance of |query| within |range|.
  * @param {String} query - the string to find
  * @param {Range} range - the range in which to search
+ * @return {Range|Undefined} - The first found instance of |query| within
+ *     |range|.
  */
 const findTextInRange = (query, range) => {
-  const searchRange = range.cloneRange();
-  while (!searchRange.collapsed) {
-    // const curNode = searchRange.startNode;
-    // Check if searchable and visible
-    // Calculate block ancestor
-    // Make node list from all children of block ancestor
-    // Find range from node list
-    // Advance if needed
+  const textNodeLists = getAllTextNodes(range.commonAncestorContainer, range);
+  for (const list of textNodeLists) {
+    const found = findRangeFromNodeList(query, range, list);
+    if (found !== undefined) return found;
   }
+  return undefined;
 };
 
 /**
