@@ -58,6 +58,32 @@ describe('TextFragmentUtils', function () {
     expect(marksArrayToString(marks)).toEqual('And another one');
   });
 
+  // The word 'a' is an ambiguous match in this document. Test that a prefix
+  // allows us to get the right instance.
+  it('works with prefix-based matches within a node', function () {
+    document.body.innerHTML = window.__html__['complicated-layout.html'];
+    const directives = utils.getFragmentDirectives('#:~:text=is-,a');
+    const parsedDirectives = utils.parseFragmentDirectives(directives);
+    const processedDirectives = utils.processFragmentDirectives(
+      parsedDirectives,
+    )['text'];
+    const marks = processedDirectives[0];
+    expect(marksArrayToString(marks)).toEqual('a');
+    expect(marks[0].parentElement.id).toEqual('root');
+  });
+
+  it('works with prefix-based matches across block boundaries', function () {
+    document.body.innerHTML = window.__html__['complicated-layout.html'];
+    const directives = utils.getFragmentDirectives('#:~:text=test-,a');
+    const parsedDirectives = utils.parseFragmentDirectives(directives);
+    const processedDirectives = utils.processFragmentDirectives(
+      parsedDirectives,
+    )['text'];
+    const marks = processedDirectives[0];
+    expect(marksArrayToString(marks)).toEqual('A');
+    expect(marks[0].parentElement.id).toEqual('first-p');
+  });
+
   it('can wrap a complex structure in <mark>s', function () {
     document.body.innerHTML = __html__['marks_test.html'];
     const range = document.createRange();
@@ -116,7 +142,7 @@ describe('TextFragmentUtils', function () {
     }
   });
 
-  it('can advance a range start', function () {
+  it('can advance a range start past an offset', function () {
     document.body.innerHTML = __html__['marks_test.html'];
     const range = document.createRange();
     const elt = document.getElementById('a').firstChild;
@@ -128,15 +154,49 @@ describe('TextFragmentUtils', function () {
 
     // Offset 3 is between whitespace and 'T'. Advancing past it should
     // chop off the 'T'
-    utils.forTesting.advanceRangeStart(range, elt, 3);
+    utils.forTesting.advanceRangeStartPastOffset(range, elt, 3);
     expect(utils.forTesting.normalizeString(range.toString())).toEqual(
       'his is a really ',
     );
 
     // 999 is way out of range, so this should just move to after the node.
-    utils.forTesting.advanceRangeStart(range, elt, 999);
+    utils.forTesting.advanceRangeStartPastOffset(range, elt, 999);
     expect(utils.forTesting.normalizeString(range.toString())).toEqual(
       ' a really ',
+    );
+  });
+
+  it('can advance a range start past boundary chars', function () {
+    document.body.innerHTML = __html__['marks_test.html'];
+    const range = document.createRange();
+    const elt = document.getElementById('a').firstChild;
+    range.setStart(elt, 0);
+    range.setEndAfter(document.getElementById('b').firstChild);
+    expect(utils.forTesting.normalizeString(range.toString())).toEqual(
+      ' this is a really ',
+    );
+
+    // From the start of the node, this is essentially just trimming off the
+    // leading whitespace.
+    utils.forTesting.advanceRangeStartToNonBoundary(range);
+    expect(utils.forTesting.normalizeString(range.toString())).toEqual(
+      'this is a really ',
+    );
+
+    // If we repeat, nothing changes, since the range already starts on a
+    // non-boundary char.
+    utils.forTesting.advanceRangeStartToNonBoundary(range);
+    expect(utils.forTesting.normalizeString(range.toString())).toEqual(
+      'this is a really ',
+    );
+
+    // Offset 10 is after the last non-boundary char in this node. Advancing
+    // will move past this node's trailing whitespace, into the next text node,
+    // and past that node's leading whitespace.
+    range.setStart(elt, 10);
+    utils.forTesting.advanceRangeStartToNonBoundary(range);
+    expect(utils.forTesting.normalizeString(range.toString())).toEqual(
+      'a really ',
     );
   });
 
