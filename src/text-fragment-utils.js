@@ -158,16 +158,62 @@ export const processTextFragmentDirective = (textFragment) => {
   searchRange.selectNodeContents(document.body);
 
   while (!searchRange.collapsed) {
-    // TODO: add a branch for prefix match
-    const potentialMatch = findTextInRange(textFragment.textStart, searchRange);
-    if (potentialMatch == null) {
-      return [];
+    let potentialMatch;
+    if (textFragment.prefix) {
+      const prefixMatch = findTextInRange(textFragment.prefix, searchRange);
+      if (prefixMatch == null) {
+        return [];
+      }
+      // Future iterations, if necessary, should start after the first character
+      // of the prefix match.
+      advanceRangeStartPastOffset(
+        searchRange,
+        prefixMatch.startContainer,
+        prefixMatch.startOffset,
+      );
+
+      // The search space for textStart is everything after the prefix and
+      // before the end of the top-level search range.
+      const matchRange = document.createRange();
+      matchRange.setStart(prefixMatch.endContainer, prefixMatch.endOffset);
+      matchRange.setEnd(searchRange.endContainer, searchRange.endOffset);
+
+      advanceRangeStartToNonBoundary(matchRange);
+      if (matchRange.collapsed) {
+        return [];
+      }
+
+      potentialMatch = findTextInRange(textFragment.textStart, matchRange);
+      // If textStart wasn't found anywhere in the matchRange, then there's no
+      // possible match and we can stop early.
+      if (potentialMatch == null) {
+        return [];
+      }
+
+      // If potentialMatch is immediately after the prefix (i.e., its start
+      // equals matchRange's start), this is a candidate and we should keep
+      // going with this iteration. Otherwise, we'll need to find the next
+      // instance (if any) of the prefix.
+      if (
+        potentialMatch.compareBoundaryPoints(
+          Range.START_TO_START,
+          matchRange,
+        ) !== 0
+      ) {
+        continue;
+      }
+    } else {
+      // With no prefix, just look directly for textStart.
+      potentialMatch = findTextInRange(textFragment.textStart, searchRange);
+      if (potentialMatch == null) {
+        return [];
+      }
+      advanceRangeStartPastOffset(
+        searchRange,
+        potentialMatch.startContainer,
+        potentialMatch.startOffset,
+      );
     }
-    advanceRangeStart(
-      searchRange,
-      potentialMatch.startContainer,
-      potentialMatch.startOffset,
-    );
 
     if (textFragment.textEnd) {
       const textEndRange = document.createRange();
@@ -196,13 +242,52 @@ export const processTextFragmentDirective = (textFragment) => {
  * @param {Range} range - the range to mutate
  * @param {Node} node - the node used to determine the new range start
  * @param {Number} offset - the offset immediately before the desired new
- *     boundary point.
+ *     boundary point
  */
-const advanceRangeStart = (range, node, offset) => {
+const advanceRangeStartPastOffset = (range, node, offset) => {
   try {
     range.setStart(node, offset + 1);
   } catch (err) {
     range.setStartAfter(node);
+  }
+};
+
+/**
+ * Modifies |range| to start at the next non-boundary (i.e., not whitespace
+ * or punctuation) character.
+ * @param {Range} range - the range to mutate
+ */
+const advanceRangeStartToNonBoundary = (range) => {
+  const walker = document.createTreeWalker(
+    range.commonAncestorContainer,
+    NodeFilter.SHOW_TEXT,
+    (node) => {
+      return filterFunction(node, range);
+    },
+  );
+  let node = walker.nextNode();
+  while (!range.collapsed && node != null) {
+    if (node !== range.startContainer) {
+      range.setStart(node, 0);
+    }
+
+    if (node.textContent.length > range.startOffset) {
+      const firstChar = node.textContent[range.startOffset];
+      if (!firstChar.match(BOUNDARY_CHARS)) {
+        return;
+      }
+    }
+
+    try {
+      range.setStart(node, range.startOffset + 1);
+    } catch (err) {
+      node = walker.nextNode();
+      if (node == null) {
+        range.collapse();
+      } else {
+        range.setStart(node, 0);
+      }
+    }
   }
 };
 
@@ -292,6 +377,29 @@ export const scrollElementIntoView = (element) => {
 };
 
 /**
+ * Filter function for use with TreeWalkers. Rejects nodes that aren't in the
+ * given range or aren't visible.
+ * @param {Node} node - the Node to evaluate
+ * @param {Range|Undefined} range - the range in which node must fall. Optional;
+ *     if null, the range check is skipped.
+ * @return {NodeFilter} - FILTER_ACCEPT or FILTER_REJECT, to be passed along to
+ *     a TreeWalker.
+ */
+const filterFunction = (node, range) => {
+  if (range != null && !range.intersectsNode(node))
+    return NodeFilter.FILTER_REJECT;
+
+  if (node instanceof HTMLElement) {
+    const nodeStyle = window.getComputedStyle(node);
+    // If the node is not rendered, just skip it.
+    if (nodeStyle.visibility === 'hidden' || nodeStyle.display === 'none') {
+      return NodeFilter.FILTER_REJECT;
+    }
+  }
+  return NodeFilter.FILTER_ACCEPT;
+};
+
+/**
  * Extracts all the text nodes within the given range.
  * @param {Node} root - the root node in which to search
  * @param {Range} range - a range restricting the scope of extraction
@@ -305,17 +413,7 @@ const getAllTextNodes = (root, range) => {
 
   const nodes = Array.from(
     getElementsIn(root, (node) => {
-      if (range !== undefined && !range.intersectsNode(node))
-        return NodeFilter.FILTER_REJECT;
-
-      if (node instanceof HTMLElement) {
-        const nodeStyle = window.getComputedStyle(node);
-        // If the node is not rendered, just skip it.
-        if (nodeStyle.visibility === 'hidden' || nodeStyle.display === 'none') {
-          return NodeFilter.FILTER_REJECT;
-        }
-      }
-      return NodeFilter.FILTER_ACCEPT;
+      return filterFunction(node, range);
     }),
   );
 
@@ -590,7 +688,8 @@ const normalizeString = (str) => {
 };
 
 export const forTesting = {
-  advanceRangeStart: advanceRangeStart,
+  advanceRangeStartPastOffset: advanceRangeStartPastOffset,
+  advanceRangeStartToNonBoundary: advanceRangeStartToNonBoundary,
   findRangeFromNodeList: findRangeFromNodeList,
   findTextInRange: findTextInRange,
   getBoundaryPointAtIndex: getBoundaryPointAtIndex,
