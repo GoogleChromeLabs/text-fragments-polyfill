@@ -114,7 +114,7 @@ export const parseFragmentDirectives = (fragmentDirectives) => {
  * @return {TextFragment} Object containing textStart, textEnd, prefix and suffix of the text fragment.
  */
 const parseTextFragmentDirective = (textFragment) => {
-  const TEXT_FRAGMENT = /^(?:(.+?)-,)?(?:(.+?))(?:,(.+?))?(?:,-(.+?))?$/;
+  const TEXT_FRAGMENT = /^(?:(.+?)-,)?(?:(.+?))(?:,([^-]+?))?(?:,-(.+?))?$/;
   return {
     prefix: decodeURIComponent(textFragment.replace(TEXT_FRAGMENT, '$1')),
     textStart: decodeURIComponent(textFragment.replace(TEXT_FRAGMENT, '$2')),
@@ -229,8 +229,32 @@ export const processTextFragmentDirective = (textFragment) => {
       potentialMatch.setEnd(textEndMatch.endContainer, textEndMatch.endOffset);
     }
 
-    // TODO: add a branch for suffix match
+    if (textFragment.suffix) {
+      const suffixRange = document.createRange();
+      suffixRange.setStart(
+        potentialMatch.endContainer,
+        potentialMatch.endOffset,
+      );
+      suffixRange.setEnd(searchRange.endContainer, searchRange.endOffset);
+      advanceRangeStartToNonBoundary(suffixRange);
 
+      const suffixMatch = findTextInRange(textFragment.suffix, suffixRange);
+      // If suffix wasn't found anywhere in the suffixRange, then there's no
+      // possible match and we can stop early.
+      if (suffixMatch == null) {
+        return [];
+      }
+
+      // If suffixMatch is immediately after potentialMatch (i.e., its start
+      // equals suffixRange's start), this is a match. If not, we have to
+      // start over from the beginning.
+      if (
+        suffixMatch.compareBoundaryPoints(Range.START_TO_START, suffixRange) !==
+        0
+      ) {
+        continue;
+      }
+    }
     return markRange(potentialMatch);
   }
   return [];
@@ -389,10 +413,19 @@ const filterFunction = (node, range) => {
   if (range != null && !range.intersectsNode(node))
     return NodeFilter.FILTER_REJECT;
 
-  if (node instanceof HTMLElement) {
-    const nodeStyle = window.getComputedStyle(node);
+  // Find an HTMLElement (this node or an ancestor) so we can check visibility.
+  let elt = node;
+  while (elt != null && !(elt instanceof HTMLElement)) elt = elt.parentNode;
+  if (elt != null) {
+    const nodeStyle = window.getComputedStyle(elt);
     // If the node is not rendered, just skip it.
-    if (nodeStyle.visibility === 'hidden' || nodeStyle.display === 'none') {
+    if (
+      nodeStyle.visibility === 'hidden' ||
+      nodeStyle.display === 'none' ||
+      nodeStyle.height === 0 ||
+      nodeStyle.width === 0 ||
+      nodeStyle.opacity === 0
+    ) {
       return NodeFilter.FILTER_REJECT;
     }
   }

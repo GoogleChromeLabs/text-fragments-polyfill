@@ -84,6 +84,33 @@ describe('TextFragmentUtils', function () {
     expect(marks[0].parentElement.id).toEqual('first-p');
   });
 
+  // The word 'a' is an ambiguous match in this document. Test that a suffix
+  // allows us to get the right instance.
+  it('works with suffix-based matches within a node', function () {
+    document.body.innerHTML = window.__html__['complicated-layout.html'];
+    const directives = utils.getFragmentDirectives('#:~:text=a,-list');
+    const parsedDirectives = utils.parseFragmentDirectives(directives);
+    const processedDirectives = utils.processFragmentDirectives(
+      parsedDirectives,
+    )['text'];
+    const marks = processedDirectives[0];
+    expect(marksArrayToString(marks)).toEqual('A');
+    expect(marks[0].parentElement.id).toEqual('first-p');
+  });
+
+  // This also lets us check that non-visible nodes are skipped.
+  it('works with suffix-based matches across block boundaries', function () {
+    document.body.innerHTML = window.__html__['complicated-layout.html'];
+    const directives = utils.getFragmentDirectives('#:~:text=a,-test');
+    const parsedDirectives = utils.parseFragmentDirectives(directives);
+    const processedDirectives = utils.processFragmentDirectives(
+      parsedDirectives,
+    )['text'];
+    const marks = processedDirectives[0];
+    expect(marksArrayToString(marks)).toEqual('a');
+    expect(marks[0].parentElement.id).toEqual('root');
+  });
+
   it('can wrap a complex structure in <mark>s', function () {
     document.body.innerHTML = __html__['marks_test.html'];
     const range = document.createRange();
