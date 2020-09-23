@@ -24,7 +24,10 @@
  */
 
 const regenerate = require('regenerate');
-const set = regenerate()
-  .add(require('unicode-9.0.0/General_Category/Punctuation/code-points.js'))
-  .add(require('unicode-9.0.0/Binary_Property/White_Space/code-points.js'));
+const set =
+    regenerate()
+        .add(require(
+            'unicode-9.0.0/General_Category/Punctuation/code-points.js'))
+        .add(require(
+            'unicode-9.0.0/Binary_Property/White_Space/code-points.js'));
 console.log('/' + set.toString() + '/u');

@@ -31,10 +31,10 @@ import * as utils from './text-fragment-utils.js';
   const init = () => {
     const fragmentDirectives = utils.getFragmentDirectives(hash);
     const parsedFragmentDirectives = utils.parseFragmentDirectives(
-      fragmentDirectives,
+        fragmentDirectives,
     );
     const processedFragmentDirectives = utils.processFragmentDirectives(
-      parsedFragmentDirectives,
+        parsedFragmentDirectives,
     );
     const createdMarks = processedFragmentDirectives['text'];
     const firstFoundMatch = createdMarks.find((marks) => marks.length)[0];

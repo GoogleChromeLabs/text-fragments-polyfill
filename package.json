@@ -12,6 +12,7 @@
     "demo"
   ],
   "devDependencies": {
+    "clang-format": "^1.4.0",
     "eslint": "^7.5.0",
     "eslint-config-google": "^0.14.0",
     "eslint-config-prettier": "^6.11.0",
@@ -31,7 +32,7 @@
   "scripts": {
     "start": "npx http-server",
     "clean": "shx rm -rf dist",
-    "fix": "npx prettier --write .",
+    "fix": "npx clang-format --style=Google -i ./src/*.js ./tools/*.js && npx prettier --write **/*.json **/*.html",
     "prepare": "npm run clean && npm run fix && npm run lint && npx rollup src/text-fragments.js --dir dist -p 'terser'",
     "lint": "npx eslint . --ext .js,.mjs --fix --ignore-pattern dist/",
     "test": "./node_modules/karma/bin/karma start --single-run"
