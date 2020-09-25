@@ -749,7 +749,7 @@ export const forTesting = {
 // Allow importing module from closure-compiler projects that haven't migrated
 // to ES6 modules.
 if (typeof goog !== 'undefined') {
-  // prettier-ignore
-  goog.declareModuleId(
-      'googleChromeLabs.textFragmentPolyfill.textFragmentUtils');
+  // clang-format off
+  goog.declareModuleId('googleChromeLabs.textFragmentPolyfill.textFragmentUtils');
+  // clang-format on
 }
