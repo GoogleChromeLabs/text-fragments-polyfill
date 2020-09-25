@@ -193,44 +193,106 @@ export const processTextFragmentDirective = (textFragment) => {
     if (textFragment.textEnd) {
       const textEndRange = document.createRange();
       textEndRange.setStart(
-          potentialMatch.endContainer,
-          potentialMatch.endOffset,
-      );
+          potentialMatch.endContainer, potentialMatch.endOffset);
       textEndRange.setEnd(searchRange.endContainer, searchRange.endOffset);
-      const textEndMatch = findTextInRange(textFragment.textEnd, textEndRange);
-      if (textEndMatch == null) {
-        return [];
+      // Search through the rest of the document to find a textEnd match. This
+      // may take multiple iterations if a suffix needs to be found.
+      while (!textEndRange.collapsed) {
+        const textEndMatch =
+            findTextInRange(textFragment.textEnd, textEndRange);
+        if (textEndMatch == null) {
+          return [];
+        }
+        advanceRangeStartPastOffset(
+            textEndRange, textEndMatch.startContainer,
+            textEndMatch.startOffset);
+
+        potentialMatch.setEnd(
+            textEndMatch.endContainer, textEndMatch.endOffset);
+        if (textFragment.suffix) {
+          // If there's supposed to be a suffix, check if it appears after the
+          // textEnd we just found.
+          const suffixResult =
+              checkSuffix(textFragment.suffix, potentialMatch, searchRange);
+          switch (suffixResult) {
+            case CheckSuffixResult.NO_SUFFIX_MATCH:
+              return [];
+            case CheckSuffixResult.SUFFIX_MATCH:
+              return markRange(potentialMatch);
+            case CheckSuffixResult.MISPLACED_SUFFIX:
+              continue;
+          }
+        } else {
+          // If we've found textEnd and there's no suffix, then we're done!
+          return markRange(potentialMatch);
+        }
       }
-      potentialMatch.setEnd(textEndMatch.endContainer, textEndMatch.endOffset);
-    }
 
-    if (textFragment.suffix) {
-      const suffixRange = document.createRange();
-      suffixRange.setStart(
-          potentialMatch.endContainer,
-          potentialMatch.endOffset,
-      );
-      suffixRange.setEnd(searchRange.endContainer, searchRange.endOffset);
-      advanceRangeStartToNonBoundary(suffixRange);
-
-      const suffixMatch = findTextInRange(textFragment.suffix, suffixRange);
-      // If suffix wasn't found anywhere in the suffixRange, then there's no
-      // possible match and we can stop early.
-      if (suffixMatch == null) {
-        return [];
-      }
-
-      // If suffixMatch is immediately after potentialMatch (i.e., its start
-      // equals suffixRange's start), this is a match. If not, we have to
-      // start over from the beginning.
-      if (suffixMatch.compareBoundaryPoints(
-              Range.START_TO_START, suffixRange) !== 0) {
-        continue;
+    } else if (textFragment.suffix) {
+      // If there's no textEnd but there is a suffix, search for the suffix
+      // after potentialMatch
+      const suffixResult =
+          checkSuffix(textFragment.suffix, potentialMatch, searchRange);
+      switch (suffixResult) {
+        case CheckSuffixResult.NO_SUFFIX_MATCH:
+          return [];
+        case CheckSuffixResult.SUFFIX_MATCH:
+          return markRange(potentialMatch);
+        case CheckSuffixResult.MISPLACED_SUFFIX:
+          continue;
       }
     }
     return markRange(potentialMatch);
   }
   return [];
+};
+
+/**
+ * Enum indicating the result of the checkSuffix function.
+ */
+const CheckSuffixResult = {
+  NO_SUFFIX_MATCH: 0,   // Suffix wasn't found at all. Search should halt.
+  SUFFIX_MATCH: 1,      // The suffix matches the expectation.
+  MISPLACED_SUFFIX: 2,  // The suffix was found, but not in the right place.
+};
+
+/**
+ * Checks to see if potentialMatch satisfies the suffix conditions of this
+ * Text Fragment.
+ * @param {String} suffix - the suffix text to find
+ * @param {Range} potentialMatch - the Range containing the match text.
+ * @param {Range} searchRange - the Range in which to search for |suffix|.
+ *     Regardless of the start boundary of this Range, nothing appearing before
+ *     |potentialMatch| will be considered.
+ * @return {CheckSuffixResult} - enum value indicating that potentialMatch
+ *     should be accepted, that the search should continue, or that the search
+ *     should halt.
+ */
+const checkSuffix = (suffix, potentialMatch, searchRange) => {
+  const suffixRange = document.createRange();
+  suffixRange.setStart(
+      potentialMatch.endContainer,
+      potentialMatch.endOffset,
+  );
+  suffixRange.setEnd(searchRange.endContainer, searchRange.endOffset);
+  advanceRangeStartToNonBoundary(suffixRange);
+
+  const suffixMatch = findTextInRange(suffix, suffixRange);
+  // If suffix wasn't found anywhere in the suffixRange, then there's no
+  // possible match and we can stop early.
+  if (suffixMatch == null) {
+    return CheckSuffixResult.NO_SUFFIX_MATCH;
+  }
+
+  // If suffixMatch is immediately after potentialMatch (i.e., its start
+  // equals suffixRange's start), this is a match. If not, we have to
+  // start over from the beginning.
+  if (suffixMatch.compareBoundaryPoints(Range.START_TO_START, suffixRange) !==
+      0) {
+    return CheckSuffixResult.MISPLACED_SUFFIX;
+  }
+
+  return CheckSuffixResult.SUFFIX_MATCH;
 };
 
 /**
@@ -515,9 +577,8 @@ const findRangeFromNodeList = (query, range, textNodes) => {
   let searchStart = textNodes[0] === range.startNode ? range.startOffset : 0;
   let start;
   let end;
-  let matchIndex;
-  while (matchIndex === undefined) {
-    matchIndex = data.indexOf(normalizedQuery, searchStart);
+  while (searchStart < data.length) {
+    const matchIndex = data.indexOf(normalizedQuery, searchStart);
     if (matchIndex === -1) return undefined;
     if (isWordBounded(data, matchIndex, normalizedQuery.length)) {
       start = getBoundaryPointAtIndex(matchIndex, textNodes, /* isEnd=*/ false);
@@ -526,21 +587,20 @@ const findRangeFromNodeList = (query, range, textNodes) => {
           textNodes,
           /* isEnd=*/ true,
       );
-    } else {
-      searchStart = matchIndex + 1;
-      matchIndex = undefined;
     }
-  }
-  if (start !== undefined && end !== undefined) {
-    const foundRange = document.createRange();
-    foundRange.setStart(start.node, start.offset);
-    foundRange.setEnd(end.node, end.offset);
 
-    // Verify that |foundRange| is a subrange of |range|
-    if (range.compareBoundaryPoints(Range.START_TO_START, foundRange) <= 0 &&
-        range.compareBoundaryPoints(Range.END_TO_END, foundRange) >= 0) {
-      return foundRange;
+    if (start != null && end != null) {
+      const foundRange = document.createRange();
+      foundRange.setStart(start.node, start.offset);
+      foundRange.setEnd(end.node, end.offset);
+
+      // Verify that |foundRange| is a subrange of |range|
+      if (range.compareBoundaryPoints(Range.START_TO_START, foundRange) <= 0 &&
+          range.compareBoundaryPoints(Range.END_TO_END, foundRange) >= 0) {
+        return foundRange;
+      }
     }
+    searchStart = matchIndex + 1;
   }
   return undefined;
 };

@@ -111,6 +111,40 @@ describe('TextFragmentUtils', function () {
     expect(marks[0].parentElement.id).toEqual('root');
   });
 
+  it('can distinguish ambiguous matches using a prefix/suffix', function () {
+    document.body.innerHTML = window.__html__['ambiguous-match.html'];
+    const directives = utils.getFragmentDirectives('#:~:text=prefix2-,target,target,-suffix1');
+    const parsedDirectives = utils.parseFragmentDirectives(directives);
+    const processedDirectives = utils.processFragmentDirectives(
+      parsedDirectives,
+    )['text'];
+    const marks = processedDirectives[0];
+    expect(marks[0].parentElement.id).toEqual('target2');
+    expect(marks[marks.length - 1].parentElement.id).toEqual('target4');
+    expect(marksArrayToString(marks)).toEqual("target suffix2 prefix1 target suffix2 prefix2 target");
+  });
+  
+  it('will ignore text matches without a matching prefix', function () {
+    document.body.innerHTML = window.__html__['ambiguous-match.html'];
+    const directives = utils.getFragmentDirectives('#:~:text=prefix3-,target');
+    const parsedDirectives = utils.parseFragmentDirectives(directives);
+    const processedDirectives = utils.processFragmentDirectives(
+      parsedDirectives,
+    )['text'];
+    expect(processedDirectives[0].length).toEqual(0);
+  });
+  
+  it('will ignore text matches without a matching suffix', function () {
+    document.body.innerHTML = window.__html__['ambiguous-match.html'];
+    const directives = utils.getFragmentDirectives('#:~:text=prefix1-,target,-suffix3');
+    const parsedDirectives = utils.parseFragmentDirectives(directives);
+    const processedDirectives = utils.processFragmentDirectives(
+      parsedDirectives,
+    )['text'];
+    expect(processedDirectives[0].length).toEqual(0);
+  });
+  
+  
   it('can wrap a complex structure in <mark>s', function () {
     document.body.innerHTML = __html__['marks_test.html'];
     const range = document.createRange();
