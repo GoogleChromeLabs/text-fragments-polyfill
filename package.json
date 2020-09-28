@@ -1,7 +1,7 @@
 {
   "name": "text-fragments-polyfill",
-  "version": "0.0.7",
-  "description": "This is an attempt to polyfill the [Text Fragments](https://wicg.github.io/scroll-to-text-fragment/) feature for browsers that don't support it natively.",
+  "version": "0.1.0",
+  "description": "This is a polyfill for the [Text Fragments](https://wicg.github.io/scroll-to-text-fragment/) feature for browsers that don't support it natively.",
   "main": "src/text-fragments.js",
   "browser": "src/text-fragments.js",
   "module": "dist/text-fragments.js",
@@ -41,7 +41,10 @@
     "type": "git",
     "url": "git+https://github.com/GoogleChromeLabs/text-fragments-polyfill.git"
   },
-  "author": "Thomas Steiner (steiner.thomas@gmail.com)",
+  "contributors": [
+    "Thomas Steiner <steiner.thomas@gmail.com>",
+    "Tommy Martino <tfmartino@gmail.com>"
+  ],
   "license": "Apache-2.0",
   "bugs": {
     "url": "https://github.com/GoogleChromeLabs/text-fragments-polyfill/issues"

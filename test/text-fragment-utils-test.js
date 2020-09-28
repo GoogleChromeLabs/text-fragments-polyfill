@@ -1,4 +1,4 @@
-import * as utils from '../text-fragment-utils.js';
+import * as utils from '../src/text-fragment-utils.js';
 
 // A normalizing helper function to try and compare extracted marks in a way
 // that's robust-ish to reformatting/prettifying of the HTML input files.

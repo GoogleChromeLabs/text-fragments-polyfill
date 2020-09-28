@@ -1,6 +1,6 @@
 # Text Fragments Polyfill
 
-This is an attempt to polyfill the
+This is a polyfill for the
 [Text Fragments](https://wicg.github.io/scroll-to-text-fragment/) feature for
 browsers that don't support it directly.
 
@@ -21,10 +21,20 @@ browsers that don't support it directly.
   </p>
 </div>
 
-There are still **many** limitations and the code is very hacky, but it serves
-well as a proof of concept. This _could_ be used in Chrome for iOS by injecting
-the script with
-[`WKUserScript`](https://developer.apple.com/documentation/webkit/wkuserscript).
+The implementation broadly follows the text-finding algorithms, with a few small deviations
+and reorganizations, and should perform similarly to renderers which have implemented this
+natively. It is used in Chromium for iOS as well as the
+[Link to Text Fragment Browser Extension](https://github.com/GoogleChromeLabs/link-to-text-fragment).
+
+The `src` directory contains two files: `text-fragments.js`, which is the polyfilling
+mechanism, and `text-fragment-utils.js`, a module of util functions related to parsing,
+finding, and highlighting text fragments within the DOM.
+
+The `tools` directory contains a util script used for generating a regex used in the utils
+module.
+
+The `test` directory contains unit tests, based on Karma and Jasmine, as well as HTML files
+which can be loaded during those tests.
 
 ## Installation
 
@@ -47,6 +57,8 @@ From unpkg:
 
 ## Usage
 
+For simple usage as a polyfill, it is sufficient to import the `text-fragments.js` file:
+
 ```js
 // Only load the polyfill in browsers that need it.
 if (
@@ -56,6 +68,10 @@ if (
   import('text-fragments.js');
 }
 ```
+
+Users who wish to take a more hands-on approach can reuse chunks of the logic by
+importing the `text-fragment-utils.js` module; support is provided for inclusion either
+as an ES6 module or using the Closure compiler.
 
 ## Demo
 
