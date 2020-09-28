@@ -4,7 +4,7 @@
 module.exports = function (config) {
   config.set({
     // base path that will be used to resolve all patterns (eg. files, exclude)
-    basePath: 'src',
+    basePath: '.',
 
     // frameworks to use
     // available frameworks: https://npmjs.org/browse/keyword/karma-adapter
@@ -12,14 +12,14 @@ module.exports = function (config) {
 
     // list of files / patterns to load in the browser
     files: [
-      { pattern: '*.js', type: 'module' },
+      { pattern: 'src/*.js', type: 'module' },
       { pattern: 'test/*.js', type: 'module' },
       'test/*.html',
     ],
 
     // list of files / patterns to exclude
     exclude: [
-      'text-fragments.js', // so that the polyfill doesn't run in test
+      'src/text-fragments.js', // so that the polyfill doesn't run in test
     ],
 
     // preprocess matching files before serving them to the browser
