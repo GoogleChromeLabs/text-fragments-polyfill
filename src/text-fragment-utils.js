@@ -248,6 +248,23 @@ export const processTextFragmentDirective = (textFragment) => {
 };
 
 /**
+ * Removes the given highlights.
+ * @param {Node[]} marks - a list of <mark> elements to be removed, with their
+ *     contents extracted and returned to the parent node (from which they were
+ *     originally pulled).
+ */
+export const removeMarks = (marks) => {
+  for (const mark of marks) {
+    const range = document.createRange();
+    range.selectNodeContents(mark);
+    const fragment = range.extractContents();
+    const parent = mark.parentNode;
+    parent.insertBefore(fragment, mark);
+    parent.removeChild(mark);
+  }
+};
+
+/**
  * Enum indicating the result of the checkSuffix function.
  */
 const CheckSuffixResult = {

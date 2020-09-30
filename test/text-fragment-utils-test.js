@@ -144,7 +144,6 @@ describe('TextFragmentUtils', function () {
     expect(processedDirectives[0].length).toEqual(0);
   });
   
-  
   it('can wrap a complex structure in <mark>s', function () {
     document.body.innerHTML = __html__['marks_test.html'];
     const range = document.createRange();
@@ -157,6 +156,9 @@ describe('TextFragmentUtils', function () {
     expect(marksArrayToString(marks)).toEqual(
       'This is a really elaborate fancy div with lots of different stuff in it.',
     );
+    
+    utils.removeMarks(marks);
+    expect(document.body.innerHTML).toEqual(__html__['marks_test.html']);
   });
 
   it('can wrap a portion of a single text node in <mark>s', function () {
@@ -166,6 +168,9 @@ describe('TextFragmentUtils', function () {
     range.setEnd(document.getElementById('f').firstChild, 17);
     const marks = utils.forTesting.markRange(range);
     expect(marksArrayToString(marks)).toEqual('of different');
+    
+    utils.removeMarks(marks);
+    expect(document.body.innerHTML).toEqual(__html__['marks_test.html']);
   });
 
   it('can <mark> a range covering many tree depths', function () {
@@ -175,6 +180,9 @@ describe('TextFragmentUtils', function () {
     range.setEnd(document.getElementById('e').nextSibling, 6);
     const marks = utils.forTesting.markRange(range);
     expect(marksArrayToString(marks)).toEqual('elaborate fancy div');
+    
+    utils.removeMarks(marks);
+    expect(document.body.innerHTML).toEqual(__html__['marks_test.html']);
   });
 
   it('can normalize text', function () {
