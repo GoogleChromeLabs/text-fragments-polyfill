@@ -17,9 +17,9 @@
 /**
  * @typedef {Object} TextFragment
  * @property {string} textStart
- * @property {string} textEnd
- * @property {string} prefix
- * @property {string} suffix
+ * @property {string} [textEnd]
+ * @property {string} [prefix]
+ * @property {string} [suffix]
  */
 
 const FRAGMENT_DIRECTIVES = ['text'];
@@ -262,6 +262,45 @@ export const removeMarks = (marks) => {
     parent.insertBefore(fragment, mark);
     parent.removeChild(mark);
   }
+};
+
+/**
+ * Enum indicating the success, or failure reason, of generateFragment.
+ */
+export const GenerateFragmentStatus = {
+  SUCCESS: 0,            // A fragment was generated.
+  INVALID_SELECTION: 1,  // The selection provided could not be used.
+  AMBIGUOUS: 2  // No unique fragment could be identified for this selection.
+}
+
+/**
+ * @typedef {Object} GenerateFragmentResult
+ * @property {GenerateFragmentStatus} status
+ * @property {TextFragment} [fragment]
+ */
+
+/**
+ * Attempts to generate a fragment, suitable for formatting and including in a
+ * URL, which will highlight the given selection upon opening.
+ * @param {Selection} selection - a Selection object, the result of
+ *     window.getSelection
+ * @return {GenerateFragmentResult}
+ */
+export const generateFragment = (selection) => {
+  let range;
+  try {
+    range = selection.getRangeAt(0);
+  } catch {
+    return {status: GenerateFragmentStatus.INVALID_SELECTION};
+  }
+
+  // TODO: Implement a robust algorithm here which is sensitive to block
+  //    boundaries and uniqueness.
+
+  return {
+    status: GenerateFragmentStatus.SUCCESS,
+    fragment: {textStart: range.toString()}
+  };
 };
 
 /**
