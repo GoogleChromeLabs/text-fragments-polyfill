@@ -17,9 +17,9 @@
 /**
  * @typedef {Object} TextFragment
  * @property {string} textStart
- * @property {string} textEnd
- * @property {string} prefix
- * @property {string} suffix
+ * @property {string} [textEnd]
+ * @property {string} [prefix]
+ * @property {string} [suffix]
  */
 
 const FRAGMENT_DIRECTIVES = ['text'];
@@ -752,6 +752,9 @@ const normalizeString = (str) => {
       .toLowerCase();
 };
 
+/**
+ * Should not be referenced except in the /test directory.
+ */
 export const forTesting = {
   advanceRangeStartPastOffset: advanceRangeStartPastOffset,
   advanceRangeStartToNonBoundary: advanceRangeStartToNonBoundary,
@@ -762,6 +765,13 @@ export const forTesting = {
   markRange: markRange,
   normalizeString: normalizeString,
 };
+
+/**
+ * Should only be used by other files in this directory.
+ */
+export const internal = {
+  normalizeString: normalizeString,
+}
 
 // Allow importing module from closure-compiler projects that haven't migrated
 // to ES6 modules.
