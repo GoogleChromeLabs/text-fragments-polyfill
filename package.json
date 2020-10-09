@@ -1,6 +1,6 @@
 {
   "name": "text-fragments-polyfill",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "This is a polyfill for the [Text Fragments](https://wicg.github.io/scroll-to-text-fragment/) feature for browsers that don't support it natively.",
   "main": "src/text-fragments.js",
   "browser": "src/text-fragments.js",
@@ -32,7 +32,7 @@
   "scripts": {
     "start": "npx http-server",
     "clean": "shx rm -rf dist",
-    "fix": "npx clang-format --style=Google -i ./src/*.js ./tools/*.js && npx prettier --write **/*.json **/*.html",
+    "fix": "npx clang-format --style=Google -i ./src/*.js ./tools/*.js ./test/*.js && npx prettier --write **/*.json **/*.html",
     "prepare": "npm run clean && npm run fix && npm run lint && npx rollup src/text-fragments.js --dir dist -p 'terser'",
     "lint": "npx eslint . --ext .js,.mjs --fix --ignore-pattern dist/",
     "test": "./node_modules/karma/bin/karma start --single-run"
