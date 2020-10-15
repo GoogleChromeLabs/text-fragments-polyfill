@@ -770,6 +770,9 @@ export const forTesting = {
  * Should only be used by other files in this directory.
  */
 export const internal = {
+  BLOCK_ELEMENTS: BLOCK_ELEMENTS,
+  BOUNDARY_CHARS: BOUNDARY_CHARS,
+  filterFunction: filterFunction,
   normalizeString: normalizeString,
 }
 
