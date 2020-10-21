@@ -47,6 +47,7 @@ export const generateFragment = (selection) => {
   }
 
   expandRangeStartToWordBound(range);
+  expandRangeEndToWordBound(range);
 
   return {
     status: GenerateFragmentStatus.SUCCESS,
@@ -60,7 +61,8 @@ export const generateFragment = (selection) => {
  *
  * @param {Node} node - a node to be searched
  * @param {Number|Undefined} startOffset - the character offset within |node|
- *     where the selected text begins. If undefined, the
+ *     where the selected text begins. If undefined, the entire node will be
+ *     searched.
  * @return {Number} the number indicating the offset to which a range should
  *     be set to ensure it starts on a word bound. Returns -1 if the node is not
  *     a text node, or if no word boundary character could be found.
@@ -92,6 +94,64 @@ const findWordStartBoundInTextNode = (node, startOffset) => {
 };
 
 /**
+ * Attempts to find a word end within the given text node, starting at |offset|.
+ *
+ * @param {Node} node - a node to be searched
+ * @param {Number|Undefined} endOffset - the character offset within |node|
+ *     where the selected text end. If undefined, the entire node will be
+ *     searched.
+ * @return {Number} the number indicating the offset to which a range should
+ *     be set to ensure it ends on a word bound. Returns -1 if the node is not
+ *     a text node, or if no word boundary character could be found.
+ */
+const findWordEndBoundInTextNode = (node, endOffset) => {
+  if (node.nodeType !== Node.TEXT_NODE) return -1;
+
+  const offset = endOffset != null ? endOffset : 0;
+
+  // If the last character in the range is a boundary character, we don't
+  // need to do anything.
+  if (offset < node.data.length && offset > 0 &&
+      fragments.internal.BOUNDARY_CHARS.test(node.data[offset - 1])) {
+    return offset;
+  }
+
+  const followingText = node.data.substring(offset);
+  const boundaryIndex = followingText.search(fragments.internal.BOUNDARY_CHARS);
+
+  if (boundaryIndex !== -1) {
+    return offset + boundaryIndex;
+  }
+  return -1;
+};
+
+/**
+ * Helper method to create a TreeWalker useful for finding a block boundary near
+ * a given node.
+ * @param {Node} node - the node where the search should start
+ * @return {TreeWalker} - a TreeWalker, rooted in a block ancestor of |node|,
+ *     currently pointing to |node|, which will traverse only visible text and
+ *     element nodes.
+ */
+const makeWalkerForNode =
+    (node) => {
+      // Find a block-level ancestor of the node by walking up the tree. This
+      // will be used as the root of the tree walker.
+      let blockAncestor = node;
+      while (!isBlock(blockAncestor)) {
+        blockAncestor = blockAncestor.parentNode;
+      }
+      const walker = document.createTreeWalker(
+          blockAncestor, NodeFilter.SHOW_ELEMENT | NodeFilter.SHOW_TEXT,
+          (node) => {
+            return fragments.internal.filterFunction(node);
+          });
+
+      walker.currentNode = node;
+      return walker;
+    }
+
+/**
  * Modifies the start of the range, if necessary, to ensure the selection text
  * starts after a boundary char (whitespace, etc.) or a block boundary. Can only
  * expand the range, not shrink it.
@@ -107,19 +167,7 @@ const expandRangeStartToWordBound = (range) => {
     return;
   }
 
-  // Find a block-level ancestor of the range's start node by walking up the
-  // tree. This will be used as the root of the tree walker.
-  let blockAncestor = range.startContainer;
-  while (!fragments.internal.BLOCK_ELEMENTS.includes(blockAncestor.tagName) &&
-         blockAncestor.tagName !== 'HTML' && blockAncestor.tagName !== 'BODY') {
-    blockAncestor = blockAncestor.parentNode;
-  }
-  const walker = document.createTreeWalker(
-      blockAncestor, NodeFilter.SHOW_ELEMENT | NodeFilter.SHOW_TEXT, (node) => {
-        return fragments.internal.filterFunction(node);
-      });
-
-  walker.currentNode = range.startContainer;
+  const walker = makeWalkerForNode(range.startContainer);
   let node = walker.previousNode();
   while (node != null) {
     const newOffset = findWordStartBoundInTextNode(node);
@@ -130,9 +178,7 @@ const expandRangeStartToWordBound = (range) => {
 
     // If |node| is a block node, then we've hit a block boundary, which counts
     // as a word boundary.
-    if (node.nodeType === Node.ELEMENT_NODE &&
-        (fragments.internal.BLOCK_ELEMENTS.includes(node.tagName) ||
-         node.tagName === 'HTML' || node.tagName === 'BODY')) {
+    if (isBlock(node)) {
       if (node.contains(range.startContainer)) {
         // If the selection starts inside |node|, then the correct range
         // boundary is the *leading* edge of |node|.
@@ -153,9 +199,129 @@ const expandRangeStartToWordBound = (range) => {
   range.collapse();
 };
 
+/**
+ * Helper method to generate a visited set suitable for use with forwardTraverse
+ * below. The initial state of the set will be such that any ancestors of
+ * |walker.currentNode| are already marked visited, since a traversal starting
+ * from document root would have done so.
+ * @param {TreeWalker} walker - the TreeWalker that will be traversed
+ * @return {Set<Node>} - the set to be passed to forwardTraverse
+ */
+const prepareVisitedSet = (walker) => {
+  const visited = new Set();
+  for (let node = walker.currentNode; node !== walker.root;
+       node = node.parentNode) {
+    visited.add(node);
+  }
+  visited.add(walker.root);
+  return visited;
+};
+
+/**
+ * Performs postorder traversal; i.e., nodes with children are returned only
+ * after traversing these children. This allows the ends of block boundaries to
+ * be respected.
+ * @param {TreeWalker} walker - the TreeWalker to be traversed
+ * @param {Set<Node>} visited - the nodes that have already been visited
+ * @return {Node} - identical to calling walker.currentNode
+ */
+const forwardTraverse =
+    (walker, visited) => {
+      const origin = walker.currentNode;
+      // If we've never visited this node before, we need to traverse down.
+      if (!visited.has(origin)) {
+        visited.add(origin);
+        // First, go as deep as possible using children.
+        while (walker.firstChild() != null) {
+          visited.add(walker.currentNode);
+        }
+
+        // Null firstChild means we hit a leaf. If that leaf is not where we
+        // started, return it.
+        if (origin != walker.currentNode) {
+          return walker.currentNode;
+        }
+      }
+
+      // Next, try to descend a sibling subtree.
+      if (walker.nextSibling() != null) {
+        do {
+          visited.add(walker.currentNode);
+        } while (walker.firstChild() != null);
+
+        return walker.currentNode;
+      }
+
+      // If we weren't able to find a child or sibling node, visit the parent
+      // (this is where the postordering happens).
+      return walker.parentNode();
+    }
+
+/**
+ * Modifies the end of the range, if necessary, to ensure the selection text
+ * ends before a boundary char (whitespace, etc.) or a block boundary. Can only
+ * expand the range, not shrink it.
+ * @param {Range} range - the range to be modified
+ */
+const expandRangeEndToWordBound = (range) => {
+  let initialOffset = range.endOffset;
+
+  const walker = makeWalkerForNode(range.endContainer);
+  const visited = prepareVisitedSet(walker);
+
+  let node = walker.currentNode;
+  while (node != null) {
+    const newOffset = findWordEndBoundInTextNode(node, initialOffset);
+    // Future iterations should not use initialOffset; null it out so it is
+    // discarded.
+    initialOffset = null;
+
+    if (newOffset !== -1) {
+      range.setEnd(node, newOffset);
+      return;
+    }
+
+    // If |node| is a block node, then we've hit a block boundary, which counts
+    // as a word boundary.
+    if (isBlock(node)) {
+      if (node.contains(range.endContainer)) {
+        // If the selection starts inside |node|, then the correct range
+        // boundary is the *trailing* edge of |node|.
+        range.setEndAfter(node, node.childNodes.length);
+      } else {
+        // Otherwise, |node| is after the selection, so the correct boundary is
+        // the *leading* edge of |node|.
+        range.setEndBefore(node);
+      }
+      return;
+    }
+
+    node = forwardTraverse(walker, visited);
+  }
+  // We should never get here; the walker should eventually hit a block node
+  // or the root of the document. Collapse range so the caller can handle this
+  // as an error.
+  range.collapse();
+};
+
+/**
+ * Helper to determine if a node is a block element or not.
+ * @param {Node} node - the node to evaluate
+ * @return {Boolean} true iff the node is an element classified as block-level
+ */
+const isBlock = (node) => {
+  return node.nodeType === Node.ELEMENT_NODE &&
+      (fragments.internal.BLOCK_ELEMENTS.includes(node.tagName) ||
+       node.tagName === 'HTML' || node.tagName === 'BODY');
+};
+
 export const forTesting = {
+  expandRangeEndToWordBound: expandRangeEndToWordBound,
   expandRangeStartToWordBound: expandRangeStartToWordBound,
+  findWordEndBoundInTextNode: findWordEndBoundInTextNode,
   findWordStartBoundInTextNode: findWordStartBoundInTextNode,
+  forwardTraverse: forwardTraverse,
+  prepareVisitedSet: prepareVisitedSet,
 };
 
 // Allow importing module from closure-compiler projects that haven't migrated
