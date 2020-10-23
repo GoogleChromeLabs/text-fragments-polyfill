@@ -16,6 +16,8 @@
 
 import * as fragments from './text-fragment-utils.js';
 
+const MAX_EXACT_MATCH_LENGTH = 300;
+
 /**
  * Enum indicating the success, or failure reason, of generateFragment.
  */
@@ -49,10 +51,41 @@ export const generateFragment = (selection) => {
   expandRangeStartToWordBound(range);
   expandRangeEndToWordBound(range);
 
-  return {
-    status: GenerateFragmentStatus.SUCCESS,
-    fragment: {textStart: fragments.internal.normalizeString(range.toString())}
-  };
+  if (canUseExactMatch(range)) {
+    return {
+      status: GenerateFragmentStatus.SUCCESS,
+      fragment:
+          {textStart: fragments.internal.normalizeString(range.toString())}
+    };
+  }
+  // Temporarily return INVALID_SELECTION for unsupported cases.
+  return {status: GenerateFragmentStatus.INVALID_SELECTION};
+};
+
+const canUseExactMatch = (range) => {
+  if (range.toString().length > MAX_EXACT_MATCH_LENGTH) return false;
+  return !containsBlockBoundary(range);
+};
+
+const containsBlockBoundary = (range) => {
+  const tempRange = range.cloneRange();
+
+  // Get a handle on the first node inside the range. For text nodes, this is
+  // the start container; for element nodes, we use the offset to find where it
+  // actually starts.
+  let node = tempRange.startContainer;
+  if (node.nodeType == Node.ELEMENT_NODE) {
+    node = node.childNodes[tempRange.startOffset];
+  }
+
+  const walker = makeWalkerForNode(node);
+
+  while (!tempRange.collapsed && node != null) {
+    if (isBlock(node)) return true;
+    node = walker.nextNode();
+    if (node != null) tempRange.setStartBefore(node);
+  }
+  return false;
 };
 
 /**
@@ -316,6 +349,7 @@ const isBlock = (node) => {
 };
 
 export const forTesting = {
+  containsBlockBoundary: containsBlockBoundary,
   expandRangeEndToWordBound: expandRangeEndToWordBound,
   expandRangeStartToWordBound: expandRangeStartToWordBound,
   findWordEndBoundInTextNode: findWordEndBoundInTextNode,

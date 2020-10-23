@@ -20,6 +20,43 @@ describe('FragmentGenerationUtils', function() {
     expect(result.fragment.suffix).toBeUndefined();
   });
 
+  it('can detect if a range contains a block boundary', function() {
+    document.body.innerHTML = __html__['marks_test.html'];
+    const range = document.createRange();
+
+    // Starts/ends inside text nodes that are children of the same block element
+    // and have block elements in between them.
+    const root = document.getElementById('a');
+    range.setStart(root.firstChild, 3);
+    range.setEnd(root.lastChild, 5);
+    expect(utils.forTesting.containsBlockBoundary(range)).toEqual(true);
+
+    // Starts/ends inside a single text node.
+    range.setStart(root.firstChild, 3);
+    range.setEnd(root.firstChild, 7);
+    expect(utils.forTesting.containsBlockBoundary(range)).toEqual(false);
+
+    // Contains other nodes, but none of them are block nodes.
+    range.setStart(root.childNodes[4], 1);  // "div with"
+    range.setEnd(root.lastChild, 5);
+    console.log(range.toString());
+    expect(utils.forTesting.containsBlockBoundary(range)).toEqual(false);
+
+    // Detects boundaries that are only the start of a block node.
+    range.setStart(root.firstChild, 3);
+    range.setEnd(document.getElementById('b').firstChild, 5);  // "a really"
+    expect(utils.forTesting.containsBlockBoundary(range)).toEqual(true);
+  });
+
+  // Disabled pending fixes to forward traversal.
+  xit('can handle the weird case for checking a range for block boundaries',
+      function() {
+        // Detects boundaries that are only the end of a block node.
+        range.setStart(document.getElementById('e').firstChild, 1);  // "fancy"
+        range.setEnd(root.childNodes[4], 3);  // "div with"
+        expect(utils.forTesting.containsBlockBoundary(range)).toEqual(true);
+      });
+
   it('can find a word start inside a text node', function() {
     document.body.innerHTML = __html__['word_bounds_test.html'];
     const elt = document.getElementById('block');
