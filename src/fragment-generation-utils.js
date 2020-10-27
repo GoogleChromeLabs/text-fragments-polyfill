@@ -79,11 +79,12 @@ const containsBlockBoundary = (range) => {
   }
 
   const walker = makeWalkerForNode(node);
+  const map = createOverrideMap(walker);
 
   while (!tempRange.collapsed && node != null) {
     if (isBlock(node)) return true;
-    node = walker.nextNode();
-    if (node != null) tempRange.setStartBefore(node);
+    if (node != null) tempRange.setStartAfter(node);
+    node = forwardTraverse(walker, map);
   }
   return false;
 };
@@ -166,23 +167,21 @@ const findWordEndBoundInTextNode = (node, endOffset) => {
  *     currently pointing to |node|, which will traverse only visible text and
  *     element nodes.
  */
-const makeWalkerForNode =
-    (node) => {
-      // Find a block-level ancestor of the node by walking up the tree. This
-      // will be used as the root of the tree walker.
-      let blockAncestor = node;
-      while (!isBlock(blockAncestor)) {
-        blockAncestor = blockAncestor.parentNode;
-      }
-      const walker = document.createTreeWalker(
-          blockAncestor, NodeFilter.SHOW_ELEMENT | NodeFilter.SHOW_TEXT,
-          (node) => {
-            return fragments.internal.filterFunction(node);
-          });
+const makeWalkerForNode = (node) => {
+  // Find a block-level ancestor of the node by walking up the tree. This
+  // will be used as the root of the tree walker.
+  let blockAncestor = node;
+  while (!isBlock(blockAncestor)) {
+    blockAncestor = blockAncestor.parentNode;
+  }
+  const walker = document.createTreeWalker(
+      blockAncestor, NodeFilter.SHOW_ELEMENT | NodeFilter.SHOW_TEXT, (node) => {
+        return fragments.internal.filterFunction(node);
+      });
 
-      walker.currentNode = node;
-      return walker;
-    }
+  walker.currentNode = node;
+  return walker;
+};
 
 /**
  * Modifies the start of the range, if necessary, to ensure the selection text
@@ -233,62 +232,71 @@ const expandRangeStartToWordBound = (range) => {
 };
 
 /**
- * Helper method to generate a visited set suitable for use with forwardTraverse
- * below. The initial state of the set will be such that any ancestors of
- * |walker.currentNode| are already marked visited, since a traversal starting
- * from document root would have done so.
+ * Helper method to create an override map which will "inject" the ancestors of
+ * the walker's starting node into traversal order, when using forwardTraverse.
+ * By traversing these ancestor nodes after their children (postorder), we can
+ * ensure that, if the walker's origin node is inside of a block element, the
+ * end of that element is properly treated as a boundary.
  * @param {TreeWalker} walker - the TreeWalker that will be traversed
- * @return {Set<Node>} - the set to be passed to forwardTraverse
+ * @return {Map<Node, Node>} - the Map to be passed to forwardTraverse
  */
-const prepareVisitedSet = (walker) => {
-  const visited = new Set();
-  for (let node = walker.currentNode; node !== walker.root;
-       node = node.parentNode) {
-    visited.add(node);
+const createOverrideMap = (walker) => {
+  // Store the current state so it can be restored at the end.
+  const walkerOrigin = walker.currentNode;
+
+  const ancestors = new Set();
+  const overrideMap = new Map();
+
+  while (walker.parentNode() != null) {
+    // Hold on to the current node so we can reset the walker later.
+    const node = walker.currentNode;
+    ancestors.add(node);
+
+    // The override map needs to point from the last (grand*)child of |node|
+    // back to |node|, so that we traverse |node| only after all of its
+    // children. If we hit another ancestor of the origin, use that instead
+    // (since it's already part of a postorder chain in our map).
+    while (walker.lastChild() != null) {
+      if (ancestors.has(walker.currentNode)) {
+        break;
+      }
+    }
+
+    // Set the mapping from the found child to its ancestor.
+    if (walker.currentNode !== node) overrideMap.set(walker.currentNode, node);
+
+    // Next, set a mapping from the ancestor to the node it displaced in the
+    // ordering. This might get overwritten later if another ancestor needs to
+    // get inserted in the ordering too.
+    overrideMap.set(node, walker.nextNode());
+
+    // Reset the walker to where it was before we traversed downwards.
+    walker.currentNode = node;
   }
-  visited.add(walker.root);
-  return visited;
+
+  walker.currentNode = walkerOrigin;
+  return overrideMap;
 };
 
 /**
- * Performs postorder traversal; i.e., nodes with children are returned only
- * after traversing these children. This allows the ends of block boundaries to
- * be respected.
+ * Performs traversal on a TreeWalker, using document order except when a node
+ * has an entry in |overrideMap|, in which case navigation skips to the
+ * indicated destination. This is useful for ensuring the ends of block
+ * boundaries are found.
  * @param {TreeWalker} walker - the TreeWalker to be traversed
- * @param {Set<Node>} visited - the nodes that have already been visited
- * @return {Node} - identical to calling walker.currentNode
+ * @param {Map<Node, Node>} overrideMap - maps nodes to the nodes which should
+ *     follow them during traversal, if this differs from document order
+ * @return {Node} - |walker|'s new current node, or null if the current node
+ *     was unchanged (and thus, no further traversal is possible)
  */
-const forwardTraverse =
-    (walker, visited) => {
-      const origin = walker.currentNode;
-      // If we've never visited this node before, we need to traverse down.
-      if (!visited.has(origin)) {
-        visited.add(origin);
-        // First, go as deep as possible using children.
-        while (walker.firstChild() != null) {
-          visited.add(walker.currentNode);
-        }
-
-        // Null firstChild means we hit a leaf. If that leaf is not where we
-        // started, return it.
-        if (origin != walker.currentNode) {
-          return walker.currentNode;
-        }
-      }
-
-      // Next, try to descend a sibling subtree.
-      if (walker.nextSibling() != null) {
-        do {
-          visited.add(walker.currentNode);
-        } while (walker.firstChild() != null);
-
-        return walker.currentNode;
-      }
-
-      // If we weren't able to find a child or sibling node, visit the parent
-      // (this is where the postordering happens).
-      return walker.parentNode();
-    }
+const forwardTraverse = (walker, overrideMap) => {
+  if (overrideMap.has(walker.currentNode)) {
+    const override = overrideMap.get(walker.currentNode);
+    if (override != null) walker.currentNode = override;
+    return override;
+  }
+  return walker.nextNode();
+};
 
 /**
  * Modifies the end of the range, if necessary, to ensure the selection text
@@ -300,7 +308,7 @@ const expandRangeEndToWordBound = (range) => {
   let initialOffset = range.endOffset;
 
   const walker = makeWalkerForNode(range.endContainer);
-  const visited = prepareVisitedSet(walker);
+  const visited = createOverrideMap(walker);
 
   let node = walker.currentNode;
   while (node != null) {
@@ -320,7 +328,7 @@ const expandRangeEndToWordBound = (range) => {
       if (node.contains(range.endContainer)) {
         // If the selection starts inside |node|, then the correct range
         // boundary is the *trailing* edge of |node|.
-        range.setEndAfter(node, node.childNodes.length);
+        range.setEnd(node, node.childNodes.length);
       } else {
         // Otherwise, |node| is after the selection, so the correct boundary is
         // the *leading* edge of |node|.
@@ -355,7 +363,7 @@ export const forTesting = {
   findWordEndBoundInTextNode: findWordEndBoundInTextNode,
   findWordStartBoundInTextNode: findWordStartBoundInTextNode,
   forwardTraverse: forwardTraverse,
-  prepareVisitedSet: prepareVisitedSet,
+  createOverrideMap: createOverrideMap,
 };
 
 // Allow importing module from closure-compiler projects that haven't migrated
