@@ -6,6 +6,7 @@ describe('FragmentGenerationUtils', function() {
     const range = document.createRange();
     // firstChild of body is a <p>; firstChild of <p> is a text node.
     range.selectNodeContents(document.body.firstChild.firstChild);
+
     const selection = window.getSelection();
     selection.removeAllRanges();
     selection.addRange(range);
@@ -23,10 +24,10 @@ describe('FragmentGenerationUtils', function() {
   it('can detect if a range contains a block boundary', function() {
     document.body.innerHTML = __html__['marks_test.html'];
     const range = document.createRange();
+    const root = document.getElementById('a');
 
     // Starts/ends inside text nodes that are children of the same block element
     // and have block elements in between them.
-    const root = document.getElementById('a');
     range.setStart(root.firstChild, 3);
     range.setEnd(root.lastChild, 5);
     expect(utils.forTesting.containsBlockBoundary(range)).toEqual(true);
@@ -37,25 +38,20 @@ describe('FragmentGenerationUtils', function() {
     expect(utils.forTesting.containsBlockBoundary(range)).toEqual(false);
 
     // Contains other nodes, but none of them are block nodes.
-    range.setStart(root.childNodes[4], 1);  // "div with"
+    range.setStart(root.childNodes[4], 3);  // "div with"
     range.setEnd(root.lastChild, 5);
-    console.log(range.toString());
     expect(utils.forTesting.containsBlockBoundary(range)).toEqual(false);
 
     // Detects boundaries that are only the start of a block node.
     range.setStart(root.firstChild, 3);
     range.setEnd(document.getElementById('b').firstChild, 5);  // "a really"
     expect(utils.forTesting.containsBlockBoundary(range)).toEqual(true);
-  });
 
-  // Disabled pending fixes to forward traversal.
-  xit('can handle the weird case for checking a range for block boundaries',
-      function() {
-        // Detects boundaries that are only the end of a block node.
-        range.setStart(document.getElementById('e').firstChild, 1);  // "fancy"
-        range.setEnd(root.childNodes[4], 3);  // "div with"
-        expect(utils.forTesting.containsBlockBoundary(range)).toEqual(true);
-      });
+    // Detects boundaries that are only the end of a block node.
+    range.setStart(document.getElementById('e').firstChild, 1);  // "fancy"
+    range.setEnd(root.childNodes[4], 7);                         // "div with"
+    expect(utils.forTesting.containsBlockBoundary(range)).toEqual(true);
+  });
 
   it('can find a word start inside a text node', function() {
     document.body.innerHTML = __html__['word_bounds_test.html'];
@@ -146,6 +142,8 @@ describe('FragmentGenerationUtils', function() {
 
     utils.forTesting.expandRangeStartToWordBound(range);
     expect(range.toString()).toEqual('Inside block');
+
+    expect(utils.forTesting.containsBlockBoundary(range)).toEqual(false);
   });
 
   it('can expand a range end to an inner block boundary', function() {
@@ -159,6 +157,8 @@ describe('FragmentGenerationUtils', function() {
 
     utils.forTesting.expandRangeEndToWordBound(range);
     expect(range.toString()).toEqual('Inside block');
+
+    expect(utils.forTesting.containsBlockBoundary(range)).toEqual(false);
   });
 
   it('can expand a range end across inline elements', function() {
@@ -180,20 +180,20 @@ describe('FragmentGenerationUtils', function() {
     expect(range.toString()).toEqual('In');
 
     utils.forTesting.expandRangeEndToWordBound(range);
-    console.log(range.endContainer.nodeType + range.endContainer.tagName);
     expect(range.toString()).toEqual('Inline');
   });
 
-  it('can postorder traverse', function() {
+  it('can traverse in order for finding block boundaries', function() {
     document.body.innerHTML = __html__['postorder-tree.html'];
-    const walker = document.createTreeWalker(document.getElementById('h'));
+    const walker = document.createTreeWalker(document.getElementById('i'));
     walker.currentNode = document.getElementById('b').firstChild;
-    const visited = utils.forTesting.prepareVisitedSet(walker);
+    const visited = utils.forTesting.createOverrideMap(walker);
     const traversalOrder = [];
     while (utils.forTesting.forwardTraverse(walker, visited) != null) {
-      if (walker.currentNode.id != null)
+      if (walker.currentNode.id != null) {
         traversalOrder.push(walker.currentNode.id);
+      }
     }
-    expect(traversalOrder).toEqual(['b', 'c', 'e', 'g', 'f', 'd', 'h']);
-  })
+    expect(traversalOrder).toEqual(['b', 'c', 'd', 'e', 'f', 'g', 'h', 'i']);
+  });
 });
