@@ -1,6 +1,6 @@
 {
   "name": "text-fragments-polyfill",
-  "version": "1.1.0",
+  "version": "2.0.0-alpha",
   "description": "This is a polyfill for the [Text Fragments](https://wicg.github.io/scroll-to-text-fragment/) feature for browsers that don't support it natively.",
   "main": "src/text-fragments.js",
   "browser": "src/text-fragments.js",

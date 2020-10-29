@@ -398,4 +398,51 @@ describe('TextFragmentUtils', function() {
           .toEqual(false);
     }
   });
+
+  it('finds all instances of ambiguous fragments', function() {
+    document.body.innerHTML = __html__['ambiguous-match.html'];
+
+    // Simplest case: textStart which appears multiple times
+    let fragment = utils.forTesting.parseTextFragmentDirective('target');
+    let result = utils.processTextFragmentDirective(fragment);
+    expect(result.length).toEqual(4);
+
+    // prefix + textStart
+    fragment = utils.forTesting.parseTextFragmentDirective('prefix1-,target');
+    result = utils.processTextFragmentDirective(fragment);
+    expect(result.length).toEqual(2);
+
+    // textStart + suffix
+    fragment = utils.forTesting.parseTextFragmentDirective('target,-suffix1');
+    result = utils.processTextFragmentDirective(fragment);
+    expect(result.length).toEqual(2);
+
+    // Repeated textStart + textEnd creates lots of combinations; with 4
+    // instances, we get (4 choose 2) = 6.
+    fragment = utils.forTesting.parseTextFragmentDirective('target,target');
+    result = utils.processTextFragmentDirective(fragment);
+    expect(result.length).toEqual(6);
+
+    // First instance of "prefix1 target" can match with 3 other "target"s;
+    // second instance of "prefix1 target" can match with 1 other "target", for
+    // a total of 4.
+    fragment =
+        utils.forTesting.parseTextFragmentDirective('prefix1-,target,target');
+    result = utils.processTextFragmentDirective(fragment);
+    expect(result.length).toEqual(4);
+
+    // First instance of "target" can match with 2 "target suffix2"s; second
+    // instance of "target" can match 1, for a total of 3.
+    fragment =
+        utils.forTesting.parseTextFragmentDirective('target,target,-suffix2');
+    result = utils.processTextFragmentDirective(fragment);
+    expect(result.length).toEqual(3);
+
+    // Two instances of "prefix1 target" can each match with one
+    // "target suffix2"
+    fragment = utils.forTesting.parseTextFragmentDirective(
+        'prefix1-,target,target,-suffix2');
+    result = utils.processTextFragmentDirective(fragment);
+    expect(result.length).toEqual(2);
+  });
 });
