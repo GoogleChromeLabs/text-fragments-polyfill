@@ -115,7 +115,10 @@ export const processFragmentDirectives = (parsedFragmentDirectives) => {
     if (FRAGMENT_DIRECTIVES.includes(fragmentDirectiveType)) {
       processedFragmentDirectives[fragmentDirectiveType] =
           fragmentDirectivesOfType.map((fragmentDirectiveOfType) => {
-            return processTextFragmentDirective(fragmentDirectiveOfType);
+            const result =
+                processTextFragmentDirective(fragmentDirectiveOfType);
+            if (result.length === 1) return markRange(result[0]);
+            return [];
           });
     }
   }
@@ -123,14 +126,16 @@ export const processFragmentDirectives = (parsedFragmentDirectives) => {
 };
 
 /**
- * Searches the document for a given text fragment and, if found, wraps the
- * corresponding text in one or more `<mark>` element(s).
+ * Searches the document for a given text fragment.
  *
  * @param {TextFragment} textFragment - Text Fragment to highlight.
- * @return {Element[]} `<mark>` elements created to highlight the text fragment,
- *     if an exact match was found.
+ * @return {Ranges[]} - Zero or more ranges within the document corresponding
+ *     to the fragment. The fragment uniquely identifies a section of the page
+ *     iff the returned list has length 1
  */
 export const processTextFragmentDirective = (textFragment) => {
+  const results = [];
+
   const searchRange = document.createRange();
   searchRange.selectNodeContents(document.body);
 
@@ -139,7 +144,7 @@ export const processTextFragmentDirective = (textFragment) => {
     if (textFragment.prefix) {
       const prefixMatch = findTextInRange(textFragment.prefix, searchRange);
       if (prefixMatch == null) {
-        return [];
+        break;
       }
       // Future iterations, if necessary, should start after the first character
       // of the prefix match.
@@ -157,14 +162,14 @@ export const processTextFragmentDirective = (textFragment) => {
 
       advanceRangeStartToNonBoundary(matchRange);
       if (matchRange.collapsed) {
-        return [];
+        break;
       }
 
       potentialMatch = findTextInRange(textFragment.textStart, matchRange);
       // If textStart wasn't found anywhere in the matchRange, then there's no
       // possible match and we can stop early.
       if (potentialMatch == null) {
-        return [];
+        break;
       }
 
       // If potentialMatch is immediately after the prefix (i.e., its start
@@ -181,7 +186,7 @@ export const processTextFragmentDirective = (textFragment) => {
       // With no prefix, just look directly for textStart.
       potentialMatch = findTextInRange(textFragment.textStart, searchRange);
       if (potentialMatch == null) {
-        return [];
+        break;
       }
       advanceRangeStartPastOffset(
           searchRange,
@@ -195,13 +200,14 @@ export const processTextFragmentDirective = (textFragment) => {
       textEndRange.setStart(
           potentialMatch.endContainer, potentialMatch.endOffset);
       textEndRange.setEnd(searchRange.endContainer, searchRange.endOffset);
+
       // Search through the rest of the document to find a textEnd match. This
       // may take multiple iterations if a suffix needs to be found.
       while (!textEndRange.collapsed) {
         const textEndMatch =
             findTextInRange(textFragment.textEnd, textEndRange);
         if (textEndMatch == null) {
-          return [];
+          break;
         }
         advanceRangeStartPastOffset(
             textEndRange, textEndMatch.startContainer,
@@ -209,42 +215,45 @@ export const processTextFragmentDirective = (textFragment) => {
 
         potentialMatch.setEnd(
             textEndMatch.endContainer, textEndMatch.endOffset);
+
         if (textFragment.suffix) {
           // If there's supposed to be a suffix, check if it appears after the
           // textEnd we just found.
           const suffixResult =
               checkSuffix(textFragment.suffix, potentialMatch, searchRange);
-          switch (suffixResult) {
-            case CheckSuffixResult.NO_SUFFIX_MATCH:
-              return [];
-            case CheckSuffixResult.SUFFIX_MATCH:
-              return markRange(potentialMatch);
-            case CheckSuffixResult.MISPLACED_SUFFIX:
-              continue;
+          if (suffixResult === CheckSuffixResult.NO_SUFFIX_MATCH) {
+            break;
+          } else if (suffixResult === CheckSuffixResult.SUFFIX_MATCH) {
+            results.push(potentialMatch.cloneRange());
+            continue;
+          } else if (suffixResult === CheckSuffixResult.MISPLACED_SUFFIX) {
+            continue;
           }
         } else {
-          // If we've found textEnd and there's no suffix, then we're done!
-          return markRange(potentialMatch);
+          // If we've found textEnd and there's no suffix, then it's a match!
+          results.push(potentialMatch.cloneRange());
         }
       }
-
     } else if (textFragment.suffix) {
       // If there's no textEnd but there is a suffix, search for the suffix
       // after potentialMatch
       const suffixResult =
           checkSuffix(textFragment.suffix, potentialMatch, searchRange);
-      switch (suffixResult) {
-        case CheckSuffixResult.NO_SUFFIX_MATCH:
-          return [];
-        case CheckSuffixResult.SUFFIX_MATCH:
-          return markRange(potentialMatch);
-        case CheckSuffixResult.MISPLACED_SUFFIX:
-          continue;
+      if (suffixResult === CheckSuffixResult.NO_SUFFIX_MATCH) {
+        break;
+      } else if (suffixResult === CheckSuffixResult.SUFFIX_MATCH) {
+        results.push(potentialMatch.cloneRange());
+        advanceRangeStartPastOffset(
+            searchRange, searchRange.startContainer, searchRange.startOffset);
+        continue;
+      } else if (suffixResult === CheckSuffixResult.MISPLACED_SUFFIX) {
+        continue;
       }
+    } else {
+      results.push(potentialMatch.cloneRange());
     }
-    return markRange(potentialMatch);
   }
-  return [];
+  return results;
 };
 
 /**
@@ -375,7 +384,7 @@ const advanceRangeStartToNonBoundary = (range) => {
  *     text nodes.
  * @return {Element[]} The <mark> nodes that were created.
  */
-const markRange = (range) => {
+export const markRange = (range) => {
   if (range.startContainer.nodeType != Node.TEXT_NODE ||
       range.endContainer.nodeType != Node.TEXT_NODE)
     return [];
@@ -764,6 +773,7 @@ export const forTesting = {
   isWordBounded: isWordBounded,
   markRange: markRange,
   normalizeString: normalizeString,
+  parseTextFragmentDirective: parseTextFragmentDirective,
 };
 
 /**
