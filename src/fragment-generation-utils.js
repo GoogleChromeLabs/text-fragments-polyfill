@@ -79,7 +79,7 @@ const containsBlockBoundary = (range) => {
   }
 
   const walker = makeWalkerForNode(node);
-  const map = createOverrideMap(walker);
+  const map = createForwardOverrideMap(walker);
 
   while (!tempRange.collapsed && node != null) {
     if (isBlock(node)) return true;
@@ -200,7 +200,10 @@ const expandRangeStartToWordBound = (range) => {
   }
 
   const walker = makeWalkerForNode(range.startContainer);
-  let node = walker.previousNode();
+  const visited = new Set();
+  const origin = walker.currentNode;
+
+  let node = backwardTraverse(walker, visited, origin);
   while (node != null) {
     const newOffset = findWordStartBoundInTextNode(node);
     if (newOffset !== -1) {
@@ -223,7 +226,7 @@ const expandRangeStartToWordBound = (range) => {
       return;
     }
 
-    node = walker.previousNode();
+    node = backwardTraverse(walker, visited, origin);
   }
   // We should never get here; the walker should eventually hit a block node
   // or the root of the document. Collapse range so the caller can handle this
@@ -240,7 +243,7 @@ const expandRangeStartToWordBound = (range) => {
  * @param {TreeWalker} walker - the TreeWalker that will be traversed
  * @return {Map<Node, Node>} - the Map to be passed to forwardTraverse
  */
-const createOverrideMap = (walker) => {
+const createForwardOverrideMap = (walker) => {
   // Store the current state so it can be restored at the end.
   const walkerOrigin = walker.currentNode;
 
@@ -299,6 +302,43 @@ const forwardTraverse = (walker, overrideMap) => {
 };
 
 /**
+ * Performs backwards traversal on a TreeWalker, such that parent nodes are
+ * encountered *before* their children (except when they are ancestors of the
+ * starting node |origin|). This is useful for finding block boundaries.
+ * @param {TreeWalker} walker - the TreeWalker to be traversed
+ * @param {Set<Node>} visited - a set used to avoid repeat iterations. Should be
+ *     empty the first time this method is called.
+ * @param {Node} origin - the node where traversal started
+ * @return {Node} - |walker|'s new current node, or null if the current node
+ *     was unchanged (and thus, no further traversal is possible)
+ */
+const backwardTraverse =
+    (walker, visited, origin) => {
+      // Infinite loop to avoid recursion. Will terminate since visited set
+      // guarantees children of a node are only traversed once, and parent node
+      // will be null once the root of the walker is reached.
+      while (true) {
+        // The first time we visit a node, we traverse its children backwards,
+        // unless it's an ancestor of the starting node.
+        if (!visited.has(walker.currentNode) &&
+            !walker.currentNode.contains(origin)) {
+          visited.add(walker.currentNode);
+          if (walker.lastChild() != null) {
+            return walker.currentNode;
+          }
+        }
+
+        if (walker.previousSibling() != null) {
+          return walker.currentNode;
+        } else if (walker.parentNode() == null) {
+          return null;
+        } else if (!visited.has(walker.currentNode)) {
+          return walker.currentNode;
+        }
+      }
+    }
+
+/**
  * Modifies the end of the range, if necessary, to ensure the selection text
  * ends before a boundary char (whitespace, etc.) or a block boundary. Can only
  * expand the range, not shrink it.
@@ -308,7 +348,7 @@ const expandRangeEndToWordBound = (range) => {
   let initialOffset = range.endOffset;
 
   const walker = makeWalkerForNode(range.endContainer);
-  const visited = createOverrideMap(walker);
+  const override = createForwardOverrideMap(walker);
 
   let node = walker.currentNode;
   while (node != null) {
@@ -337,7 +377,7 @@ const expandRangeEndToWordBound = (range) => {
       return;
     }
 
-    node = forwardTraverse(walker, visited);
+    node = forwardTraverse(walker, override);
   }
   // We should never get here; the walker should eventually hit a block node
   // or the root of the document. Collapse range so the caller can handle this
@@ -357,13 +397,14 @@ const isBlock = (node) => {
 };
 
 export const forTesting = {
+  backwardTraverse: backwardTraverse,
   containsBlockBoundary: containsBlockBoundary,
+  createForwardOverrideMap: createForwardOverrideMap,
   expandRangeEndToWordBound: expandRangeEndToWordBound,
   expandRangeStartToWordBound: expandRangeStartToWordBound,
   findWordEndBoundInTextNode: findWordEndBoundInTextNode,
   findWordStartBoundInTextNode: findWordStartBoundInTextNode,
   forwardTraverse: forwardTraverse,
-  createOverrideMap: createOverrideMap,
 };
 
 // Allow importing module from closure-compiler projects that haven't migrated

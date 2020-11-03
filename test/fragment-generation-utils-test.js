@@ -185,15 +185,34 @@ describe('FragmentGenerationUtils', function() {
 
   it('can traverse in order for finding block boundaries', function() {
     document.body.innerHTML = __html__['postorder-tree.html'];
-    const walker = document.createTreeWalker(document.getElementById('i'));
+    const walker = document.createTreeWalker(document.getElementById('l'));
     walker.currentNode = document.getElementById('b').firstChild;
-    const visited = utils.forTesting.createOverrideMap(walker);
+    const override = utils.forTesting.createForwardOverrideMap(walker);
     const traversalOrder = [];
-    while (utils.forTesting.forwardTraverse(walker, visited) != null) {
+    while (utils.forTesting.forwardTraverse(walker, override) != null) {
       if (walker.currentNode.id != null) {
         traversalOrder.push(walker.currentNode.id);
       }
     }
-    expect(traversalOrder).toEqual(['b', 'c', 'd', 'e', 'f', 'g', 'h', 'i']);
+    expect(traversalOrder).toEqual([
+      'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l'
+    ]);
+  });
+
+  it('can traverse in reverse order for finding block boundaries', function() {
+    document.body.innerHTML = __html__['postorder-tree.html'];
+    const walker = document.createTreeWalker(document.getElementById('l'));
+    const origin = document.getElementById('k').firstChild;
+    walker.currentNode = origin;
+    const visited = new Set();
+    const traversalOrder = [];
+    while (utils.forTesting.backwardTraverse(walker, visited, origin) != null) {
+      if (walker.currentNode.id != null) {
+        traversalOrder.push(walker.currentNode.id);
+      }
+    }
+    expect(traversalOrder).toEqual([
+      'k', 'j', 'h', 'i', 'g', 'f', 'c', 'e', 'd', 'b', 'l'
+    ]);
   });
 });
