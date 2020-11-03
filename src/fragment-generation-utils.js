@@ -51,33 +51,186 @@ export const generateFragment = (selection) => {
   expandRangeStartToWordBound(range);
   expandRangeEndToWordBound(range);
 
+  const fragment = {};
+
   if (canUseExactMatch(range)) {
+    fragment.textStart = fragments.internal.normalizeString(range.toString());
+    // TODO: check for ambiguity and maybe add context in these cases.
     return {
       status: GenerateFragmentStatus.SUCCESS,
-      fragment:
-          {textStart: fragments.internal.normalizeString(range.toString())}
+      fragment: fragment,
     };
+  } else {
+    // We have to use textStart and textEnd to identify a range. First, break
+    // the range up based on block boundaries, as textStart/textEnd can't cross
+    // these.
+    // const searchSpace = getSearchSpaceForStartAndEnd(range);
+
+    // TODO: choose progressively longer prefixes of the start search space, and
+    // suffixes of the end search space, until we hit a combination that
+    // uniquely identifies the desired fragment.
   }
+
   // Temporarily return INVALID_SELECTION for unsupported cases.
   return {status: GenerateFragmentStatus.INVALID_SELECTION};
 };
 
+/**
+ * Finds the search space for the textStart parameter when using range match.
+ * This is the text from the start of the range to the first block boundary,
+ * trimmed to remove any leading/trailing boundary characters.
+ * @param {Range} range - the range which will be highlighted.
+ * @return {String|Undefined} - the text which may be used for constructing a
+ *     textStart parameter identifying this range. Will return undefined if no
+ *     block boundaries are found inside this range, or if all the candidate
+ *     ranges were empty (or included only boundary characters).
+ */
+const getSearchSpaceForStart = (range) => {
+  let node = getFirstNodeForBlockSearch(range);
+  const walker = makeWalkerForNode(node, range.endContainer);
+  const map = createForwardOverrideMap(walker);
+  const origin = node;
+
+  // tempRange monitors whether we've exhausted our search space yet.
+  const tempRange = range.cloneRange();
+  while (!tempRange.collapsed && node != null) {
+    // Depending on whether |node| is an ancestor of the start of our
+    // search, we use either its leading or trailing edge as our start.
+    if (node.contains(origin)) {
+      tempRange.setStartAfter(node);
+    } else {
+      tempRange.setStartBefore(node);
+    }
+
+    // If |node| is a block node, then we've hit a block boundary.
+    if (isBlock(node)) {
+      const candidate = range.cloneRange();
+      candidate.setEnd(tempRange.startContainer, tempRange.startOffset);
+      const trimmed = trimBoundary(candidate.toString());
+      if (trimmed.length > 0) {
+        return trimmed;
+      }
+    }
+    node = forwardTraverse(walker, map);
+  }
+  return undefined;
+};
+
+/**
+ * Finds the search space for the textEnd parameter when using range match.
+ * This is the text from the last block boundary to the end of the range,
+ * trimmed to remove any leading/trailing boundary characters.
+ * @param {Range} range - the range which will be highlighted.
+ * @return {String|Undefined} - the text which may be used for constructing a
+ *     textEnd parameter identifying this range. Will return undefined if no
+ *     block boundaries are found inside this range, or if all the candidate
+ *     ranges were empty (or included only boundary characters).
+ */
+const getSearchSpaceForEnd = (range) => {
+  let node = getLastNodeForBlockSearch(range);
+  const walker = makeWalkerForNode(node, range.startContainer);
+  const visited = new Set();
+  const origin = node;
+
+  // tempRange monitors whether we've exhausted our search space yet.
+  const tempRange = range.cloneRange();
+  while (!tempRange.collapsed && node != null) {
+    // Depending on whether |node| is an ancestor of the start of our
+    // search, we use either its leading or trailing edge as our start.
+    if (node.contains(origin)) {
+      tempRange.setEnd(node, 0);
+    } else {
+      tempRange.setEndAfter(node);
+    }
+
+    // If |node| is a block node, then we've hit a block boundary.
+    if (isBlock(node)) {
+      const candidate = range.cloneRange();
+      candidate.setStart(tempRange.endContainer, tempRange.endOffset);
+      const trimmed = trimBoundary(candidate.toString());
+      if (trimmed.length > 0) {
+        return trimmed;
+      }
+    }
+    node = backwardTraverse(walker, visited, origin);
+  }
+  return undefined;
+};
+
+/**
+ * Analogous to the standard String trim method, but removes any boundary chars,
+ * not just whitespace.
+ * @param {String} string - the string to trim
+ * @return {String} - the trimmed string
+ */
+const trimBoundary = (string) => {
+  const startIndex = string.search(fragments.internal.NON_BOUNDARY_CHARS);
+
+  // Search backwards. Spread operator (...) splits full characters, rather
+  // than code points, to avoid breaking unicode characters upon reverse.
+  let endIndex = [...string].reverse().join('').search(
+      fragments.internal.NON_BOUNDARY_CHARS);
+  if (endIndex !== -1) endIndex = string.length - endIndex;
+
+  if (startIndex === -1 || endIndex === -1 || startIndex >= endIndex) return '';
+
+  return string.substring(startIndex, endIndex);
+};
+
+/**
+ * Determines whether the conditions for an exact match are met.
+ * @param {Range} range - the range for which a fragment is being generated.
+ * @return {boolean} - true if exact matching (i.e., only textStart) can be
+ *     used; false if range matching (i.e., both textStart and textEnd) must be
+ *     used.
+ */
 const canUseExactMatch = (range) => {
   if (range.toString().length > MAX_EXACT_MATCH_LENGTH) return false;
   return !containsBlockBoundary(range);
 };
 
+/**
+ * Finds the node at which a forward traversal through |range| should begin,
+ * based on the range's start container and offset values.
+ * @param {Range} range - the range which will be traversed
+ * @return {Node} - the node where traversal should begin
+ */
+const getFirstNodeForBlockSearch = (range) => {
+  // Get a handle on the first node inside the range. For text nodes, this
+  // is the start container; for element nodes, we use the offset to find
+  // where it actually starts.
+  let node = range.startContainer;
+  if (node.nodeType == Node.ELEMENT_NODE) {
+    node = node.childNodes[range.startOffset];
+  }
+  return node;
+};
+
+/**
+ * Finds the node at which a backward traversal through |range| should begin,
+ * based on the range's end container and offset values.
+ * @param {Range} range - the range which will be traversed
+ * @return {Node} - the node where traversal should begin
+ */
+const getLastNodeForBlockSearch = (range) => {
+  // Get a handle on the last node inside the range. For text nodes, this
+  // is the end container; for element nodes, we use the offset to find
+  // where it actually ends. If the offset is 0, the node itself is returned.
+  let node = range.endContainer;
+  if (node.nodeType == Node.ELEMENT_NODE && range.endOffset > 0) {
+    node = node.childNodes[range.endOffset - 1];
+  }
+  return node;
+};
+
+/**
+ * Determines whether or not a range crosses a block boundary.
+ * @param {Range} range - the range to investigate
+ * @return {boolean} - true if a block boundary was found; false otherwise
+ */
 const containsBlockBoundary = (range) => {
   const tempRange = range.cloneRange();
-
-  // Get a handle on the first node inside the range. For text nodes, this is
-  // the start container; for element nodes, we use the offset to find where it
-  // actually starts.
-  let node = tempRange.startContainer;
-  if (node.nodeType == Node.ELEMENT_NODE) {
-    node = node.childNodes[tempRange.startOffset];
-  }
-
+  let node = getFirstNodeForBlockSearch(tempRange);
   const walker = makeWalkerForNode(node);
   const map = createForwardOverrideMap(walker);
 
@@ -163,15 +316,19 @@ const findWordEndBoundInTextNode = (node, endOffset) => {
  * Helper method to create a TreeWalker useful for finding a block boundary near
  * a given node.
  * @param {Node} node - the node where the search should start
+ * @param {Node|Undefined} endNode - optional; if included, the root of the
+ *     walker will be chosen to ensure it can traverse at least as far as this
+ *     node.
  * @return {TreeWalker} - a TreeWalker, rooted in a block ancestor of |node|,
  *     currently pointing to |node|, which will traverse only visible text and
  *     element nodes.
  */
-const makeWalkerForNode = (node) => {
+const makeWalkerForNode = (node, endNode) => {
   // Find a block-level ancestor of the node by walking up the tree. This
   // will be used as the root of the tree walker.
   let blockAncestor = node;
-  while (!isBlock(blockAncestor)) {
+  const endNodeNotNull = endNode != null ? endNode : node;
+  while (!blockAncestor.contains(endNodeNotNull) || !isBlock(blockAncestor)) {
     blockAncestor = blockAncestor.parentNode;
   }
   const walker = document.createTreeWalker(
@@ -405,6 +562,9 @@ export const forTesting = {
   findWordEndBoundInTextNode: findWordEndBoundInTextNode,
   findWordStartBoundInTextNode: findWordStartBoundInTextNode,
   forwardTraverse: forwardTraverse,
+  getSearchSpaceForEnd: getSearchSpaceForEnd,
+  getSearchSpaceForStart: getSearchSpaceForStart,
+  trimBoundary: trimBoundary,
 };
 
 // Allow importing module from closure-compiler projects that haven't migrated
