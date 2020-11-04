@@ -48,8 +48,9 @@ describe('FragmentGenerationUtils', function() {
     range.selectNodeContents(document.getElementById('a'));
 
     expect(fragmentUtils.forTesting.normalizeString(range.toString().trim()))
-        .toEqual('this is a really elaborate fancy div with lots of different stuff in it.');
-    
+        .toEqual(
+            'this is a really elaborate fancy div with lots of different stuff in it.');
+
     selection.removeAllRanges();
     selection.addRange(range);
     result = generationUtils.generateFragment(selection);
@@ -59,7 +60,6 @@ describe('FragmentGenerationUtils', function() {
     expect(result.fragment.textEnd).toEqual('it');
     expect(result.fragment.prefix).toBeUndefined();
     expect(result.fragment.suffix).toBeUndefined();
-
   });
 
   it('can detect if a range contains a block boundary', function() {

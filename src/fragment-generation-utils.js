@@ -52,8 +52,9 @@ export const generateFragment = (selection) => {
   expandRangeEndToWordBound(range);
 
   if (canUseExactMatch(range)) {
-    const fragment = {};
-    fragment.textStart = fragments.internal.normalizeString(range.toString());
+    const fragment = {
+      textStart: fragments.internal.normalizeString(range.toString())
+    };
     if (isUniquelyIdentifying(fragment)) {
       return {
         status: GenerateFragmentStatus.SUCCESS,
@@ -70,7 +71,7 @@ export const generateFragment = (selection) => {
     const startSearchSpace = getSearchSpaceForStart(range);
     const endSearchSpace = getSearchSpaceForEnd(range);
 
-    if (!!startSearchSpace && !!endSearchSpace) {
+    if (startSearchSpace && endSearchSpace) {
       // If the search spaces are truthy, then there's a block boundary between
       // them.
       const factory = new FragmentFactory(startSearchSpace, endSearchSpace);
@@ -316,7 +317,7 @@ const trimBoundary = (string) => {
 const reverseString = (string) => {
   // Spread operator (...) splits full characters, rather than code points, to
   // avoid breaking compound unicode characters upon reverse.
-  return [...string].reverse().join('');
+  return [...(string || '')].reverse().join('');
 };
 
 /**
