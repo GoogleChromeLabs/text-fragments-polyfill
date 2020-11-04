@@ -23,6 +23,45 @@ describe('FragmentGenerationUtils', function() {
     expect(result.fragment.suffix).toBeUndefined();
   });
 
+  it('can generate a fragment for a match across block boundaries', function() {
+    document.body.innerHTML = __html__['marks_test.html'];
+    const range = document.createRange();
+
+    range.setStart(document.getElementById('c'), 0);
+    range.setEnd(document.getElementById('f'), 1);
+
+    expect(fragmentUtils.forTesting.normalizeString(range.toString()))
+        .toEqual('elaborate fancy div with lots of different stuff');
+
+    const selection = window.getSelection();
+    selection.removeAllRanges();
+    selection.addRange(range);
+
+    let result = generationUtils.generateFragment(selection);
+    expect(result.status)
+        .toEqual(generationUtils.GenerateFragmentStatus.SUCCESS);
+    expect(result.fragment.textStart).toEqual('elaborate');
+    expect(result.fragment.textEnd).toEqual('stuff');
+    expect(result.fragment.prefix).toBeUndefined();
+    expect(result.fragment.suffix).toBeUndefined();
+
+    range.selectNodeContents(document.getElementById('a'));
+
+    expect(fragmentUtils.forTesting.normalizeString(range.toString().trim()))
+        .toEqual(
+            'this is a really elaborate fancy div with lots of different stuff in it.');
+
+    selection.removeAllRanges();
+    selection.addRange(range);
+    result = generationUtils.generateFragment(selection);
+    expect(result.status)
+        .toEqual(generationUtils.GenerateFragmentStatus.SUCCESS);
+    expect(result.fragment.textStart).toEqual('This');
+    expect(result.fragment.textEnd).toEqual('it');
+    expect(result.fragment.prefix).toBeUndefined();
+    expect(result.fragment.suffix).toBeUndefined();
+  });
+
   it('can detect if a range contains a block boundary', function() {
     document.body.innerHTML = __html__['marks_test.html'];
     const range = document.createRange();
@@ -298,5 +337,59 @@ describe('FragmentGenerationUtils', function() {
     expect(fragmentUtils.forTesting.normalizeString(
                generationUtils.forTesting.getSearchSpaceForEnd(range)))
         .toEqual('div with lots of different stuff');
+  });
+
+  it('can generate progressively larger fragments for a range', function() {
+    document.body.innerHTML = __html__['range-fragment-test.html'];
+    const range = document.createRange();
+    range.selectNodeContents(document.getElementById('root'));
+
+    const startSpace = generationUtils.forTesting.getSearchSpaceForStart(range);
+    const endSpace = generationUtils.forTesting.getSearchSpaceForEnd(range);
+
+    const factory =
+        new generationUtils.forTesting.FragmentFactory(startSpace, endSpace);
+
+    expect(factory.embiggen()).toEqual(true);
+    expect(startSpace.substring(0, factory.startOffset)).toEqual('repeat');
+    expect(endSpace.substring(factory.endOffset)).toEqual('repeat');
+
+    expect(factory.tryToMakeUniqueFragment()).toBeUndefined();
+
+    expect(factory.embiggen()).toEqual(true);
+    expect(startSpace.substring(0, factory.startOffset))
+        .toEqual('repeat repeat');
+    expect(endSpace.substring(factory.endOffset)).toEqual('repeat repeat');
+
+    expect(factory.tryToMakeUniqueFragment()).toBeUndefined();
+
+    expect(factory.embiggen()).toEqual(true);
+    expect(startSpace.substring(0, factory.startOffset))
+        .toEqual('repeat repeat repeat');
+    expect(endSpace.substring(factory.endOffset))
+        .toEqual('repeat repeat repeat');
+
+    expect(factory.tryToMakeUniqueFragment()).toBeUndefined();
+
+    expect(factory.embiggen()).toEqual(true);
+    expect(startSpace.substring(0, factory.startOffset))
+        .toEqual('repeat repeat repeat unique');
+    expect(endSpace.substring(factory.endOffset))
+        .toEqual('unique repeat repeat repeat');
+
+    const fragment = factory.tryToMakeUniqueFragment();
+    expect(fragment).not.toBeUndefined();
+    expect(fragment.textStart).toEqual('repeat repeat repeat unique');
+    expect(fragment.textEnd).toEqual('unique repeat repeat repeat');
+
+    expect(factory.embiggen()).toEqual(true);
+    expect(startSpace.substring(0, factory.startOffset))
+        .toEqual('repeat repeat repeat unique repeat');
+    expect(endSpace.substring(factory.endOffset))
+        .toEqual('repeat unique repeat repeat repeat');
+
+    expect(factory.embiggen()).toEqual(true);
+    expect(factory.embiggen()).toEqual(true);
+    expect(factory.embiggen()).toEqual(false);
   });
 });

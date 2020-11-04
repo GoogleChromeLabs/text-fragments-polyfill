@@ -51,27 +51,56 @@ export const generateFragment = (selection) => {
   expandRangeStartToWordBound(range);
   expandRangeEndToWordBound(range);
 
-  const fragment = {};
-
   if (canUseExactMatch(range)) {
-    fragment.textStart = fragments.internal.normalizeString(range.toString());
-    // TODO: check for ambiguity and maybe add context in these cases.
-    return {
-      status: GenerateFragmentStatus.SUCCESS,
-      fragment: fragment,
+    const fragment = {
+      textStart: fragments.internal.normalizeString(range.toString())
     };
+    if (isUniquelyIdentifying(fragment)) {
+      return {
+        status: GenerateFragmentStatus.SUCCESS,
+        fragment: fragment,
+      };
+    } else {
+      // TODO: try adding context to see if we can get a unique fragment.
+      return {status: GenerateFragmentStatus.AMBIGUOUS};
+    }
   } else {
     // We have to use textStart and textEnd to identify a range. First, break
     // the range up based on block boundaries, as textStart/textEnd can't cross
     // these.
-    // const searchSpace = getSearchSpaceForStartAndEnd(range);
+    const startSearchSpace = getSearchSpaceForStart(range);
+    const endSearchSpace = getSearchSpaceForEnd(range);
 
-    // TODO: choose progressively longer prefixes of the start search space, and
-    // suffixes of the end search space, until we hit a combination that
-    // uniquely identifies the desired fragment.
+    if (startSearchSpace && endSearchSpace) {
+      // If the search spaces are truthy, then there's a block boundary between
+      // them.
+      const factory = new FragmentFactory(startSearchSpace, endSearchSpace);
+      while (factory.embiggen()) {
+        const fragment = factory.tryToMakeUniqueFragment();
+        if (fragment != null) {
+          return {
+            status: GenerateFragmentStatus.SUCCESS,
+            fragment: fragment,
+          };
+        }
+      }
+      // TODO: Add context here.
+      return {status: GenerateFragmentStatus.AMBIGUOUS};
+    } else {
+      // If the search space was empty/undefined, it's because no block boundary
+      // was found. That means textStart and textEnd *share* a search space, so
+      // our approach must ensure the substrings chosen as candidates don't
+      // overlap.
+      const sharedSearchSpace = trimBoundary(range.toString());
+      if (!!sharedSearchSpace) {
+        // If sharedSearchSpace is falsy, this is an empty selection.
+        return {status: GenerateFragmentStatus.INVALID_SELECTION};
+      }
+
+      // TODO: This needs logic similar to the FragmentFactory above, but
+      // operating on a shared search space.
+    }
   }
-
-  // Temporarily return INVALID_SELECTION for unsupported cases.
   return {status: GenerateFragmentStatus.INVALID_SELECTION};
 };
 
@@ -158,6 +187,111 @@ const getSearchSpaceForEnd = (range) => {
 };
 
 /**
+ * Helper class for constructing range-based fragments for selections that cross
+ * block boundaries.
+ */
+const FragmentFactory = class {
+  /**
+   * @param {String} startSearchSpace - the maximum possible text for textStart
+   * @param {String} endSearchSpace - the maximum possible text for textEnd
+   */
+  constructor(startSearchSpace, endSearchSpace) {
+    this.startSearchSpace = startSearchSpace;
+    this.endSearchSpace = endSearchSpace;
+    this.backwardsEndSearchSpace = reverseString(endSearchSpace);
+    this.startOffset = 0;
+    this.endOffset = endSearchSpace.length;
+  }
+
+  /**
+   * Generates a fragment based on the current state, then tests it for
+   * uniqueness.
+   * @return {TextFragment|Undefined} - a text fragment if the current state is
+   *     uniquely identifying, or undefined if the current state is ambiguous.
+   */
+  tryToMakeUniqueFragment() {
+    const fragment = {
+      textStart: this.startSearchSpace.substring(0, this.startOffset),
+      textEnd: this.endSearchSpace.substring(this.endOffset),
+    };
+    return isUniquelyIdentifying(fragment) ? fragment : undefined;
+  }
+
+  /**
+   * Shifts the current state such that the candidates for textStart and textEnd
+   * represent more of the possible search spaces.
+   * @return {boolean} - true if the desired expansion occurred; false if the
+   *     entire search space has been consumed and no further attempts can be
+   *     made.
+   */
+  embiggen() {
+    // Return false if both start and end have already consumed their full
+    // search spaces.
+    if (this.startOffset === this.startSearchSpace.length &&
+        this.backwardsEndOffset() === this.endSearchSpace.length) {
+      return false;
+    }
+
+    if (this.startOffset < this.startSearchSpace.length) {
+      // Find the next boundary char.
+      // TODO: should keep going if we haven't added any non boundary chars.
+      const newStartOffset =
+          this.startSearchSpace.substring(this.startOffset + 1)
+              .search(fragments.internal.BOUNDARY_CHARS);
+      if (newStartOffset === -1) {
+        this.startOffset = this.startSearchSpace.length;
+      } else {
+        this.startOffset = this.startOffset + 1 + newStartOffset;
+      }
+    }
+
+    if (this.backwardsEndOffset() < this.endSearchSpace.length) {
+      // Find the next boundary char.
+      // TODO: should keep going if we haven't added any non boundary chars.
+      const newBackwardsOffset =
+          this.backwardsEndSearchSpace.substring(this.backwardsEndOffset() + 1)
+              .search(fragments.internal.BOUNDARY_CHARS);
+      if (newBackwardsOffset === -1) {
+        this.setBackwardsEndOffset(this.endSearchSpace.length);
+      } else {
+        this.setBackwardsEndOffset(
+            this.backwardsEndOffset() + 1 + newBackwardsOffset);
+      }
+    }
+
+    // TODO: check if this exceeds the total length limit
+    return true;
+  }
+
+  /**
+   * Helper method for doing arithmetic in the backwards search space.
+   * @return {Number} - the current end offset, as a start offset in the
+   *     backwards search space
+   */
+  backwardsEndOffset() {
+    return this.endSearchSpace.length - this.endOffset;
+  }
+
+  /**
+   * Helper method for doing arithmetic in the backwards search space.
+   * @param {Number} backwardsEndOffset - the desired new value of the start
+   *     offset in the backwards search space
+   */
+  setBackwardsEndOffset(backwardsEndOffset) {
+    this.endOffset = this.endSearchSpace.length - backwardsEndOffset;
+  }
+};
+
+/**
+ * @param {TextFragment} fragment - the candidate fragment
+ * @return {boolean} - true iff the candidate fragment identifies exactly one
+ *     portion of the document.
+ */
+const isUniquelyIdentifying = (fragment) => {
+  return fragments.processTextFragmentDirective(fragment).length === 1;
+};
+
+/**
  * Analogous to the standard String trim method, but removes any boundary chars,
  * not just whitespace.
  * @param {String} string - the string to trim
@@ -166,15 +300,24 @@ const getSearchSpaceForEnd = (range) => {
 const trimBoundary = (string) => {
   const startIndex = string.search(fragments.internal.NON_BOUNDARY_CHARS);
 
-  // Search backwards. Spread operator (...) splits full characters, rather
-  // than code points, to avoid breaking unicode characters upon reverse.
-  let endIndex = [...string].reverse().join('').search(
-      fragments.internal.NON_BOUNDARY_CHARS);
+  let endIndex =
+      reverseString(string).search(fragments.internal.NON_BOUNDARY_CHARS);
   if (endIndex !== -1) endIndex = string.length - endIndex;
 
   if (startIndex === -1 || endIndex === -1 || startIndex >= endIndex) return '';
 
   return string.substring(startIndex, endIndex);
+};
+
+/**
+ * Reverses a string. Compound unicode characters are preserved.
+ * @param {String} string - the string to reverse
+ * @return {String} - sdrawkcab |gnirts|
+ */
+const reverseString = (string) => {
+  // Spread operator (...) splits full characters, rather than code points, to
+  // avoid breaking compound unicode characters upon reverse.
+  return [...(string || '')].reverse().join('');
 };
 
 /**
@@ -266,11 +409,8 @@ const findWordStartBoundInTextNode = (node, startOffset) => {
     return offset;
 
   const precedingText = node.data.substring(0, offset);
-  // Search backwards through text for a boundary char. Spread operator (...)
-  // splits full characters, rather than code points, to avoid breaking
-  // unicode characters upon reverse.
-  const boundaryIndex = [...precedingText].reverse().join('').search(
-      fragments.internal.BOUNDARY_CHARS);
+  const boundaryIndex =
+      reverseString(precedingText).search(fragments.internal.BOUNDARY_CHARS);
 
   if (boundaryIndex !== -1) {
     // Because we did a backwards search, the found index counts backwards
@@ -356,6 +496,12 @@ const expandRangeStartToWordBound = (range) => {
     return;
   }
 
+  // Also, skip doing any traversal if we're already at the inside edge of
+  // a block node.
+  if (isBlock(range.startContainer) && range.startOffset === 0) {
+    return;
+  }
+
   const walker = makeWalkerForNode(range.startContainer);
   const visited = new Set();
   const origin = walker.currentNode;
@@ -407,7 +553,7 @@ const createForwardOverrideMap = (walker) => {
   const ancestors = new Set();
   const overrideMap = new Map();
 
-  while (walker.parentNode() != null) {
+  do {
     // Hold on to the current node so we can reset the walker later.
     const node = walker.currentNode;
     ancestors.add(node);
@@ -432,7 +578,7 @@ const createForwardOverrideMap = (walker) => {
 
     // Reset the walker to where it was before we traversed downwards.
     walker.currentNode = node;
-  }
+  } while (walker.parentNode() != null);
 
   walker.currentNode = walkerOrigin;
   return overrideMap;
@@ -504,10 +650,16 @@ const backwardTraverse =
 const expandRangeEndToWordBound = (range) => {
   let initialOffset = range.endOffset;
 
-  const walker = makeWalkerForNode(range.endContainer);
+  let node = range.endContainer;
+  if (node.nodeType === Node.ELEMENT_NODE) {
+    if (range.endOffset < node.childNodes.length) {
+      node = node.childNodes[range.endOffset];
+    }
+  }
+
+  const walker = makeWalkerForNode(node);
   const override = createForwardOverrideMap(walker);
 
-  let node = walker.currentNode;
   while (node != null) {
     const newOffset = findWordEndBoundInTextNode(node, initialOffset);
     // Future iterations should not use initialOffset; null it out so it is
@@ -562,6 +714,7 @@ export const forTesting = {
   findWordEndBoundInTextNode: findWordEndBoundInTextNode,
   findWordStartBoundInTextNode: findWordStartBoundInTextNode,
   forwardTraverse: forwardTraverse,
+  FragmentFactory: FragmentFactory,
   getSearchSpaceForEnd: getSearchSpaceForEnd,
   getSearchSpaceForStart: getSearchSpaceForStart,
   trimBoundary: trimBoundary,
