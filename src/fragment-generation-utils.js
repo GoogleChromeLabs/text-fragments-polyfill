@@ -71,35 +71,30 @@ export const generateFragment = (selection) => {
     const startSearchSpace = getSearchSpaceForStart(range);
     const endSearchSpace = getSearchSpaceForEnd(range);
 
+    let factory;
+
     if (startSearchSpace && endSearchSpace) {
       // If the search spaces are truthy, then there's a block boundary between
       // them.
-      const factory = new FragmentFactory(startSearchSpace, endSearchSpace);
-      while (factory.embiggen()) {
-        const fragment = factory.tryToMakeUniqueFragment();
-        if (fragment != null) {
-          return {
-            status: GenerateFragmentStatus.SUCCESS,
-            fragment: fragment,
-          };
-        }
-      }
-      // TODO: Add context here.
-      return {status: GenerateFragmentStatus.AMBIGUOUS};
+      factory = new FragmentFactory(startSearchSpace, endSearchSpace);
     } else {
       // If the search space was empty/undefined, it's because no block boundary
       // was found. That means textStart and textEnd *share* a search space, so
       // our approach must ensure the substrings chosen as candidates don't
       // overlap.
-      const sharedSearchSpace = trimBoundary(range.toString());
-      if (!!sharedSearchSpace) {
-        // If sharedSearchSpace is falsy, this is an empty selection.
-        return {status: GenerateFragmentStatus.INVALID_SELECTION};
-      }
-
-      // TODO: This needs logic similar to the FragmentFactory above, but
-      // operating on a shared search space.
+      factory = new FragmentFactory(trimBoundary(range.toString()));
     }
+    while (factory.embiggen()) {
+      const fragment = factory.tryToMakeUniqueFragment();
+      if (fragment != null) {
+        return {
+          status: GenerateFragmentStatus.SUCCESS,
+          fragment: fragment,
+        };
+      }
+    }
+    // TODO: Add context here.
+    return {status: GenerateFragmentStatus.AMBIGUOUS};
   }
   return {status: GenerateFragmentStatus.INVALID_SELECTION};
 };
@@ -196,11 +191,18 @@ const FragmentFactory = class {
    * @param {String} endSearchSpace - the maximum possible text for textEnd
    */
   constructor(startSearchSpace, endSearchSpace) {
-    this.startSearchSpace = startSearchSpace;
-    this.endSearchSpace = endSearchSpace;
-    this.backwardsEndSearchSpace = reverseString(endSearchSpace);
+    if (endSearchSpace != null) {
+      this.startSearchSpace = startSearchSpace;
+      this.endSearchSpace = endSearchSpace;
+      this.backwardsEndSearchSpace = reverseString(endSearchSpace);
+      this.isSharedMode = false;
+    } else {
+      this.sharedSearchSpace = startSearchSpace;
+      this.backwardsSharedSearchSpace = reverseString(startSearchSpace);
+      this.isSharedMode = true;
+    }
     this.startOffset = 0;
-    this.endOffset = endSearchSpace.length;
+    this.endOffset = this.getEndSearchSpace().length;
   }
 
   /**
@@ -211,8 +213,8 @@ const FragmentFactory = class {
    */
   tryToMakeUniqueFragment() {
     const fragment = {
-      textStart: this.startSearchSpace.substring(0, this.startOffset),
-      textEnd: this.endSearchSpace.substring(this.endOffset),
+      textStart: this.getStartSearchSpace().substring(0, this.startOffset),
+      textEnd: this.getEndSearchSpace().substring(this.endOffset),
     };
     return isUniquelyIdentifying(fragment) ? fragment : undefined;
   }
@@ -225,37 +227,47 @@ const FragmentFactory = class {
    *     made.
    */
   embiggen() {
-    // Return false if both start and end have already consumed their full
-    // search spaces.
-    if (this.startOffset === this.startSearchSpace.length &&
-        this.backwardsEndOffset() === this.endSearchSpace.length) {
-      return false;
+    if (!this.isSharedMode) {
+      // Return false if both start and end have already consumed their full
+      // search spaces.
+      if (this.startOffset === this.getStartSearchSpace().length &&
+          this.backwardsEndOffset() === this.getEndSearchSpace().length) {
+        return false;
+      }
     }
 
-    if (this.startOffset < this.startSearchSpace.length) {
+    if (this.startOffset < this.getStartSearchSpace().length) {
       // Find the next boundary char.
       // TODO: should keep going if we haven't added any non boundary chars.
-      const newStartOffset =
-          this.startSearchSpace.substring(this.startOffset + 1)
-              .search(fragments.internal.BOUNDARY_CHARS);
+      const newStartOffset = this.getStartSearchSpace()
+                                 .substring(this.startOffset + 1)
+                                 .search(fragments.internal.BOUNDARY_CHARS);
       if (newStartOffset === -1) {
-        this.startOffset = this.startSearchSpace.length;
+        this.startOffset = this.getStartSearchSpace().length;
       } else {
         this.startOffset = this.startOffset + 1 + newStartOffset;
       }
     }
 
-    if (this.backwardsEndOffset() < this.endSearchSpace.length) {
+    if (this.backwardsEndOffset() < this.getEndSearchSpace().length) {
       // Find the next boundary char.
       // TODO: should keep going if we haven't added any non boundary chars.
-      const newBackwardsOffset =
-          this.backwardsEndSearchSpace.substring(this.backwardsEndOffset() + 1)
-              .search(fragments.internal.BOUNDARY_CHARS);
+      const newBackwardsOffset = this.getBackwardsEndSearchSpace()
+                                     .substring(this.backwardsEndOffset() + 1)
+                                     .search(fragments.internal.BOUNDARY_CHARS);
       if (newBackwardsOffset === -1) {
-        this.setBackwardsEndOffset(this.endSearchSpace.length);
+        this.setBackwardsEndOffset(this.getEndSearchSpace().length);
       } else {
         this.setBackwardsEndOffset(
             this.backwardsEndOffset() + 1 + newBackwardsOffset);
+      }
+    }
+
+    if (this.isSharedMode) {
+      // If the search space is shared between textStart and textEnd, then stop
+      // searching when textStart overlaps textEnd.
+      if (this.startOffset >= this.endOffset) {
+        return false;
       }
     }
 
@@ -264,12 +276,35 @@ const FragmentFactory = class {
   }
 
   /**
+   * @return {String} - the string to be used as the search space for textStart
+   */
+  getStartSearchSpace() {
+    return this.isSharedMode ? this.sharedSearchSpace : this.startSearchSpace;
+  }
+
+  /**
+   * @return {String} - the string to be used as the search space for textEnd
+   */
+  getEndSearchSpace() {
+    return this.isSharedMode ? this.sharedSearchSpace : this.endSearchSpace;
+  }
+
+  /**
+   * @return {String} - the string to be used as the search space for textEnd,
+   *     backwards.
+   */
+  getBackwardsEndSearchSpace() {
+    return this.isSharedMode ? this.backwardsSharedSearchSpace :
+                               this.backwardsEndSearchSpace;
+  }
+
+  /**
    * Helper method for doing arithmetic in the backwards search space.
    * @return {Number} - the current end offset, as a start offset in the
    *     backwards search space
    */
   backwardsEndOffset() {
-    return this.endSearchSpace.length - this.endOffset;
+    return this.getEndSearchSpace().length - this.endOffset;
   }
 
   /**
@@ -278,7 +313,7 @@ const FragmentFactory = class {
    *     offset in the backwards search space
    */
   setBackwardsEndOffset(backwardsEndOffset) {
-    this.endOffset = this.endSearchSpace.length - backwardsEndOffset;
+    this.endOffset = this.getEndSearchSpace().length - backwardsEndOffset;
   }
 };
 
