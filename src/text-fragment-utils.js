@@ -739,6 +739,23 @@ const isWordBounded = (text, startPos, length) => {
     return false;
   }
 
+  // Move startPos until it does not point on a boundary character.
+  while (text[startPos].match(BOUNDARY_CHARS)) {
+    ++startPos;
+    --length;
+    if (!length) {
+      return false;
+    }
+  }
+
+  // Move end character until it does not point on a boundary character.
+  while(text[startPos + length - 1].match(BOUNDARY_CHARS)) {
+    --length;
+    if (!length) {
+      return false;
+    }
+  }
+
   if (startPos !== 0 && !text[startPos - 1].match(BOUNDARY_CHARS)) return false;
 
   if (startPos + length !== text.length &&

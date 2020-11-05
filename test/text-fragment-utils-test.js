@@ -348,6 +348,9 @@ describe('TextFragmentUtils', function() {
       {data: 'the quick, brown dog', substring: 'the quick'},
       {data: 'a "quotation" works', substring: 'quotation'},
       {data: 'other\nspacing\t', substring: 'spacing'},
+      {data: 'text foo bar', substring: 'foo '},
+      {data: 'text foo bar', substring: ' foo'},
+      {data: 'text foo bar', substring: ' foo '},
       // Japanese has no spaces, so only punctuation works as a boundary.
       {data: 'はい。いいえ。', substring: 'いいえ'},
       {data: '『パープル・レイン』', substring: 'パープル'},
@@ -357,6 +360,8 @@ describe('TextFragmentUtils', function() {
       {data: 'testing', substring: 'test'},
       {data: 'attest', substring: 'test'},
       {data: 'untested', substring: 'test'},
+      {data: '  hello ', substring: '  '},
+      {data: ' hello  ', substring: '  '},
       // アルバム is an actual word. With proper Japanese word segmenting we
       // could move this to the true cases, but for now we expect it to be
       // rejected.
