@@ -349,7 +349,7 @@ describe('TextFragmentUtils', function() {
       {data: 'a "quotation" works', substring: 'quotation'},
       {data: 'other\nspacing\t', substring: 'spacing'},
       {data: 'text foo bar', substring: 'foo '},
-      {data: 'text foo bar', substring: ' foo'},
+      {data: 'text  foo bar', substring: '  foo'},
       {data: 'text foo bar', substring: ' foo '},
       // Japanese has no spaces, so only punctuation works as a boundary.
       {data: 'はい。いいえ。', substring: 'いいえ'},
