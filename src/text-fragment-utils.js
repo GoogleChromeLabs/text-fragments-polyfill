@@ -739,7 +739,24 @@ const isWordBounded = (text, startPos, length) => {
     return false;
   }
 
-  if (startPos !== 0 && !text[startPos - 1].match(BOUNDARY_CHARS)) return false;
+  // If the first character is already a boundary, move it once.
+  if (text[startPos].match(BOUNDARY_CHARS)) {
+    ++startPos;
+    --length;
+    if (!length) {
+      return false;
+    }
+  }
+
+  // If the last character is already a boundary, move it once.
+  if (text[startPos + length - 1].match(BOUNDARY_CHARS)) {
+    --length;
+    if (!length) {
+      return false;
+    }
+  }
+
+  if (startPos !== 0 && (!text[startPos - 1].match(BOUNDARY_CHARS))) return false;
 
   if (startPos + length !== text.length &&
       !text[startPos + length].match(BOUNDARY_CHARS))
