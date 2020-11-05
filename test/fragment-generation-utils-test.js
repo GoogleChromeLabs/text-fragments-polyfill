@@ -62,6 +62,21 @@ describe('FragmentGenerationUtils', function() {
     expect(result.fragment.suffix).toBeUndefined();
   });
 
+  it('can generate a fragment for a really long range in a text node.',
+     function() {
+       document.body.innerHTML = __html__['very-long-text.html'];
+       const range = document.createRange();
+       range.selectNodeContents(document.getElementById('root'));
+
+       const selection = window.getSelection();
+       selection.removeAllRanges();
+       selection.addRange(range);
+
+       const result = generationUtils.generateFragment(selection);
+       expect(result.fragment.textStart).toEqual('words words words');
+       expect(result.fragment.textEnd).toEqual('words words words');
+     });
+
   it('can detect if a range contains a block boundary', function() {
     document.body.innerHTML = __html__['marks_test.html'];
     const range = document.createRange();
@@ -339,7 +354,7 @@ describe('FragmentGenerationUtils', function() {
         .toEqual('div with lots of different stuff');
   });
 
-  it('can generate progressively larger fragments for a range', function() {
+  it('can generate progressively larger fragments across blocks', function() {
     document.body.innerHTML = __html__['range-fragment-test.html'];
     const range = document.createRange();
     range.selectNodeContents(document.getElementById('root'));
@@ -390,6 +405,29 @@ describe('FragmentGenerationUtils', function() {
 
     expect(factory.embiggen()).toEqual(true);
     expect(factory.embiggen()).toEqual(true);
+    expect(factory.embiggen()).toEqual(false);
+  });
+
+  it('can generate progressively larger fragments within a block', function() {
+    const sharedSpace = 'text1 text2 text3 text4 text5 text6 text7';
+
+    const factory = new generationUtils.forTesting.FragmentFactory(sharedSpace);
+
+    expect(factory.embiggen()).toEqual(true);
+    expect(sharedSpace.substring(0, factory.startOffset)).toEqual('text1');
+    expect(sharedSpace.substring(factory.endOffset)).toEqual('text7');
+
+    expect(factory.embiggen()).toEqual(true);
+    expect(sharedSpace.substring(0, factory.startOffset))
+        .toEqual('text1 text2');
+    expect(sharedSpace.substring(factory.endOffset)).toEqual('text6 text7');
+
+    expect(factory.embiggen()).toEqual(true);
+    expect(sharedSpace.substring(0, factory.startOffset))
+        .toEqual('text1 text2 text3');
+    expect(sharedSpace.substring(factory.endOffset))
+        .toEqual('text5 text6 text7');
+
     expect(factory.embiggen()).toEqual(false);
   });
 });
