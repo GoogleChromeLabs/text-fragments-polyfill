@@ -96,7 +96,6 @@ export const generateFragment = (selection) => {
     // TODO: Add context here.
     return {status: GenerateFragmentStatus.AMBIGUOUS};
   }
-  return {status: GenerateFragmentStatus.INVALID_SELECTION};
 };
 
 /**
