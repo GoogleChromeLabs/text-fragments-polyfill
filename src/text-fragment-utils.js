@@ -756,7 +756,8 @@ const isWordBounded = (text, startPos, length) => {
     }
   }
 
-  if (startPos !== 0 && (!text[startPos - 1].match(BOUNDARY_CHARS))) return false;
+  if (startPos !== 0 && (!text[startPos - 1].match(BOUNDARY_CHARS)))
+    return false;
 
   if (startPos + length !== text.length &&
       !text[startPos + length].match(BOUNDARY_CHARS))

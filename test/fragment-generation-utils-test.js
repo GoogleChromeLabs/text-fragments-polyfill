@@ -428,6 +428,12 @@ describe('FragmentGenerationUtils', function() {
     expect(sharedSpace.substring(factory.endOffset))
         .toEqual('text5 text6 text7');
 
+    expect(factory.embiggen()).toEqual(true);
+    expect(sharedSpace.substring(0, factory.startOffset))
+        .toEqual('text1 text2 text3 text4');
+    expect(sharedSpace.substring(factory.endOffset))
+        .toEqual(' text5 text6 text7');
+
     expect(factory.embiggen()).toEqual(false);
   });
 });
