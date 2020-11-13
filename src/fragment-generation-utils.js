@@ -93,7 +93,6 @@ export const generateFragment = (selection) => {
         };
       }
     }
-    // TODO: Add context here.
     return {status: GenerateFragmentStatus.AMBIGUOUS};
   }
 };
@@ -226,52 +225,68 @@ const FragmentFactory = class {
    *     made.
    */
   embiggen() {
-    if (!this.isSharedMode) {
-      // Return false if both start and end have already consumed their full
+    let canExpandRange = true;
+
+    if (this.isSharedMode) {
+      if (this.startOffset >= this.endOffset) {
+        // If the search space is shared between textStart and textEnd, then
+        // stop expanding when textStart overlaps textEnd.
+        canExpandRange = false;
+      }
+    } else {
+      // Stop expanding if both start and end have already consumed their full
       // search spaces.
       if (this.startOffset === this.getStartSearchSpace().length &&
           this.backwardsEndOffset() === this.getEndSearchSpace().length) {
-        return false;
+        canExpandRange = false;
       }
     }
 
-    if (this.startOffset < this.getStartSearchSpace().length) {
-      // Find the next boundary char.
-      // TODO: should keep going if we haven't added any non boundary chars.
-      const newStartOffset = this.getStartSearchSpace()
-                                 .substring(this.startOffset + 1)
-                                 .search(fragments.internal.BOUNDARY_CHARS);
-      if (newStartOffset === -1) {
-        this.startOffset = this.getStartSearchSpace().length;
-      } else {
-        this.startOffset = this.startOffset + 1 + newStartOffset;
+    if (canExpandRange) {
+      if (this.startOffset < this.getStartSearchSpace().length) {
+        // Find the next boundary char.
+        // TODO: should keep going if we haven't added any non boundary chars.
+        const newStartOffset = this.getStartSearchSpace()
+                                   .substring(this.startOffset + 1)
+                                   .search(fragments.internal.BOUNDARY_CHARS);
+        if (newStartOffset === -1) {
+          this.startOffset = this.getStartSearchSpace().length;
+        } else {
+          this.startOffset = this.startOffset + 1 + newStartOffset;
+        }
+
+        // Ensure we don't have overlapping start and end segments.
+        if (this.isSharedMode) {
+          this.startOffset = Math.min(this.startOffset, this.endOffset);
+        }
+      }
+
+      if (this.backwardsEndOffset() < this.getEndSearchSpace().length) {
+        // Find the next boundary char.
+        // TODO: should keep going if we haven't added any non boundary chars.
+        const newBackwardsOffset =
+            this.getBackwardsEndSearchSpace()
+                .substring(this.backwardsEndOffset() + 1)
+                .search(fragments.internal.BOUNDARY_CHARS);
+        if (newBackwardsOffset === -1) {
+          this.setBackwardsEndOffset(this.getEndSearchSpace().length);
+        } else {
+          this.setBackwardsEndOffset(
+              this.backwardsEndOffset() + 1 + newBackwardsOffset);
+        }
+
+        // Ensure we don't have overlapping start and end segments.
+        if (this.isSharedMode) {
+          this.endOffset = Math.max(this.startOffset, this.endOffset);
+        }
       }
     }
 
-    if (this.backwardsEndOffset() < this.getEndSearchSpace().length) {
-      // Find the next boundary char.
-      // TODO: should keep going if we haven't added any non boundary chars.
-      const newBackwardsOffset = this.getBackwardsEndSearchSpace()
-                                     .substring(this.backwardsEndOffset() + 1)
-                                     .search(fragments.internal.BOUNDARY_CHARS);
-      if (newBackwardsOffset === -1) {
-        this.setBackwardsEndOffset(this.getEndSearchSpace().length);
-      } else {
-        this.setBackwardsEndOffset(
-            this.backwardsEndOffset() + 1 + newBackwardsOffset);
-      }
-    }
-
-    if (this.isSharedMode) {
-      // If the search space is shared between textStart and textEnd, then stop
-      // searching when textStart overlaps textEnd.
-      if (this.startOffset >= this.endOffset) {
-        return false;
-      }
-    }
+    // TODO: based on |canExpandRange| and the number of iterations, maybe add
+    //     context (prefix/suffix).
 
     // TODO: check if this exceeds the total length limit
-    return true;
+    return canExpandRange;
   }
 
   /**
