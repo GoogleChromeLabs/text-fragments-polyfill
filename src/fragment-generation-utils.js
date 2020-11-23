@@ -17,6 +17,7 @@
 import * as fragments from './text-fragment-utils.js';
 
 const MAX_EXACT_MATCH_LENGTH = 300;
+const ITERATIONS_BEFORE_ADDING_CONTEXT = 3;
 
 /**
  * Enum indicating the success, or failure reason, of generateFragment.
@@ -201,6 +202,15 @@ const FragmentFactory = class {
     }
     this.startOffset = 0;
     this.endOffset = this.getEndSearchSpace().length;
+
+    this.prefixOffset = null;
+    this.suffixOffset = null;
+
+    this.prefixSearchSpace = '';
+    this.backwardsPrefixSearchSpace = '';
+    this.suffixSearchSpace = '';
+
+    this.numIterations = 0;
   }
 
   /**
@@ -214,6 +224,14 @@ const FragmentFactory = class {
       textStart: this.getStartSearchSpace().substring(0, this.startOffset),
       textEnd: this.getEndSearchSpace().substring(this.endOffset),
     };
+    if (this.prefixOffset != null) {
+      fragment.prefix =
+          this.getPrefixSearchSpace().substring(this.prefixOffset);
+    }
+    if (this.suffixOffset != null) {
+      fragment.suffix =
+          this.getSuffixSearchSpace().substring(0, this.suffixOffset);
+    }
     return isUniquelyIdentifying(fragment) ? fragment : undefined;
   }
 
@@ -239,6 +257,21 @@ const FragmentFactory = class {
       if (this.startOffset === this.getStartSearchSpace().length &&
           this.backwardsEndOffset() === this.getEndSearchSpace().length) {
         canExpandRange = false;
+      }
+    }
+
+    let canExpandContext = false;
+    // Context is only added when the range match space is exhausted, or after
+    // a set number of iterations, whichever comes first.
+    if (!canExpandRange ||
+        this.numIterations >= ITERATIONS_BEFORE_ADDING_CONTEXT) {
+      // Check if there's any unused search space left.
+      if ((this.backwardsPrefixOffset() != null &&
+           this.backwardsPrefixOffset() !==
+               this.getPrefixSearchSpace().length) ||
+          (this.suffixOffset != null &&
+           this.suffixOffset !== this.getSuffixSearchSpace().length)) {
+        canExpandContext = true;
       }
     }
 
@@ -282,11 +315,37 @@ const FragmentFactory = class {
       }
     }
 
-    // TODO: based on |canExpandRange| and the number of iterations, maybe add
-    //     context (prefix/suffix).
+    if (canExpandContext) {
+      if (this.backwardsPrefixOffset() < this.getPrefixSearchSpace().length) {
+        const newBackwardsPrefixOffset =
+            this.getBackwardsPrefixSearchSpace()
+                .substring(this.backwardsPrefixOffset() + 1)
+                .search(fragments.internal.BOUNDARY_CHARS);
+        if (newBackwardsPrefixOffset === -1) {
+          this.setBackwardsPrefixOffset(
+              this.getBackwardsPrefixSearchSpace().length);
+        } else {
+          this.setBackwardsPrefixOffset(
+              this.backwardsPrefixOffset() + 1 + newBackwardsPrefixOffset);
+        }
+      }
+
+      if (this.suffixOffset < this.getSuffixSearchSpace().length) {
+        const newSuffixOffset = this.getSuffixSearchSpace()
+                                    .substring(this.suffixOffset + 1)
+                                    .search(fragments.internal.BOUNDARY_CHARS);
+        if (newSuffixOffset === -1) {
+          this.suffixOffset = this.getSuffixSearchSpace().length;
+        } else {
+          this.suffixOffset = this.suffixOffset + 1 + newSuffixOffset;
+        }
+      }
+    }
+
+    this.numIterations++;
 
     // TODO: check if this exceeds the total length limit
-    return canExpandRange;
+    return canExpandRange || canExpandContext;
   }
 
   /**
@@ -313,6 +372,51 @@ const FragmentFactory = class {
   }
 
   /**
+   * @return {String} - the string to be used as the search space for prefix
+   */
+  getPrefixSearchSpace() {
+    return this.prefixSearchSpace;
+  }
+
+  /**
+   * @return {String} - the string to be used as the search space for prefix,
+   *     backwards.
+   */
+  getBackwardsPrefixSearchSpace() {
+    return this.backwardsPrefixSearchSpace;
+  }
+
+  /**
+   * @return {String} - the string to be used as the search space for suffix
+   */
+  getSuffixSearchSpace() {
+    return this.suffixSearchSpace;
+  }
+
+  /**
+   *  TODO: test-only at the moment; refactor this into the constructor or a
+   *  builder pattern
+   *  @param {String} newSearchSpace - the string to be used as the search space
+   *      for prefix
+   */
+  setPrefixSearchSpace(newSearchSpace) {
+    this.prefixSearchSpace = newSearchSpace;
+    this.backwardsPrefixSearchSpace = reverseString(newSearchSpace);
+    this.prefixOffset = newSearchSpace.length;
+  }
+
+  /**
+   *  TODO: test-only at the moment; refactor this into the constructor or a
+   *  builder pattern
+   *  @param {String} newSearchSpace - the string to be used as the search space
+   *      for suffix
+   */
+  setSuffixSearchSpace(newSearchSpace) {
+    this.suffixSearchSpace = newSearchSpace;
+    this.suffixOffset = 0;
+  }
+
+  /**
    * Helper method for doing arithmetic in the backwards search space.
    * @return {Number} - the current end offset, as a start offset in the
    *     backwards search space
@@ -328,6 +432,27 @@ const FragmentFactory = class {
    */
   setBackwardsEndOffset(backwardsEndOffset) {
     this.endOffset = this.getEndSearchSpace().length - backwardsEndOffset;
+  }
+
+  /**
+   * Helper method for doing arithmetic in the backwards search space.
+   * @return {Number} - the current prefix offset, as a start offset in the
+   *     backwards search space
+   */
+  backwardsPrefixOffset() {
+    if (this.prefixOffset == null) return null;
+    return this.getPrefixSearchSpace().length - this.prefixOffset;
+  }
+
+  /**
+   * Helper method for doing arithmetic in the backwards search space.
+   * @param {Number} backwardsPrefixOffset - the desired new value of the prefix
+   *     offset in the backwards search space
+   */
+  setBackwardsPrefixOffset(backwardsPrefixOffset) {
+    if (this.prefixOffset == null) return;
+    this.prefixOffset =
+        this.getPrefixSearchSpace().length - backwardsPrefixOffset;
   }
 };
 

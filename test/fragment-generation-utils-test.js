@@ -436,4 +436,59 @@ describe('FragmentGenerationUtils', function() {
 
     expect(factory.embiggen()).toEqual(false);
   });
+
+  it('can add context to a single-block range match', function() {
+    const sharedSpace = 'text1 text2 text3 text4 text5 text6 text7';
+    const prefixSpace = 'prefix3 prefix2 prefix1';
+    const suffixSpace = 'suffix1 suffix2 suffix3';
+
+    const factory = new generationUtils.forTesting.FragmentFactory(sharedSpace);
+    factory.setPrefixSearchSpace(prefixSpace);
+    factory.setSuffixSearchSpace(suffixSpace);
+
+    expect(factory.embiggen()).toEqual(true);
+    expect(sharedSpace.substring(0, factory.startOffset)).toEqual('text1');
+    expect(sharedSpace.substring(factory.endOffset)).toEqual('text7');
+
+    expect(factory.embiggen()).toEqual(true);
+    expect(sharedSpace.substring(0, factory.startOffset))
+        .toEqual('text1 text2');
+    expect(sharedSpace.substring(factory.endOffset)).toEqual('text6 text7');
+
+    expect(factory.embiggen()).toEqual(true);
+    expect(sharedSpace.substring(0, factory.startOffset))
+        .toEqual('text1 text2 text3');
+    expect(sharedSpace.substring(factory.endOffset))
+        .toEqual('text5 text6 text7');
+
+    expect(factory.embiggen()).toEqual(true);
+    expect(sharedSpace.substring(0, factory.startOffset))
+        .toEqual('text1 text2 text3 text4');
+    expect(sharedSpace.substring(factory.endOffset))
+        .toEqual(' text5 text6 text7');
+    expect(prefixSpace.substring(factory.prefixOffset)).toEqual('prefix1');
+    expect(suffixSpace.substring(0, factory.suffixOffset)).toEqual('suffix1');
+
+    expect(factory.embiggen()).toEqual(true);
+    expect(sharedSpace.substring(0, factory.startOffset))
+        .toEqual('text1 text2 text3 text4');
+    expect(sharedSpace.substring(factory.endOffset))
+        .toEqual(' text5 text6 text7');
+    expect(prefixSpace.substring(factory.prefixOffset))
+        .toEqual('prefix2 prefix1');
+    expect(suffixSpace.substring(0, factory.suffixOffset))
+        .toEqual('suffix1 suffix2');
+
+    expect(factory.embiggen()).toEqual(true);
+    expect(sharedSpace.substring(0, factory.startOffset))
+        .toEqual('text1 text2 text3 text4');
+    expect(sharedSpace.substring(factory.endOffset))
+        .toEqual(' text5 text6 text7');
+    expect(prefixSpace.substring(factory.prefixOffset))
+        .toEqual('prefix3 prefix2 prefix1');
+    expect(suffixSpace.substring(0, factory.suffixOffset))
+        .toEqual('suffix1 suffix2 suffix3');
+
+    expect(factory.embiggen()).toEqual(false);
+  });
 });
