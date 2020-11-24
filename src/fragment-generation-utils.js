@@ -52,19 +52,26 @@ export const generateFragment = (selection) => {
   expandRangeStartToWordBound(range);
   expandRangeEndToWordBound(range);
 
+  let factory;
+
+  // First, try the easy case of just using the range text as the fragment.
+  const exactText = fragments.internal.normalizeString(range.toString());
   if (canUseExactMatch(range)) {
     const fragment = {
-      textStart: fragments.internal.normalizeString(range.toString())
+      textStart: exactText,
     };
     if (isUniquelyIdentifying(fragment)) {
       return {
         status: GenerateFragmentStatus.SUCCESS,
         fragment: fragment,
       };
-    } else {
-      // TODO: try adding context to see if we can get a unique fragment.
-      return {status: GenerateFragmentStatus.AMBIGUOUS};
     }
+  }
+
+  // TODO: generate the prefix/suffix search spaces here.
+
+  if (canUseExactMatch(range)) {
+    factory = new FragmentFactory().setExactTextMatch(exactText);
   } else {
     // We have to use textStart and textEnd to identify a range. First, break
     // the range up based on block boundaries, as textStart/textEnd can't cross
@@ -72,30 +79,30 @@ export const generateFragment = (selection) => {
     const startSearchSpace = getSearchSpaceForStart(range);
     const endSearchSpace = getSearchSpaceForEnd(range);
 
-    let factory;
-
     if (startSearchSpace && endSearchSpace) {
       // If the search spaces are truthy, then there's a block boundary between
       // them.
-      factory = new FragmentFactory(startSearchSpace, endSearchSpace);
+      factory = new FragmentFactory().setStartAndEndSearchSpace(
+          startSearchSpace, endSearchSpace);
     } else {
       // If the search space was empty/undefined, it's because no block boundary
       // was found. That means textStart and textEnd *share* a search space, so
       // our approach must ensure the substrings chosen as candidates don't
       // overlap.
-      factory = new FragmentFactory(trimBoundary(range.toString()));
+      factory = new FragmentFactory().setSharedSearchSpace(
+          trimBoundary(range.toString()));
     }
-    while (factory.embiggen()) {
-      const fragment = factory.tryToMakeUniqueFragment();
-      if (fragment != null) {
-        return {
-          status: GenerateFragmentStatus.SUCCESS,
-          fragment: fragment,
-        };
-      }
-    }
-    return {status: GenerateFragmentStatus.AMBIGUOUS};
   }
+  while (factory.embiggen()) {
+    const fragment = factory.tryToMakeUniqueFragment();
+    if (fragment != null) {
+      return {
+        status: GenerateFragmentStatus.SUCCESS,
+        fragment: fragment,
+      };
+    }
+  }
+  return {status: GenerateFragmentStatus.AMBIGUOUS};
 };
 
 /**
@@ -186,23 +193,19 @@ const getSearchSpaceForEnd = (range) => {
  */
 const FragmentFactory = class {
   /**
-   * @param {String} startSearchSpace - the maximum possible text for textStart
-   * @param {String} endSearchSpace - the maximum possible text for textEnd
+   * Initializes the basic state of the factory. Users should then call exactly
+   * one of setStartAndEndSearchSpace, setSharedSearchSpace, or
+   * setExactTextMatch, and optionally setPrefixAndSuffixSearchSpace.
    */
-  constructor(startSearchSpace, endSearchSpace) {
-    if (endSearchSpace != null) {
-      this.startSearchSpace = startSearchSpace;
-      this.endSearchSpace = endSearchSpace;
-      this.backwardsEndSearchSpace = reverseString(endSearchSpace);
-      this.isSharedMode = false;
-    } else {
-      this.sharedSearchSpace = startSearchSpace;
-      this.backwardsSharedSearchSpace = reverseString(startSearchSpace);
-      this.isSharedMode = true;
-    }
-    this.startOffset = 0;
-    this.endOffset = this.getEndSearchSpace().length;
+  constructor() {
+    this.Mode = {
+      ALL_PARTS: 1,
+      SHARED_START_AND_END: 2,
+      CONTEXT_ONLY: 3,
+    };
 
+    this.startOffset = null;
+    this.endOffset = null;
     this.prefixOffset = null;
     this.suffixOffset = null;
 
@@ -220,10 +223,15 @@ const FragmentFactory = class {
    *     uniquely identifying, or undefined if the current state is ambiguous.
    */
   tryToMakeUniqueFragment() {
-    const fragment = {
-      textStart: this.getStartSearchSpace().substring(0, this.startOffset),
-      textEnd: this.getEndSearchSpace().substring(this.endOffset),
-    };
+    let fragment;
+    if (this.mode === this.Mode.CONTEXT_ONLY) {
+      fragment = {textStart: this.exactTextMatch};
+    } else {
+      fragment = {
+        textStart: this.getStartSearchSpace().substring(0, this.startOffset),
+        textEnd: this.getEndSearchSpace().substring(this.endOffset),
+      };
+    }
     if (this.prefixOffset != null) {
       fragment.prefix =
           this.getPrefixSearchSpace().substring(this.prefixOffset);
@@ -245,19 +253,21 @@ const FragmentFactory = class {
   embiggen() {
     let canExpandRange = true;
 
-    if (this.isSharedMode) {
+    if (this.mode === this.Mode.SHARED_START_AND_END) {
       if (this.startOffset >= this.endOffset) {
         // If the search space is shared between textStart and textEnd, then
         // stop expanding when textStart overlaps textEnd.
         canExpandRange = false;
       }
-    } else {
+    } else if (this.mode === this.Mode.ALL_PARTS) {
       // Stop expanding if both start and end have already consumed their full
       // search spaces.
       if (this.startOffset === this.getStartSearchSpace().length &&
           this.backwardsEndOffset() === this.getEndSearchSpace().length) {
         canExpandRange = false;
       }
+    } else if (this.mode === this.Mode.CONTEXT_ONLY) {
+      canExpandRange = false;
     }
 
     let canExpandContext = false;
@@ -289,7 +299,7 @@ const FragmentFactory = class {
         }
 
         // Ensure we don't have overlapping start and end segments.
-        if (this.isSharedMode) {
+        if (this.mode === this.Mode.SHARED_START_AND_END) {
           this.startOffset = Math.min(this.startOffset, this.endOffset);
         }
       }
@@ -309,7 +319,7 @@ const FragmentFactory = class {
         }
 
         // Ensure we don't have overlapping start and end segments.
-        if (this.isSharedMode) {
+        if (this.mode === this.Mode.SHARED_START_AND_END) {
           this.endOffset = Math.max(this.startOffset, this.endOffset);
         }
       }
@@ -349,17 +359,107 @@ const FragmentFactory = class {
   }
 
   /**
+   * Sets up the factory for a range-based match with a highlight that crosses
+   * block boundaries.
+   *
+   * Exactly one of this, setSharedSearchSpace, or setExactTextMatch should be
+   * called so the factory can identify the fragment.
+   *
+   * @param {String} startSearchSpace - the maximum possible string which can be
+   *     used to identify the start of the fragment
+   * @param {String} endSearchSpace - the maximum possible string which can be
+   *     used to identify the end of the fragment
+   * @return {FragmentFactory} - returns |this| to allow call chaining and
+   *     assignment
+   */
+  setStartAndEndSearchSpace(startSearchSpace, endSearchSpace) {
+    this.startSearchSpace = startSearchSpace;
+    this.endSearchSpace = endSearchSpace;
+    this.backwardsEndSearchSpace = reverseString(endSearchSpace);
+
+    this.startOffset = 0;
+    this.endOffset = endSearchSpace.length;
+
+    this.mode = this.Mode.ALL_PARTS;
+    return this;
+  }
+
+  /**
+   * Sets up the factory for a range-based match with a highlight that doesn't
+   * cross block boundaries.
+   *
+   * Exactly one of this, setStartAndEndSearchSpace, or setExactTextMatch should
+   * be called so the factory can identify the fragment.
+   *
+   * @param {String} sharedSearchSpace - the full text of the highlight
+   * @return {FragmentFactory} - returns |this| to allow call chaining and
+   *     assignment
+   */
+  setSharedSearchSpace(sharedSearchSpace) {
+    this.sharedSearchSpace = sharedSearchSpace;
+    this.backwardsSharedSearchSpace = reverseString(sharedSearchSpace);
+
+    this.startOffset = 0;
+    this.endOffset = sharedSearchSpace.length;
+
+    this.mode = this.Mode.SHARED_START_AND_END;
+    return this;
+  }
+
+  /**
+   * Sets up the factory for an exact text match.
+   *
+   * Exactly one of this, setStartAndEndSearchSpace, or setSharedSearchSpace
+   * should be called so the factory can identify the fragment.
+   *
+   * @param {String} exactTextMatch - the full text of the highlight
+   * @return {FragmentFactory} - returns |this| to allow call chaining and
+   *     assignment
+   */
+  setExactTextMatch(exactTextMatch) {
+    this.exactTextMatch = exactTextMatch;
+
+    this.mode = this.Mode.CONTEXT_ONLY;
+    return this;
+  }
+
+  /**
+   * Sets up the factory for context-based matches.
+   *
+   * @param {String} prefixSearchSpace - the string to be used as the search
+   *     space for prefix
+   * @param {String} suffixSearchSpace - the string to be used as the search
+   *     space for suffix
+   * @return {FragmentFactory} - returns |this| to allow call chaining and
+   *     assignment
+   */
+  setPrefixAndSuffixSearchSpace(prefixSearchSpace, suffixSearchSpace) {
+    this.prefixSearchSpace = prefixSearchSpace;
+    this.backwardsPrefixSearchSpace = reverseString(prefixSearchSpace);
+    this.prefixOffset = prefixSearchSpace.length;
+
+    this.suffixSearchSpace = suffixSearchSpace;
+    this.suffixOffset = 0;
+
+    return this;
+  }
+
+  /**
    * @return {String} - the string to be used as the search space for textStart
    */
   getStartSearchSpace() {
-    return this.isSharedMode ? this.sharedSearchSpace : this.startSearchSpace;
+    return this.mode === this.Mode.SHARED_START_AND_END ?
+        this.sharedSearchSpace :
+        this.startSearchSpace;
   }
 
   /**
    * @return {String} - the string to be used as the search space for textEnd
    */
   getEndSearchSpace() {
-    return this.isSharedMode ? this.sharedSearchSpace : this.endSearchSpace;
+    return this.mode === this.Mode.SHARED_START_AND_END ?
+        this.sharedSearchSpace :
+        this.endSearchSpace;
   }
 
   /**
@@ -367,8 +467,9 @@ const FragmentFactory = class {
    *     backwards.
    */
   getBackwardsEndSearchSpace() {
-    return this.isSharedMode ? this.backwardsSharedSearchSpace :
-                               this.backwardsEndSearchSpace;
+    return this.mode === this.Mode.SHARED_START_AND_END ?
+        this.backwardsSharedSearchSpace :
+        this.backwardsEndSearchSpace;
   }
 
   /**
@@ -391,29 +492,6 @@ const FragmentFactory = class {
    */
   getSuffixSearchSpace() {
     return this.suffixSearchSpace;
-  }
-
-  /**
-   *  TODO: test-only at the moment; refactor this into the constructor or a
-   *  builder pattern
-   *  @param {String} newSearchSpace - the string to be used as the search space
-   *      for prefix
-   */
-  setPrefixSearchSpace(newSearchSpace) {
-    this.prefixSearchSpace = newSearchSpace;
-    this.backwardsPrefixSearchSpace = reverseString(newSearchSpace);
-    this.prefixOffset = newSearchSpace.length;
-  }
-
-  /**
-   *  TODO: test-only at the moment; refactor this into the constructor or a
-   *  builder pattern
-   *  @param {String} newSearchSpace - the string to be used as the search space
-   *      for suffix
-   */
-  setSuffixSearchSpace(newSearchSpace) {
-    this.suffixSearchSpace = newSearchSpace;
-    this.suffixOffset = 0;
   }
 
   /**
