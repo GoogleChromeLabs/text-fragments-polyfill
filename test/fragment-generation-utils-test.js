@@ -362,8 +362,8 @@ describe('FragmentGenerationUtils', function() {
     const startSpace = generationUtils.forTesting.getSearchSpaceForStart(range);
     const endSpace = generationUtils.forTesting.getSearchSpaceForEnd(range);
 
-    const factory =
-        new generationUtils.forTesting.FragmentFactory(startSpace, endSpace);
+    const factory = new generationUtils.forTesting.FragmentFactory()
+                        .setStartAndEndSearchSpace(startSpace, endSpace);
 
     expect(factory.embiggen()).toEqual(true);
     expect(startSpace.substring(0, factory.startOffset)).toEqual('repeat');
@@ -405,13 +405,16 @@ describe('FragmentGenerationUtils', function() {
 
     expect(factory.embiggen()).toEqual(true);
     expect(factory.embiggen()).toEqual(true);
+
     expect(factory.embiggen()).toEqual(false);
   });
 
   it('can generate progressively larger fragments within a block', function() {
     const sharedSpace = 'text1 text2 text3 text4 text5 text6 text7';
 
-    const factory = new generationUtils.forTesting.FragmentFactory(sharedSpace);
+    const factory =
+        new generationUtils.forTesting.FragmentFactory().setSharedSearchSpace(
+            sharedSpace);
 
     expect(factory.embiggen()).toEqual(true);
     expect(sharedSpace.substring(0, factory.startOffset)).toEqual('text1');
@@ -442,9 +445,10 @@ describe('FragmentGenerationUtils', function() {
     const prefixSpace = 'prefix3 prefix2 prefix1';
     const suffixSpace = 'suffix1 suffix2 suffix3';
 
-    const factory = new generationUtils.forTesting.FragmentFactory(sharedSpace);
-    factory.setPrefixSearchSpace(prefixSpace);
-    factory.setSuffixSearchSpace(suffixSpace);
+    const factory =
+        new generationUtils.forTesting.FragmentFactory()
+            .setSharedSearchSpace(sharedSpace)
+            .setPrefixAndSuffixSearchSpace(prefixSpace, suffixSpace);
 
     expect(factory.embiggen()).toEqual(true);
     expect(sharedSpace.substring(0, factory.startOffset)).toEqual('text1');
@@ -484,6 +488,38 @@ describe('FragmentGenerationUtils', function() {
         .toEqual('text1 text2 text3 text4');
     expect(sharedSpace.substring(factory.endOffset))
         .toEqual(' text5 text6 text7');
+    expect(prefixSpace.substring(factory.prefixOffset))
+        .toEqual('prefix3 prefix2 prefix1');
+    expect(suffixSpace.substring(0, factory.suffixOffset))
+        .toEqual('suffix1 suffix2 suffix3');
+
+    expect(factory.embiggen()).toEqual(false);
+  });
+
+  it('can add context to an exact text match', function() {
+    const exactText = 'text1 text2 text3 text4 text5 text6 text7';
+    const prefixSpace = 'prefix3 prefix2 prefix1';
+    const suffixSpace = 'suffix1 suffix2 suffix3';
+
+    const factory =
+        new generationUtils.forTesting.FragmentFactory()
+            .setExactTextMatch(exactText)
+            .setPrefixAndSuffixSearchSpace(prefixSpace, suffixSpace);
+
+    expect(factory.embiggen()).toEqual(true);
+    expect(factory.exactTextMatch).toEqual(exactText);
+    expect(prefixSpace.substring(factory.prefixOffset)).toEqual('prefix1');
+    expect(suffixSpace.substring(0, factory.suffixOffset)).toEqual('suffix1');
+
+    expect(factory.embiggen()).toEqual(true);
+    expect(factory.exactTextMatch).toEqual(exactText);
+    expect(prefixSpace.substring(factory.prefixOffset))
+        .toEqual('prefix2 prefix1');
+    expect(suffixSpace.substring(0, factory.suffixOffset))
+        .toEqual('suffix1 suffix2');
+
+    expect(factory.embiggen()).toEqual(true);
+    expect(factory.exactTextMatch).toEqual(exactText);
     expect(prefixSpace.substring(factory.prefixOffset))
         .toEqual('prefix3 prefix2 prefix1');
     expect(suffixSpace.substring(0, factory.suffixOffset))
