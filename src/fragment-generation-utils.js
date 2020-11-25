@@ -68,8 +68,6 @@ export const generateFragment = (selection) => {
     }
   }
 
-  // TODO: generate the prefix/suffix search spaces here.
-
   if (canUseExactMatch(range)) {
     factory = new FragmentFactory().setExactTextMatch(exactText);
   } else {
@@ -93,6 +91,21 @@ export const generateFragment = (selection) => {
           trimBoundary(range.toString()));
     }
   }
+
+  const prefixRange = document.createRange();
+  prefixRange.selectNodeContents(document.body);
+  const suffixRange = prefixRange.cloneRange();
+
+  prefixRange.setEnd(range.startContainer, range.startOffset);
+  suffixRange.setStart(range.endContainer, range.endOffset);
+
+  const prefixSearchSpace = getSearchSpaceForEnd(prefixRange);
+  const suffixSearchSpace = getSearchSpaceForStart(suffixRange);
+
+  if (prefixSearchSpace && suffixSearchSpace) {
+    factory.setPrefixAndSuffixSearchSpace(prefixSearchSpace, suffixSearchSpace);
+  }
+
   while (factory.embiggen()) {
     const fragment = factory.tryToMakeUniqueFragment();
     if (fragment != null) {
@@ -106,7 +119,7 @@ export const generateFragment = (selection) => {
 };
 
 /**
- * Finds the search space for the textStart parameter when using range match.
+ * Finds the search space for parameters when using range or suffix match.
  * This is the text from the start of the range to the first block boundary,
  * trimmed to remove any leading/trailing boundary characters.
  * @param {Range} range - the range which will be highlighted.
@@ -147,7 +160,7 @@ const getSearchSpaceForStart = (range) => {
 };
 
 /**
- * Finds the search space for the textEnd parameter when using range match.
+ * Finds the search space for parameters when using range or prefix match.
  * This is the text from the last block boundary to the end of the range,
  * trimmed to remove any leading/trailing boundary characters.
  * @param {Range} range - the range which will be highlighted.
@@ -166,7 +179,7 @@ const getSearchSpaceForEnd = (range) => {
   const tempRange = range.cloneRange();
   while (!tempRange.collapsed && node != null) {
     // Depending on whether |node| is an ancestor of the start of our
-    // search, we use either its leading or trailing edge as our start.
+    // search, we use either its leading or trailing edge as our end.
     if (node.contains(origin)) {
       tempRange.setEnd(node, 0);
     } else {
@@ -228,17 +241,25 @@ const FragmentFactory = class {
       fragment = {textStart: this.exactTextMatch};
     } else {
       fragment = {
-        textStart: this.getStartSearchSpace().substring(0, this.startOffset),
-        textEnd: this.getEndSearchSpace().substring(this.endOffset),
+        textStart: trimBoundary(
+            this.getStartSearchSpace().substring(0, this.startOffset)),
+        textEnd:
+            trimBoundary(this.getEndSearchSpace().substring(this.endOffset)),
       };
     }
     if (this.prefixOffset != null) {
-      fragment.prefix =
-          this.getPrefixSearchSpace().substring(this.prefixOffset);
+      const prefix = trimBoundary(
+          this.getPrefixSearchSpace().substring(this.prefixOffset));
+      if (prefix) {
+        fragment.prefix = prefix;
+      }
     }
     if (this.suffixOffset != null) {
-      fragment.suffix =
-          this.getSuffixSearchSpace().substring(0, this.suffixOffset);
+      const suffix = trimBoundary(
+          this.getSuffixSearchSpace().substring(0, this.suffixOffset));
+      if (suffix) {
+        fragment.suffix = suffix;
+      }
     }
     return isUniquelyIdentifying(fragment) ? fragment : undefined;
   }
@@ -595,7 +616,8 @@ const getFirstNodeForBlockSearch = (range) => {
   // is the start container; for element nodes, we use the offset to find
   // where it actually starts.
   let node = range.startContainer;
-  if (node.nodeType == Node.ELEMENT_NODE) {
+  if (node.nodeType == Node.ELEMENT_NODE &&
+      range.startOffset < node.childNodes.length) {
     node = node.childNodes[range.startOffset];
   }
   return node;
@@ -721,7 +743,9 @@ const makeWalkerForNode = (node, endNode) => {
   let blockAncestor = node;
   const endNodeNotNull = endNode != null ? endNode : node;
   while (!blockAncestor.contains(endNodeNotNull) || !isBlock(blockAncestor)) {
-    blockAncestor = blockAncestor.parentNode;
+    if (blockAncestor.parentNode) {
+      blockAncestor = blockAncestor.parentNode;
+    }
   }
   const walker = document.createTreeWalker(
       blockAncestor, NodeFilter.SHOW_ELEMENT | NodeFilter.SHOW_TEXT, (node) => {

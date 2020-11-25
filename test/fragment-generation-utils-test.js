@@ -527,4 +527,53 @@ describe('FragmentGenerationUtils', function() {
 
     expect(factory.embiggen()).toEqual(false);
   });
+
+  it('can generate prefixes/suffixes to distinguish short matches', function() {
+    // This is the most common case for prefix/suffix matches: a user selects a
+    // word or a small portion of a word.
+    document.body.innerHTML = __html__['ambiguous-match.html'];
+
+    const target = document.createRange();
+    const selection = window.getSelection();
+
+    target.selectNodeContents(document.getElementById('target1'));
+    selection.removeAllRanges();
+    selection.addRange(target);
+
+    let result = generationUtils.generateFragment(selection);
+    expect(result.fragment.textStart).toEqual('target');
+    expect(result.fragment.textEnd).toBeUndefined();
+    expect(result.fragment.prefix).toEqual('prefix1');
+    expect(result.fragment.suffix).toEqual('suffix1');
+
+    target.selectNodeContents(document.getElementById('target3'));
+    selection.removeAllRanges();
+    selection.addRange(target);
+
+    result = generationUtils.generateFragment(selection);
+    expect(result.fragment.textStart).toEqual('target');
+    expect(result.fragment.textEnd).toBeUndefined();
+    expect(result.fragment.prefix).toEqual('prefix1');
+    expect(result.fragment.suffix).toEqual('suffix2');
+  });
+
+  it('can generate prefixes/suffixes to distinguish long matches', function() {
+    // A passage which appears multiple times on a page.
+    document.body.innerHTML = __html__['long-ambiguous-match.html'];
+
+    const target = document.createRange();
+    const selection = window.getSelection();
+
+    const node = document.getElementById('target').firstChild;
+    target.setStart(node, 5);
+    target.setEnd(node, node.textContent.length - 8);
+    selection.removeAllRanges();
+    selection.addRange(target);
+
+    const result = generationUtils.generateFragment(selection);
+    expect(fragmentUtils.forTesting.normalizeString(result.fragment.prefix))
+        .toEqual('prefix. lorem ipsum dolor');
+    expect(fragmentUtils.forTesting.normalizeString(result.fragment.suffix))
+        .toEqual('recteque qui ei. suffix');
+  });
 });
