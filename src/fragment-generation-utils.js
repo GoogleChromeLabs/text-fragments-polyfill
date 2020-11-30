@@ -131,6 +131,9 @@ export const generateFragment = (selection) => {
 const getSearchSpaceForStart = (range) => {
   let node = getFirstNodeForBlockSearch(range);
   const walker = makeWalkerForNode(node, range.endContainer);
+  if (!walker) {
+    return undefined;
+  }
   const map = createForwardOverrideMap(walker);
   const origin = node;
 
@@ -172,6 +175,9 @@ const getSearchSpaceForStart = (range) => {
 const getSearchSpaceForEnd = (range) => {
   let node = getLastNodeForBlockSearch(range);
   const walker = makeWalkerForNode(node, range.startContainer);
+  if (!walker) {
+    return undefined;
+  }
   const visited = new Set();
   const origin = node;
 
@@ -649,6 +655,9 @@ const containsBlockBoundary = (range) => {
   const tempRange = range.cloneRange();
   let node = getFirstNodeForBlockSearch(tempRange);
   const walker = makeWalkerForNode(node);
+  if (!walker) {
+    return false;
+  }
   const map = createForwardOverrideMap(walker);
 
   while (!tempRange.collapsed && node != null) {
@@ -738,6 +747,10 @@ const findWordEndBoundInTextNode = (node, endOffset) => {
  *     element nodes.
  */
 const makeWalkerForNode = (node, endNode) => {
+  if (!node) {
+    return undefined;
+  }
+
   // Find a block-level ancestor of the node by walking up the tree. This
   // will be used as the root of the tree walker.
   let blockAncestor = node;
@@ -747,6 +760,7 @@ const makeWalkerForNode = (node, endNode) => {
       blockAncestor = blockAncestor.parentNode;
     }
   }
+
   const walker = document.createTreeWalker(
       blockAncestor, NodeFilter.SHOW_ELEMENT | NodeFilter.SHOW_TEXT, (node) => {
         return fragments.internal.filterFunction(node);
@@ -779,6 +793,9 @@ const expandRangeStartToWordBound = (range) => {
   }
 
   const walker = makeWalkerForNode(range.startContainer);
+  if (!walker) {
+    return;
+  }
   const visited = new Set();
   const origin = walker.currentNode;
 
@@ -934,6 +951,9 @@ const expandRangeEndToWordBound = (range) => {
   }
 
   const walker = makeWalkerForNode(node);
+  if (!walker) {
+    return;
+  }
   const override = createForwardOverrideMap(walker);
 
   while (node != null) {

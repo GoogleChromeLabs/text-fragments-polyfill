@@ -571,6 +571,8 @@ describe('FragmentGenerationUtils', function() {
     selection.addRange(target);
 
     const result = generationUtils.generateFragment(selection);
+    expect(result.fragment.textStart).not.toBeFalsy();
+    expect(result.fragment.textEnd).not.toBeFalsy();
     expect(fragmentUtils.forTesting.normalizeString(result.fragment.prefix))
         .toEqual('prefix. lorem ipsum dolor');
     expect(fragmentUtils.forTesting.normalizeString(result.fragment.suffix))
