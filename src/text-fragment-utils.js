@@ -135,8 +135,10 @@ export const processFragmentDirectives = (parsedFragmentDirectives) => {
  *
  * @param {TextFragment} textFragment - Text Fragment to highlight.
  * @return {Ranges[]} - Zero or more ranges within the document corresponding
- *     to the fragment. The fragment uniquely identifies a section of the page
- *     iff the returned list has length 1
+ *     to the fragment. If the fragment corresponds to more than one location
+ *     in the document (i.e., is ambiguous) then the first two matches will be
+ *     returned (regardless of how many more matches there may be in the
+ *     document).
  */
 export const processTextFragmentDirective = (textFragment) => {
   const results = [];
@@ -230,6 +232,9 @@ export const processTextFragmentDirective = (textFragment) => {
             break;
           } else if (suffixResult === CheckSuffixResult.SUFFIX_MATCH) {
             results.push(potentialMatch.cloneRange());
+            if (results.length > 1) {
+              return results;
+            }
             continue;
           } else if (suffixResult === CheckSuffixResult.MISPLACED_SUFFIX) {
             continue;
@@ -237,6 +242,9 @@ export const processTextFragmentDirective = (textFragment) => {
         } else {
           // If we've found textEnd and there's no suffix, then it's a match!
           results.push(potentialMatch.cloneRange());
+          if (results.length > 1) {
+            return results;
+          }
         }
       }
     } else if (textFragment.suffix) {
@@ -248,6 +256,9 @@ export const processTextFragmentDirective = (textFragment) => {
         break;
       } else if (suffixResult === CheckSuffixResult.SUFFIX_MATCH) {
         results.push(potentialMatch.cloneRange());
+        if (results.length > 1) {
+          return results;
+        }
         advanceRangeStartPastOffset(
             searchRange, searchRange.startContainer, searchRange.startOffset);
         continue;
@@ -256,6 +267,9 @@ export const processTextFragmentDirective = (textFragment) => {
       }
     } else {
       results.push(potentialMatch.cloneRange());
+      if (results.length > 1) {
+        return results;
+      }
     }
   }
   return results;
