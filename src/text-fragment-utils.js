@@ -146,11 +146,7 @@ export const processTextFragmentDirective = (textFragment) => {
   const searchRange = document.createRange();
   searchRange.selectNodeContents(document.body);
 
-  while (!searchRange.collapsed) {
-    if (results.length > 1) {
-      return results;
-    }
-
+  while (!searchRange.collapsed && results.length < 2) {
     let potentialMatch;
     if (textFragment.prefix) {
       const prefixMatch = findTextInRange(textFragment.prefix, searchRange);
@@ -214,11 +210,7 @@ export const processTextFragmentDirective = (textFragment) => {
 
       // Search through the rest of the document to find a textEnd match. This
       // may take multiple iterations if a suffix needs to be found.
-      while (!textEndRange.collapsed) {
-        if (results.length > 1) {
-          return results;
-        }
-
+      while (!textEndRange.collapsed && results.length < 2) {
         const textEndMatch =
             findTextInRange(textFragment.textEnd, textEndRange);
         if (textEndMatch == null) {
