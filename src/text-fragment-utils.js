@@ -135,8 +135,10 @@ export const processFragmentDirectives = (parsedFragmentDirectives) => {
  *
  * @param {TextFragment} textFragment - Text Fragment to highlight.
  * @return {Ranges[]} - Zero or more ranges within the document corresponding
- *     to the fragment. The fragment uniquely identifies a section of the page
- *     iff the returned list has length 1
+ *     to the fragment. If the fragment corresponds to more than one location
+ *     in the document (i.e., is ambiguous) then the first two matches will be
+ *     returned (regardless of how many more matches there may be in the
+ *     document).
  */
 export const processTextFragmentDirective = (textFragment) => {
   const results = [];
@@ -144,7 +146,7 @@ export const processTextFragmentDirective = (textFragment) => {
   const searchRange = document.createRange();
   searchRange.selectNodeContents(document.body);
 
-  while (!searchRange.collapsed) {
+  while (!searchRange.collapsed && results.length < 2) {
     let potentialMatch;
     if (textFragment.prefix) {
       const prefixMatch = findTextInRange(textFragment.prefix, searchRange);
@@ -208,7 +210,7 @@ export const processTextFragmentDirective = (textFragment) => {
 
       // Search through the rest of the document to find a textEnd match. This
       // may take multiple iterations if a suffix needs to be found.
-      while (!textEndRange.collapsed) {
+      while (!textEndRange.collapsed && results.length < 2) {
         const textEndMatch =
             findTextInRange(textFragment.textEnd, textEndRange);
         if (textEndMatch == null) {
