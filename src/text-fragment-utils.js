@@ -28,12 +28,13 @@ const FRAGMENT_DIRECTIVES = ['text'];
 // block element. Source for the list:
 // https://developer.mozilla.org/en-US/docs/Web/HTML/Block-level_elements#Elements
 const BLOCK_ELEMENTS = [
-  'ADDRESS', 'ARTICLE', 'ASIDE', 'BLOCKQUOTE', 'DETAILS',  'DIALOG',
-  'DD',      'DIV',     'DL',    'DT',         'FIELDSET', 'FIGCAPTION',
-  'FIGURE',  'FOOTER',  'FORM',  'H1',         'H2',       'H3',
-  'H4',      'H5',      'H6',    'HEADER',     'HGROUP',   'HR',
-  'LI',      'MAIN',    'NAV',   'OL',         'P',        'PRE',
-  'SECTION', 'TABLE',   'UL',
+  'ADDRESS',  'ARTICLE', 'ASIDE',   'BLOCKQUOTE', 'DETAILS',  'DIALOG',
+  'DD',       'DIV',     'DL',      'DT',         'FIELDSET', 'FIGCAPTION',
+  'FIGURE',   'FOOTER',  'FORM',    'H1',         'H2',       'H3',
+  'H4',       'H5',      'H6',      'HEADER',     'HGROUP',   'HR',
+  'LI',       'MAIN',    'NAV',     'OL',         'P',        'PRE',
+  'SECTION',  'TABLE',   'UL',      'TR',         'TH',       'TD',
+  'COLGROUP', 'COL',     'CAPTION', 'THEAD',      'TBODY',    'TFOOT',
 ];
 
 // Characters that indicate a word boundary. Use the script

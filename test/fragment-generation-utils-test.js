@@ -578,4 +578,35 @@ describe('FragmentGenerationUtils', function() {
     expect(fragmentUtils.forTesting.normalizeString(result.fragment.suffix))
         .toEqual('recteque qui ei. suffix');
   });
+
+  it('can generate URLs spanning table elements', function() {
+    document.body.innerHTML = __html__['table.html'];
+
+    const target = document.createRange();
+    const selection = window.getSelection();
+
+    const nodeA = document.getElementById('a').firstChild;
+    target.setStart(nodeA, 6);
+    target.setEnd(nodeA, 11);
+    selection.removeAllRanges();
+    selection.addRange(target);
+
+    let result = generationUtils.generateFragment(selection);
+    expect(fragmentUtils.forTesting.normalizeString(result.fragment.prefix))
+        .toEqual('first');
+    expect(fragmentUtils.forTesting.normalizeString(result.fragment.textStart))
+        .toEqual('named');
+
+    const nodeB = document.getElementById('b').firstChild;
+    target.setStart(nodeA, 0);
+    target.setEnd(nodeB, nodeB.textContent.length);
+    selection.removeAllRanges();
+    selection.addRange(target);
+
+    result = generationUtils.generateFragment(selection);
+    expect(fragmentUtils.forTesting.normalizeString(result.fragment.textStart))
+        .toEqual('first named');
+    expect(fragmentUtils.forTesting.normalizeString(result.fragment.textEnd))
+        .toEqual('2014');
+  });
 });

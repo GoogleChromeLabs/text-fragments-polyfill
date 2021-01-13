@@ -446,4 +446,16 @@ describe('TextFragmentUtils', function() {
     result = utils.processTextFragmentDirective(fragment);
     expect(result.length).toEqual(2);
   });
+
+  it('can find ranges spanning multiple table elements', function() {
+    document.body.innerHTML = __html__['table.html'];
+    let fragment =
+        utils.forTesting.parseTextFragmentDirective('First%20named,2014');
+    let result = utils.processTextFragmentDirective(fragment);
+    expect(result.length).toEqual(1);
+
+    fragment = utils.forTesting.parseTextFragmentDirective('12');
+    result = utils.processTextFragmentDirective(fragment);
+    expect(result.length).toEqual(1);
+  });
 });
