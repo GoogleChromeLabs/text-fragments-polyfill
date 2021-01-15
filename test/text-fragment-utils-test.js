@@ -458,4 +458,15 @@ describe('TextFragmentUtils', function() {
     result = utils.processTextFragmentDirective(fragment);
     expect(result.length).toEqual(1);
   });
+
+  it("finds the background color from ::target-text", function() {
+    document.body.innerHTML = __html__['target-text-test.html'];
+    var backgroundColor = utils.getTargetTextBackgroundColor();
+    expect(backgroundColor).toEqual("green");
+
+    document.body.innerHTML = __html__['marks_test.html'];
+    backgroundColor = utils.getTargetTextBackgroundColor();
+    expect(backgroundColor).toBeUndefined;
+    
+  });
 });

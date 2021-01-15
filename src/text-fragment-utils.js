@@ -820,3 +820,24 @@ if (typeof goog !== 'undefined') {
   goog.declareModuleId('googleChromeLabs.textFragmentPolyfill.textFragmentUtils');
   // clang-format on
 }
+
+/**
+ * Seaches ::target-text background color in the document
+ *
+ * @return {string} - background color from ::target-text
+ */
+export const getTargetTextBackgroundColor = () => {
+  const styles = document.getElementsByTagName("style");
+  if (!styles) return null;
+
+  for (const style of styles) {
+    const cssRules = style.innerHTML;
+    const targetTextRules = cssRules.match(/::target-text\s*{\s*((.|\n)*?)\s*}/g);
+    if (!targetTextRules) return null;
+
+    const backgroundColor = targetTextRules[0].match(/background-color\s*:\s*(.*?)\s*;/);
+    if (!backgroundColor) return null;
+    
+    return backgroundColor[1];
+  }
+}
