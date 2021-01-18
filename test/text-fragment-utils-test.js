@@ -458,4 +458,40 @@ describe('TextFragmentUtils', function() {
     result = utils.processTextFragmentDirective(fragment);
     expect(result.length).toEqual(1);
   });
+
+  it("finds the background color from ::target-text", function() {
+    document.body.innerHTML = __html__['target-text-test.html'];
+
+    // complete ::target-text
+    var targetTextStyle = utils.getTargetTextStyle();
+    expect(targetTextStyle.backgroundColor).toEqual("green");
+    expect(targetTextStyle.color).toEqual("grey !important");
+
+    // wrong background color
+    document.getElementsByTagName('style')[0].innerHTML = `
+      ::target-text {
+        color: #FFC0CB;
+        background-color: wrong;
+      }
+    `; 
+    targetTextStyle = utils.getTargetTextStyle();
+    expect(targetTextStyle.color).toEqual("#FFC0CB");
+    expect(targetTextStyle.backgroundColor).toBeUndefined;
+
+    // no color
+    document.getElementsByTagName('style')[0].innerHTML = `
+      ::target-text {
+        background-color: rgb(230, 230, 250);
+      }
+    `; 
+    targetTextStyle = utils.getTargetTextStyle();
+    expect(targetTextStyle.backgroundColor).toEqual("rgb(230, 230, 250)");
+    expect(targetTextStyle.color).toBeUndefined;
+
+    // no ::target-text
+    document.body.innerHTML = __html__['marks_test.html'];
+    targetTextStyle = utils.getTargetTextStyle();
+    expect(targetTextStyle).toBeUndefined;
+    
+  });
 });
