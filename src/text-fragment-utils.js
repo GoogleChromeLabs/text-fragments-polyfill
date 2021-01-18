@@ -822,22 +822,46 @@ if (typeof goog !== 'undefined') {
 }
 
 /**
- * Seaches ::target-text background color in the document
+ * Extract color and background-color from ::target-text in the document.
  *
- * @return {string} - background color from ::target-text
+ * @return {{backgroundColor: string, color: string}} - color and background-color from ::target-text
  */
-export const getTargetTextBackgroundColor = () => {
+export const getTargetTextStyle = () => {
+  
   const styles = document.getElementsByTagName("style");
   if (!styles) return null;
 
   for (const style of styles) {
     const cssRules = style.innerHTML;
     const targetTextRules = cssRules.match(/::target-text\s*{\s*((.|\n)*?)\s*}/g);
-    if (!targetTextRules) return null;
+    if (!targetTextRules) continue;
 
     const backgroundColor = targetTextRules[0].match(/background-color\s*:\s*(.*?)\s*;/);
-    if (!backgroundColor) return null;
-    
-    return backgroundColor[1];
+    const color = targetTextRules[0].match(/[^-]color\s*:\s*(.*?)\s*;/);
+
+    const targetTextStyle = {
+      backgroundColor: isValidColor(backgroundColor) ? backgroundColor[1] : null,
+      color: isValidColor(color) ? color[1] : null
+    };
+
+    return targetTextStyle;
   }
+
+  return null;
 }
+
+/**
+ * Verify that the regex match is a valid color.
+ * 
+ * @param {String} color - regex match to be validated
+ * @return {bool} - true iff the regex match is a valid color.
+ */
+const isValidColor = (color) => {
+  if (!color) return false;
+  if (color.length < 2) return false;
+
+  const optionElement = new Option().style;
+  optionElement.color = color[1].replace('!important', '');
+
+  return optionElement.color === null ? false : true;
+};
