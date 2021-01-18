@@ -865,3 +865,13 @@ const isValidColor = (color) => {
 
   return optionElement.color === null ? false : true;
 };
+
+/**
+ * Add color and background-color to <mark> tag.
+ * 
+ * @param {Object} mark - <mark> element to add color and background-color to
+ */
+export const setMarkStyle = (mark, {backgroundColor, color}) => {
+  if (backgroundColor) mark.style.backgroundColor = backgroundColor;
+  if (color) mark.style.color = color;
+};
