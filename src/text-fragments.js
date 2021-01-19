@@ -37,6 +37,24 @@ import * as utils from './text-fragment-utils.js';
         parsedFragmentDirectives,
     );
     const createdMarks = processedFragmentDirectives['text'];
+
+    const targetTextStyle = utils.getTargetTextStyle();
+    const markStyle = {
+      backgroundColor: targetTextStyle && targetTextStyle.backgroundColor ?
+                        (targetTextStyle.backgroundColor.includes('!important') ?
+                          targetTextStyle.backgroundColor :
+                          targetTextStyle.backgroundColor + ' !important') :
+                        'rgb(233,210,253) !important',
+      color: targetTextStyle && targetTextStyle.color ?
+              (targetTextStyle.color.includes('!important') ?
+                targetTextStyle.color :
+                targetTextStyle.color + ' !important') :
+              null
+    };
+    for (const createdMark of createdMarks) {
+      utils.setMarkStyle(createdMark[0], markStyle);
+    }
+
     const firstFoundMatch = createdMarks.find((marks) => marks.length)[0];
     if (firstFoundMatch) {
       window.setTimeout(() => utils.scrollElementIntoView(firstFoundMatch));

@@ -873,6 +873,9 @@ const isValidColor = (color) => {
  * @param {Object} - background-color and color that will be applied to the element style
  */
 export const setMarkStyle = (mark, {backgroundColor, color}) => {
-  if (backgroundColor) mark.style.backgroundColor = backgroundColor;
-  if (color) mark.style.color = color;
+  const cssRuleBackgroundColor = backgroundColor ? `background-color: ${backgroundColor};` : '';
+  const cssRuleColor = color ? `color: ${color};` : '';
+  mark.setAttribute('style', `${cssRuleBackgroundColor && cssRuleColor ?
+                                  cssRuleBackgroundColor + ' ' + cssRuleColor :
+                                  (cssRuleBackgroundColor || cssRuleColor)}`);
 };
