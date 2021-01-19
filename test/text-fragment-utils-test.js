@@ -459,7 +459,7 @@ describe('TextFragmentUtils', function() {
     expect(result.length).toEqual(1);
   });
 
-  it("finds the background color from ::target-text", function() {
+  it('finds the background color from ::target-text', function() {
     document.body.innerHTML = __html__['target-text-test.html'];
 
     // complete ::target-text
@@ -475,7 +475,7 @@ describe('TextFragmentUtils', function() {
       }
     `; 
     targetTextStyle = utils.getTargetTextStyle();
-    expect(targetTextStyle.color).toEqual("#FFC0CB");
+    expect(targetTextStyle.color).toEqual('#FFC0CB');
     expect(targetTextStyle.backgroundColor).toBeUndefined;
 
     // no color
@@ -485,7 +485,7 @@ describe('TextFragmentUtils', function() {
       }
     `; 
     targetTextStyle = utils.getTargetTextStyle();
-    expect(targetTextStyle.backgroundColor).toEqual("rgb(230, 230, 250)");
+    expect(targetTextStyle.backgroundColor).toEqual('rgb(230, 230, 250)');
     expect(targetTextStyle.color).toBeUndefined;
 
     // no ::target-text
@@ -493,5 +493,24 @@ describe('TextFragmentUtils', function() {
     targetTextStyle = utils.getTargetTextStyle();
     expect(targetTextStyle).toBeUndefined;
     
+  });
+
+  it('should update <mark> style', function() {
+    document.body.innerHTML = __html__['marks_test.html'];
+    const range = document.createRange();
+    range.setStart(document.getElementById('a').firstChild, 0);
+    const lastChild = document.getElementById('a').lastChild;
+    range.setEnd(lastChild, lastChild.textContent.length);
+    const marks = utils.forTesting.markRange(range);
+    const cssRules = {
+      backgroundColor: 'purple',
+      color: 'grey'
+    }
+
+    for (const mark of marks) {
+      utils.setMarkStyle(mark, cssRules);
+      expect(mark.outerHTML).toContain(`<mark style="background-color: purple; color: grey;">`);
+    }
+
   });
 });
