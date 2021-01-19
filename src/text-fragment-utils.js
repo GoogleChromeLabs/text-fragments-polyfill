@@ -869,7 +869,8 @@ const isValidColor = (color) => {
 /**
  * Add color and background-color to <mark> tag.
  * 
- * @param {Object} mark - <mark> element to add color and background-color to
+ * @param {Object} mark - <mark> element to receive inline style
+ * @param {Object} - background-color and color that will be applied to the element style
  */
 export const setMarkStyle = (mark, {backgroundColor, color}) => {
   if (backgroundColor) mark.style.backgroundColor = backgroundColor;
