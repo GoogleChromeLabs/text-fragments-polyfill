@@ -824,35 +824,39 @@ if (typeof goog !== 'undefined') {
 /**
  * Extract color and background-color from ::target-text in the document.
  *
- * @return {{backgroundColor: string, color: string}} - color and background-color from ::target-text
+ * @return {{backgroundColor: string, color: string}} - color and
+ *     background-color from ::target-text
  */
-export const getTargetTextStyle = () => {
-  
-  const styles = document.getElementsByTagName("style");
-  if (!styles) return null;
+export const getTargetTextStyle =
+    () => {
+      const styles = document.getElementsByTagName('style');
+      if (!styles) return null;
 
-  for (const style of styles) {
-    const cssRules = style.innerHTML;
-    const targetTextRules = cssRules.match(/::target-text\s*{\s*((.|\n)*?)\s*}/g);
-    if (!targetTextRules) continue;
+      for (const style of styles) {
+        const cssRules = style.innerHTML;
+        const targetTextRules =
+            cssRules.match(/::target-text\s*{\s*((.|\n)*?)\s*}/g);
+        if (!targetTextRules) continue;
 
-    const backgroundColor = targetTextRules[0].match(/background-color\s*:\s*(.*?)\s*;/);
-    const color = targetTextRules[0].match(/[^-]color\s*:\s*(.*?)\s*;/);
+        const backgroundColor =
+            targetTextRules[0].match(/background-color\s*:\s*(.*?)\s*;/);
+        const color = targetTextRules[0].match(/[^-]color\s*:\s*(.*?)\s*;/);
 
-    const targetTextStyle = {
-      backgroundColor: isValidColor(backgroundColor) ? backgroundColor[1] : null,
-      color: isValidColor(color) ? color[1] : null
-    };
+        const targetTextStyle = {
+          backgroundColor: isValidColor(backgroundColor) ? backgroundColor[1] :
+                                                           null,
+          color: isValidColor(color) ? color[1] : null
+        };
 
-    return targetTextStyle;
-  }
+        return targetTextStyle;
+      }
 
-  return null;
-}
+      return null;
+    }
 
 /**
  * Verify that the regex match is a valid color.
- * 
+ *
  * @param {String} color - regex match to be validated
  * @return {bool} - true iff the regex match is a valid color.
  */
@@ -868,11 +872,19 @@ const isValidColor = (color) => {
 
 /**
  * Add color and background-color to <mark> tag.
- * 
+ *
  * @param {Object} mark - <mark> element to receive inline style
- * @param {Object} - background-color and color that will be applied to the element style
+ * @param {Object} - background-color and color that will be applied to the
+ *     element style
  */
 export const setMarkStyle = (mark, {backgroundColor, color}) => {
-  if (backgroundColor) mark.style.backgroundColor = backgroundColor;
-  if (color) mark.style.color = color;
+  const cssRuleBackgroundColor =
+      backgroundColor ? `background-color: ${backgroundColor};` : '';
+  const cssRuleColor = color ? `color: ${color};` : '';
+  mark.setAttribute(
+      'style',
+      `${
+          cssRuleBackgroundColor && cssRuleColor ?
+              cssRuleBackgroundColor + ' ' + cssRuleColor :
+              (cssRuleBackgroundColor || cssRuleColor)}`);
 };
