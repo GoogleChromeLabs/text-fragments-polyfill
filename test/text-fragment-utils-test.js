@@ -463,9 +463,9 @@ describe('TextFragmentUtils', function() {
     document.body.innerHTML = __html__['target-text-test.html'];
 
     // complete ::target-text
-    var targetTextStyle = utils.getTargetTextStyle();
-    expect(targetTextStyle.backgroundColor).toEqual("green");
-    expect(targetTextStyle.color).toEqual("grey !important");
+    let targetTextStyle = utils.getTargetTextStyle();
+    expect(targetTextStyle.backgroundColor).toEqual('green');
+    expect(targetTextStyle.color).toEqual('grey !important');
 
     // wrong background color
     document.getElementsByTagName('style')[0].innerHTML = `
@@ -473,7 +473,7 @@ describe('TextFragmentUtils', function() {
         color: #FFC0CB;
         background-color: wrong;
       }
-    `; 
+    `;
     targetTextStyle = utils.getTargetTextStyle();
     expect(targetTextStyle.color).toEqual('#FFC0CB');
     expect(targetTextStyle.backgroundColor).toBeUndefined;
@@ -483,7 +483,7 @@ describe('TextFragmentUtils', function() {
       ::target-text {
         background-color: rgb(230, 230, 250);
       }
-    `; 
+    `;
     targetTextStyle = utils.getTargetTextStyle();
     expect(targetTextStyle.backgroundColor).toEqual('rgb(230, 230, 250)');
     expect(targetTextStyle.color).toBeUndefined;
@@ -492,7 +492,6 @@ describe('TextFragmentUtils', function() {
     document.body.innerHTML = __html__['marks_test.html'];
     targetTextStyle = utils.getTargetTextStyle();
     expect(targetTextStyle).toBeUndefined;
-    
   });
 
   it('should update <mark> style', function() {
@@ -502,15 +501,12 @@ describe('TextFragmentUtils', function() {
     const lastChild = document.getElementById('a').lastChild;
     range.setEnd(lastChild, lastChild.textContent.length);
     const marks = utils.forTesting.markRange(range);
-    const cssRules = {
-      backgroundColor: 'purple',
-      color: 'grey'
-    }
+    const cssRules = {backgroundColor: 'purple', color: 'grey'}
 
     for (const mark of marks) {
       utils.setMarkStyle(mark, cssRules);
-      expect(mark.outerHTML).toContain(`<mark style="background-color: purple; color: grey;">`);
+      expect(mark.outerHTML)
+          .toContain(`<mark style="background-color: purple; color: grey;">`);
     }
-
   });
 });
