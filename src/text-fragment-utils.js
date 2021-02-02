@@ -822,69 +822,38 @@ if (typeof goog !== 'undefined') {
 }
 
 /**
- * Extract color and background-color from ::target-text in the document.
+ * Replaces all occurence of the pseudo element ::target-text to a css class
+ * chrome-target-text
  *
- * @return {{backgroundColor: string, color: string}} - color and
- *     background-color from ::target-text
+ * @return {bool} - true iff we can create a css class from
+ *     ::target-text
  */
-export const getTargetTextStyle =
+export const applyTargetTextStyle =
     () => {
       const styles = document.getElementsByTagName('style');
-      if (!styles) return null;
+      if (!styles) return false;
 
+      let targetTextStyleFound = false;
       for (const style of styles) {
         const cssRules = style.innerHTML;
         const targetTextRules =
             cssRules.match(/::target-text\s*{\s*((.|\n)*?)\s*}/g);
         if (!targetTextRules) continue;
 
-        const backgroundColor =
-            targetTextRules[0].match(/background-color\s*:\s*(.*?)\s*;/);
-        const color = targetTextRules[0].match(/[^-]color\s*:\s*(.*?)\s*;/);
-
-        const targetTextStyle = {
-          backgroundColor: isValidColor(backgroundColor) ? backgroundColor[1] :
-                                                           null,
-          color: isValidColor(color) ? color[1] : null
-        };
-
-        return targetTextStyle;
+        const newNode = document.createTextNode(
+            cssRules.replaceAll('::target-text', ' .chrome-target-text'));
+        style.replaceChild(newNode, style.firstChild);
+        targetTextStyleFound = true;
       }
 
-      return null;
+      return targetTextStyleFound;
     }
 
 /**
- * Verify that the regex match is a valid color.
+ * Adds chrome-target-text css class to <mark> tag.
  *
- * @param {String} color - regex match to be validated
- * @return {bool} - true iff the regex match is a valid color.
+ * @param {Object} mark - <mark> element to receive css class
  */
-const isValidColor = (color) => {
-  if (!color) return false;
-  if (color.length < 2) return false;
-
-  const optionElement = new Option().style;
-  optionElement.color = color[1].replace('!important', '');
-
-  return optionElement.color === null ? false : true;
-};
-
-/**
- * Add color and background-color to <mark> tag.
- *
- * @param {Object} mark - <mark> element to receive inline style
- * @param {Object} - background-color and color that will be applied to the
- *     element style
- */
-export const setMarkStyle = (mark, {backgroundColor, color}) => {
-  const cssRuleBackgroundColor =
-      backgroundColor ? `background-color: ${backgroundColor};` : '';
-  const cssRuleColor = color ? `color: ${color};` : '';
-  mark.setAttribute(
-      'style',
-      `${
-          cssRuleBackgroundColor && cssRuleColor ?
-              cssRuleBackgroundColor + ' ' + cssRuleColor :
-              (cssRuleBackgroundColor || cssRuleColor)}`);
+export const addCssClassToMark = (mark) => {
+  mark.setAttribute('class', 'chrome-target-text');
 };

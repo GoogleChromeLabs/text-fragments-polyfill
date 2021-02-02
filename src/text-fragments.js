@@ -38,10 +38,9 @@ import * as utils from './text-fragment-utils.js';
     );
     const createdMarks = processedFragmentDirectives['text'];
 
-    const targetTextStyle = utils.getTargetTextStyle();
-    if (targetTextStyle) {
+    if (utils.applyTargetTextStyle()) {
       for (const createdMark of createdMarks.flat()) {
-        utils.setMarkStyle(createdMark, targetTextStyle);
+        utils.addCssClassToMark(createdMark);
       }
     }
 
