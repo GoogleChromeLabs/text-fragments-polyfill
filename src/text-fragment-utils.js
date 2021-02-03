@@ -400,6 +400,7 @@ export const markRange = (range) => {
   // If the range is entirely within a single node, just surround it.
   if (range.startContainer === range.endContainer) {
     const trivialMark = document.createElement('mark');
+    trivialMark.setAttribute('class', textFragmentCssClassName);
     range.surroundContents(trivialMark);
     return [trivialMark];
   }
@@ -436,6 +437,7 @@ export const markRange = (range) => {
   while (node) {
     if (node.nodeType === Node.TEXT_NODE) {
       const mark = document.createElement('mark');
+      mark.setAttribute('class', textFragmentCssClassName);
       node.parentNode.insertBefore(mark, node);
       mark.appendChild(node);
       marks.push(mark);
@@ -444,8 +446,10 @@ export const markRange = (range) => {
   }
 
   const startMark = document.createElement('mark');
+  startMark.setAttribute('class', textFragmentCssClassName);
   startNodeSubrange.surroundContents(startMark);
   const endMark = document.createElement('mark');
+  endMark.setAttribute('class', textFragmentCssClassName);
   endNodeSubrange.surroundContents(endMark);
 
   return [startMark, ...marks, endMark];
@@ -823,37 +827,28 @@ if (typeof goog !== 'undefined') {
 
 /**
  * Replaces all occurence of the pseudo element ::target-text to a css class
- * chrome-target-text
+ * text-fragments-polyfill-target-text
  *
- * @return {bool} - true iff we can create a css class from
- *     ::target-text
  */
 export const applyTargetTextStyle =
     () => {
       const styles = document.getElementsByTagName('style');
-      if (!styles) return false;
+      if (!styles) return;
 
-      let targetTextStyleFound = false;
       for (const style of styles) {
         const cssRules = style.innerHTML;
         const targetTextRules =
             cssRules.match(/::target-text\s*{\s*((.|\n)*?)\s*}/g);
         if (!targetTextRules) continue;
 
-        const newNode = document.createTextNode(
-            cssRules.replaceAll('::target-text', ' .chrome-target-text'));
-        style.replaceChild(newNode, style.firstChild);
-        targetTextStyleFound = true;
+        const markCss = targetTextRules.join('\n');
+        const newNode = document.createTextNode(markCss.replaceAll(
+            '::target-text', ` .${textFragmentCssClassName}`));
+        style.appendChild(newNode);
       }
-
-      return targetTextStyleFound;
     }
 
 /**
- * Adds chrome-target-text css class to <mark> tag.
- *
- * @param {Object} mark - <mark> element to receive css class
+ * Text fragments CSS class name.
  */
-export const addCssClassToMark = (mark) => {
-  mark.setAttribute('class', 'chrome-target-text');
-};
+export const textFragmentCssClassName = 'text-fragments-polyfill-target-text';

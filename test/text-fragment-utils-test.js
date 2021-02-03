@@ -13,14 +13,14 @@ const marksArrayToString = (marks) => {
 };
 
 // A helper function to extract the color and background color from
-// css class the chrome-target-text.
+// css class the text-fragments-polyfill-target-text.
 const getColors =
     () => {
       const style = document.getElementsByTagName('style')[0];
       if (!style) return null;
 
-      const chromeTargetTextRules =
-          style.innerHTML.match(/.chrome-target-text\s*{\s*((.|\n)*?)\s*}/g);
+      const chromeTargetTextRules = style.innerHTML.match(
+          /.text-fragments-polyfill-target-text\s*{\s*((.|\n)*?)\s*}/g);
       if (!chromeTargetTextRules) return null;
 
       const backgroundColor =
@@ -484,7 +484,7 @@ describe('TextFragmentUtils', function() {
     document.body.innerHTML = __html__['target-text-test.html'];
 
     // complete ::target-text
-    expect(utils.applyTargetTextStyle()).toBeTrue();
+    utils.applyTargetTextStyle();
     let targetTextStyle = getColors();
     expect(targetTextStyle.backgroundColor).toEqual('green');
     expect(targetTextStyle.color).toEqual('grey !important');
@@ -495,30 +495,14 @@ describe('TextFragmentUtils', function() {
       background-color: rgb(230, 230, 250);
     }
     `;
-    expect(utils.applyTargetTextStyle()).toBeTrue();
+    utils.applyTargetTextStyle();
     targetTextStyle = getColors();
     expect(targetTextStyle.backgroundColor).toEqual('rgb(230, 230, 250)');
     expect(targetTextStyle.color).toBeUndefined;
 
     // no ::target-text
     document.body.innerHTML = __html__['marks_test.html'];
-    expect(utils.applyTargetTextStyle()).toBeFalse();
+    utils.applyTargetTextStyle();
     expect(getColors()).toBeUndefined;
-  });
-
-  it('should update <mark> style', function() {
-    document.body.innerHTML = __html__['marks_test.html'];
-    const range = document.createRange();
-    range.setStart(document.getElementById('a').firstChild, 0);
-    const lastChild = document.getElementById('a').lastChild;
-    range.setEnd(lastChild, lastChild.textContent.length);
-    const marks = utils.forTesting.markRange(range);
-    const cssRules = {backgroundColor: 'purple', color: 'grey'}
-
-    for (const mark of marks) {
-      utils.setMarkStyle(mark, cssRules);
-      expect(mark.outerHTML)
-          .toContain(`<mark style="background-color: purple; color: grey;">`);
-    }
   });
 });

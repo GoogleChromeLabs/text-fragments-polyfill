@@ -37,13 +37,7 @@ import * as utils from './text-fragment-utils.js';
         parsedFragmentDirectives,
     );
     const createdMarks = processedFragmentDirectives['text'];
-
-    if (utils.applyTargetTextStyle()) {
-      for (const createdMark of createdMarks.flat()) {
-        utils.addCssClassToMark(createdMark);
-      }
-    }
-
+    utils.applyTargetTextStyle();
     const firstFoundMatch = createdMarks.find((marks) => marks.length)[0];
     if (firstFoundMatch) {
       window.setTimeout(() => utils.scrollElementIntoView(firstFoundMatch));
