@@ -490,11 +490,8 @@ describe('TextFragmentUtils', function() {
     expect(targetTextStyle.color).toEqual('grey !important');
 
     // ::target-text scoped to an element
-    document.getElementsByTagName('style')[0].innerHTML = `
-    div::target-text {
-      background-color: rgb(230, 230, 250);
-    }
-    `;
+    document.getElementsByTagName('style')[0].innerHTML = 
+      'div::target-text { background-color: rgb(230, 230, 250);}';
     utils.applyTargetTextStyle();
     targetTextStyle = getColors();
     expect(targetTextStyle.backgroundColor).toEqual('rgb(230, 230, 250)');
