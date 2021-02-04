@@ -835,20 +835,41 @@ if (typeof goog !== 'undefined') {
  * text-fragments-polyfill-target-text
  *
  */
-export const applyTargetTextStyle =
-    () => {
-      const styles = document.getElementsByTagName('style');
-      if (!styles) return;
+export const applyTargetTextStyle = () => {
+  const styles = document.getElementsByTagName('style');
+  if (!styles) return;
 
-      for (const style of styles) {
-        const cssRules = style.innerHTML;
-        const targetTextRules =
-            cssRules.match(/(\w*)::target-text\s*{\s*((.|\n)*?)\s*}/g);
-        if (!targetTextRules) continue;
+  for (const style of styles) {
+    const cssRules = style.innerHTML;
+    const targetTextRules =
+        cssRules.match(/(\w*)::target-text\s*{\s*((.|\n)*?)\s*}/g);
+    if (!targetTextRules) continue;
 
-        const markCss = targetTextRules.join('\n');
-        const newNode = document.createTextNode(markCss.replaceAll(
-            '::target-text', ` .${TEXT_FRAGMENT_CSS_CLASS_NAME}`));
-        style.appendChild(newNode);
-      }
-    };
+    const markCss = targetTextRules.join('\n');
+    const newNode = document.createTextNode(markCss.replaceAll(
+        '::target-text', ` .${TEXT_FRAGMENT_CSS_CLASS_NAME}`));
+    style.appendChild(newNode);
+  }
+};
+
+/**
+ * Add color and background-color to the CSS class.
+ *
+ * @param {Object} - background-color and color that will be applied to the
+ *     to the CSS class.
+ */
+export const setDefaultTextFragmentsStyle = ({backgroundColor, color}) => {
+  const styles = document.getElementsByTagName('style');
+  const defaultStyle = `.${TEXT_FRAGMENT_CSS_CLASS_NAME} {
+    background-color: ${backgroundColor};
+    color: ${color};
+  }`
+  if (styles.length === 0) {
+    document.head.insertAdjacentHTML(
+        'beforeend', `<style type="text/css">${defaultStyle}</style>`);
+  }
+  else {
+    const defaultStyleNode = document.createTextNode(defaultStyle);
+    styles[0].insertBefore(defaultStyleNode, styles[0].firstChild);
+  }
+};
