@@ -12,6 +12,27 @@ const marksArrayToString = (marks) => {
   return text.join('').replace(/[\t\n\r ]+/g, ' ').trim();
 };
 
+// A helper function to extract the color and background color from
+// css class the text-fragments-polyfill-target-text.
+const getColors =
+    () => {
+      const style = document.getElementsByTagName('style')[0];
+      if (!style) return null;
+
+      const chromeTargetTextRules = style.innerHTML.match(
+          /.text-fragments-polyfill-target-text\s*{\s*((.|\n)*?)\s*}/g);
+      if (!chromeTargetTextRules) return null;
+
+      const backgroundColor =
+          chromeTargetTextRules[0].match(/background-color\s*:\s*(.*?)\s*;/);
+      const color = chromeTargetTextRules[0].match(/[^-]color\s*:\s*(.*?)\s*;/);
+      const chromeTargetTextStyle = {
+        backgroundColor: backgroundColor ? backgroundColor[1] : null,
+        color: color ? color[1] : null
+      };
+      return chromeTargetTextStyle;
+    }
+
 describe('TextFragmentUtils', function() {
   it('gets directives from a hash', function() {
     const directives = utils.getFragmentDirectives('#foo:~:text=bar&text=baz');
@@ -463,50 +484,22 @@ describe('TextFragmentUtils', function() {
     document.body.innerHTML = __html__['target-text-test.html'];
 
     // complete ::target-text
-    let targetTextStyle = utils.getTargetTextStyle();
+    utils.applyTargetTextStyle();
+    let targetTextStyle = getColors();
     expect(targetTextStyle.backgroundColor).toEqual('green');
     expect(targetTextStyle.color).toEqual('grey !important');
 
-    // wrong background color
-    document.getElementsByTagName('style')[0].innerHTML = `
-      ::target-text {
-        color: #FFC0CB;
-        background-color: wrong;
-      }
-    `;
-    targetTextStyle = utils.getTargetTextStyle();
-    expect(targetTextStyle.color).toEqual('#FFC0CB');
-    expect(targetTextStyle.backgroundColor).toBeUndefined;
-
-    // no color
-    document.getElementsByTagName('style')[0].innerHTML = `
-      ::target-text {
-        background-color: rgb(230, 230, 250);
-      }
-    `;
-    targetTextStyle = utils.getTargetTextStyle();
+    // ::target-text scoped to an element
+    document.getElementsByTagName('style')[0].innerHTML = 
+      'div::target-text { background-color: rgb(230, 230, 250);}';
+    utils.applyTargetTextStyle();
+    targetTextStyle = getColors();
     expect(targetTextStyle.backgroundColor).toEqual('rgb(230, 230, 250)');
     expect(targetTextStyle.color).toBeUndefined;
 
     // no ::target-text
     document.body.innerHTML = __html__['marks_test.html'];
-    targetTextStyle = utils.getTargetTextStyle();
-    expect(targetTextStyle).toBeUndefined;
-  });
-
-  it('should update <mark> style', function() {
-    document.body.innerHTML = __html__['marks_test.html'];
-    const range = document.createRange();
-    range.setStart(document.getElementById('a').firstChild, 0);
-    const lastChild = document.getElementById('a').lastChild;
-    range.setEnd(lastChild, lastChild.textContent.length);
-    const marks = utils.forTesting.markRange(range);
-    const cssRules = {backgroundColor: 'purple', color: 'grey'}
-
-    for (const mark of marks) {
-      utils.setMarkStyle(mark, cssRules);
-      expect(mark.outerHTML)
-          .toContain(`<mark style="background-color: purple; color: grey;">`);
-    }
+    utils.applyTargetTextStyle();
+    expect(getColors()).toBeUndefined;
   });
 });
