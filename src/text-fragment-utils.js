@@ -869,6 +869,7 @@ export const setDefaultTextFragmentsStyle = ({backgroundColor, color}) => {
         'beforeend', `<style type="text/css">${defaultStyle}</style>`);
   }
   else {
+    applyTargetTextStyle();
     const defaultStyleNode = document.createTextNode(defaultStyle);
     styles[0].insertBefore(defaultStyleNode, styles[0].firstChild);
   }
