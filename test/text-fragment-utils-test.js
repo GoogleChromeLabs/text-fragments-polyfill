@@ -527,9 +527,9 @@ describe('TextFragmentUtils', function() {
       color: 'rgb(255, 165, 0)'
     };
     document.getElementsByTagName('style')[0].innerHTML =
-        '.text-fragments-polyfill-target-text { background-color: rgb(0, 250, 250)}' +
-        'b .text-fragments-polyfill-target-text { background-color: rgb(230, 230, 250)}' +
-        'p .text-fragments-polyfill-target-text { color: rgb(130, 130, 25)}';
+        '::target-text { background-color: rgb(0, 250, 250)}' +
+        'b::target-text { background-color: rgb(230, 230, 250)}' +
+        'p::target-text { color: rgb(130, 130, 25)}';
     utils.setDefaultTextFragmentsStyle(style);
     const range = document.createRange();
     range.setStart(document.getElementById('a').firstChild, 0);
