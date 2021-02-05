@@ -2,6 +2,11 @@ import * as generationUtils from '../src/fragment-generation-utils.js';
 import * as fragmentUtils from '../src/text-fragment-utils.js';
 
 describe('FragmentGenerationUtils', function() {
+  beforeEach(function() {
+    generationUtils.setTimeout(500);
+    generationUtils.forTesting.recordStartTime(Date.now());
+  });
+
   it('can generate a fragment for an exact match', function() {
     document.body.innerHTML = __html__['basic_test.html'];
     const range = document.createRange();
@@ -313,6 +318,7 @@ describe('FragmentGenerationUtils', function() {
     expect(generationUtils.forTesting.getSearchSpaceForEnd(range))
         .toBeUndefined();
 
+
     // Starts inside one block, ends outside that block
     range.selectNodeContents(document.getElementById('a'));
     range.setStart(document.getElementById('c').firstChild, 0);
@@ -608,5 +614,42 @@ describe('FragmentGenerationUtils', function() {
         .toEqual('first named');
     expect(fragmentUtils.forTesting.normalizeString(result.fragment.textEnd))
         .toEqual('2014');
+  });
+
+  it('will halt generation after a certain time period', function() {
+    document.body.innerHTML = __html__['basic_test.html'];
+    const range = document.createRange();
+    range.selectNodeContents(document.body.firstChild.firstChild);
+
+    const selection = window.getSelection();
+    selection.removeAllRanges();
+    selection.addRange(range);
+
+    expect(function() {
+      generationUtils.generateFragment(selection, Date.now() - 1000);
+    }).toThrowMatching(function(thrown) {
+      return thrown.isTimeout
+    });
+
+    generationUtils.setTimeout(2000);
+    expect(function() {
+      generationUtils.generateFragment(selection, Date.now() - 1000);
+    }).not.toThrowMatching(function(thrown) {
+      return thrown.isTimeout
+    });
+  });
+
+
+  it('will halt search space creation after a certain time period', function() {
+    document.body.innerHTML = __html__['complicated-layout.html'];
+    const range = document.createRange();
+    range.selectNodeContents(document.getElementById('root'));
+
+    generationUtils.forTesting.recordStartTime(Date.now() - 1000);
+    expect(function() {
+      generationUtils.forTesting.getSearchSpaceForStart(range)
+    }).toThrowMatching(function(thrown) {
+      return thrown.isTimeout
+    });
   });
 });

@@ -19,6 +19,35 @@ import * as fragments from './text-fragment-utils.js';
 const MAX_EXACT_MATCH_LENGTH = 300;
 const ITERATIONS_BEFORE_ADDING_CONTEXT = 3;
 
+// Desired max run time, in ms. Can be overwritten.
+let timeoutDurationMs = 500;
+
+let t0;  // Start timestamp for fragment generation
+
+const checkTimeout = () => {
+  const delta = Date.now() - t0;
+  if (delta > timeoutDurationMs) {
+    const timeoutError =
+        new Error(`Fragment generation timed out after ${delta} ms.`);
+    timeoutError.isTimeout = true;
+    throw timeoutError;
+  }
+};
+
+const recordStartTime = (newStartTime) => {
+  t0 = newStartTime;
+};
+
+/**
+ * Allows overriding the max runtime to specify a different interval. Fragment
+ * generation will halt and throw an error after this amount of time.
+ * @param {Number} newTimeoutDurationMs - the desired timeout length, in ms.
+ */
+export const setTimeout =
+    (newTimeoutDurationMs) => {
+      timeoutDurationMs = newTimeoutDurationMs;
+    }
+
 /**
  * Enum indicating the success, or failure reason, of generateFragment.
  */
@@ -39,9 +68,15 @@ export const GenerateFragmentStatus = {
  * URL, which will highlight the given selection upon opening.
  * @param {Selection} selection - a Selection object, the result of
  *     window.getSelection
+ * @param {Date} [startTime] - the time when generation began, for timeout
+ *     purposes. Defaults to current timestamp.
  * @return {GenerateFragmentResult}
+ * @throws {Error} - Will throw if computation takes longer than the accepted
+ *     timeout length.
  */
-export const generateFragment = (selection) => {
+export const generateFragment = (selection, startTime = Date.now()) => {
+  recordStartTime(startTime);
+
   let range;
   try {
     range = selection.getRangeAt(0);
@@ -52,11 +87,16 @@ export const generateFragment = (selection) => {
   expandRangeStartToWordBound(range);
   expandRangeEndToWordBound(range);
 
+  if (range.collapsed) {
+    return {status: GenerateFragmentStatus.INVALID_SELECTION};
+  }
+
   let factory;
 
   // First, try the easy case of just using the range text as the fragment.
   const exactText = fragments.internal.normalizeString(range.toString());
-  if (canUseExactMatch(range)) {
+  const exactMatchResult = canUseExactMatch(range);
+  if (exactMatchResult) {
     const fragment = {
       textStart: exactText,
     };
@@ -66,9 +106,7 @@ export const generateFragment = (selection) => {
         fragment: fragment,
       };
     }
-  }
 
-  if (canUseExactMatch(range)) {
     factory = new FragmentFactory().setExactTextMatch(exactText);
   } else {
     // We have to use textStart and textEnd to identify a range. First, break
@@ -114,6 +152,7 @@ export const generateFragment = (selection) => {
         fragment: fragment,
       };
     }
+    checkTimeout();
   }
   return {status: GenerateFragmentStatus.AMBIGUOUS};
 };
@@ -140,6 +179,7 @@ const getSearchSpaceForStart = (range) => {
   // tempRange monitors whether we've exhausted our search space yet.
   const tempRange = range.cloneRange();
   while (!tempRange.collapsed && node != null) {
+    checkTimeout();
     // Depending on whether |node| is an ancestor of the start of our
     // search, we use either its leading or trailing edge as our start.
     if (node.contains(origin)) {
@@ -184,6 +224,7 @@ const getSearchSpaceForEnd = (range) => {
   // tempRange monitors whether we've exhausted our search space yet.
   const tempRange = range.cloneRange();
   while (!tempRange.collapsed && node != null) {
+    checkTimeout();
     // Depending on whether |node| is an ancestor of the start of our
     // search, we use either its leading or trailing edge as our end.
     if (node.contains(origin)) {
@@ -602,9 +643,9 @@ const reverseString = (string) => {
 /**
  * Determines whether the conditions for an exact match are met.
  * @param {Range} range - the range for which a fragment is being generated.
- * @return {boolean} - true if exact matching (i.e., only textStart) can be
- *     used; false if range matching (i.e., both textStart and textEnd) must be
- *     used.
+ * @return {boolean} - true if exact matching (i.e., only
+ *     textStart) can be used; false if range matching (i.e., both textStart and
+ *     textEnd) must be used.
  */
 const canUseExactMatch = (range) => {
   if (range.toString().length > MAX_EXACT_MATCH_LENGTH) return false;
@@ -649,7 +690,8 @@ const getLastNodeForBlockSearch = (range) => {
 /**
  * Determines whether or not a range crosses a block boundary.
  * @param {Range} range - the range to investigate
- * @return {boolean} - true if a block boundary was found; false otherwise
+ * @return {boolean} - true if a block boundary was found,
+ *     false if no such boundary was found.
  */
 const containsBlockBoundary = (range) => {
   const tempRange = range.cloneRange();
@@ -664,6 +706,7 @@ const containsBlockBoundary = (range) => {
     if (isBlock(node)) return true;
     if (node != null) tempRange.setStartAfter(node);
     node = forwardTraverse(walker, map);
+    checkTimeout();
   }
   return false;
 };
@@ -905,8 +948,9 @@ const forwardTraverse = (walker, overrideMap) => {
  * @param {Set<Node>} visited - a set used to avoid repeat iterations. Should be
  *     empty the first time this method is called.
  * @param {Node} origin - the node where traversal started
- * @return {Node} - |walker|'s new current node, or null if the current node
- *     was unchanged (and thus, no further traversal is possible)
+ * @return {Node} - |walker|'s new current node, or null if
+ *     the current node was unchanged (and thus, no further traversal is
+ *     possible).
  */
 const backwardTraverse =
     (walker, visited, origin) => {
@@ -914,6 +958,7 @@ const backwardTraverse =
       // guarantees children of a node are only traversed once, and parent node
       // will be null once the root of the walker is reached.
       while (true) {
+        checkTimeout();
         // The first time we visit a node, we traverse its children backwards,
         // unless it's an ancestor of the starting node.
         if (!visited.has(walker.currentNode) &&
@@ -957,6 +1002,8 @@ const expandRangeEndToWordBound = (range) => {
   const override = createForwardOverrideMap(walker);
 
   while (node != null) {
+    checkTimeout();
+
     const newOffset = findWordEndBoundInTextNode(node, initialOffset);
     // Future iterations should not use initialOffset; null it out so it is
     // discarded.
@@ -1013,6 +1060,7 @@ export const forTesting = {
   FragmentFactory: FragmentFactory,
   getSearchSpaceForEnd: getSearchSpaceForEnd,
   getSearchSpaceForStart: getSearchSpaceForStart,
+  recordStartTime: recordStartTime,
   trimBoundary: trimBoundary,
 };
 
