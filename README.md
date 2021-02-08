@@ -26,9 +26,13 @@ and reorganizations, and should perform similarly to renderers which have implem
 natively. It is used in Chromium for iOS as well as the
 [Link to Text Fragment Browser Extension](https://github.com/GoogleChromeLabs/link-to-text-fragment).
 
-The `src` directory contains two files: `text-fragments.js`, which is the polyfilling
-mechanism, and `text-fragment-utils.js`, a module of util functions related to parsing,
-finding, and highlighting text fragments within the DOM.
+The `src` directory contains three files:
+
+* `text-fragments.js`, containing the polyfilling mechanism.
+
+* `text-fragment-utils.js`, a module of util functions related to parsing, finding, and highlighting text fragments within the DOM. Most of the logic used by the polyfill for finding fragments in a page lives here.
+
+* `fragment-generation-utils.js`, a module of util functions for generating URLs with a text fragment. These utils are not used by the polyfill itself, but they are likely to be useful for related projects.
 
 The `tools` directory contains a util script used for generating a regex used in the utils
 module.
@@ -69,9 +73,7 @@ if (
 }
 ```
 
-Users who wish to take a more hands-on approach can reuse chunks of the logic by
-importing the `text-fragment-utils.js` module; support is provided for inclusion either
-as an ES6 module or using the Closure compiler.
+Users who wish to take a more hands-on approach can reuse chunks of the logic by importing the `text-fragment-utils.js` and `fragment-generation-utils.js` modules; support is provided for inclusion either as an ES6 module or using the Closure compiler.
 
 ## Demo
 
