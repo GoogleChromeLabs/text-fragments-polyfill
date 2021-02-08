@@ -56,6 +56,12 @@ module.exports = function (config) {
       }
     },
 
+    client: {
+      // We can't run in an iframe because some of the code under test is
+      // checking if it's inside an iframe.
+      useIframe: false,
+    },
+
     // Continuous Integration mode
     // if true, Karma captures browsers, runs the tests and exits
     singleRun: false,

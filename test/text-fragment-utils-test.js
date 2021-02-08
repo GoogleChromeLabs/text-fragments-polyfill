@@ -518,53 +518,54 @@ describe('TextFragmentUtils', function() {
     expect(defaultStyle.color).toEqual('orange');
   });
 
-  it('adds default text fragment css class to non empty style element', function() {
-    document.body.innerHTML = __html__['default_style.html'];
-    document.head.insertAdjacentHTML(
-        'beforeend', '<style type="text/css"></style>');
-    const style = {
-      backgroundColor: 'rgb(128, 0, 128)',
-      color: 'rgb(255, 165, 0)'
-    };
-    document.getElementsByTagName('style')[0].innerHTML =
-        '::target-text { background-color: rgb(0, 250, 250)}' +
-        'b::target-text { background-color: rgb(230, 230, 250)}' +
-        'p::target-text { color: rgb(130, 130, 25)}';
-    utils.setDefaultTextFragmentsStyle(style);
-    const range = document.createRange();
-    range.setStart(document.getElementById('a').firstChild, 0);
-    const lastChild = document.getElementById('a').lastChild;
-    range.setEnd(lastChild, lastChild.textContent.length);
-    const marks = utils.forTesting.markRange(range);
+  it('adds default text fragment css class to non empty style element',
+     function() {
+       document.body.innerHTML = __html__['default_style.html'];
+       document.head.insertAdjacentHTML(
+           'beforeend', '<style type="text/css"></style>');
+       const style = {
+         backgroundColor: 'rgb(128, 0, 128)',
+         color: 'rgb(255, 165, 0)'
+       };
+       document.getElementsByTagName('style')[0].innerHTML =
+           '::target-text { background-color: rgb(0, 250, 250)}' +
+           'b::target-text { background-color: rgb(230, 230, 250)}' +
+           'p::target-text { color: rgb(130, 130, 25)}';
+       utils.setDefaultTextFragmentsStyle(style);
+       const range = document.createRange();
+       range.setStart(document.getElementById('a').firstChild, 0);
+       const lastChild = document.getElementById('a').lastChild;
+       range.setEnd(lastChild, lastChild.textContent.length);
+       const marks = utils.forTesting.markRange(range);
 
-    // mark within <div>
-    let computedBackgroundColor =
-        document.defaultView.getComputedStyle(marks[0]).getPropertyValue(
-            'background-color');
-    let computedColor =
-        document.defaultView.getComputedStyle(marks[0]).getPropertyValue(
-            'color');
-    expect(computedBackgroundColor).toEqual('rgb(0, 250, 250)');
-    expect(computedColor).toEqual('rgb(255, 165, 0)');
+       // mark within <div>
+       let computedBackgroundColor =
+           document.defaultView.getComputedStyle(marks[0]).getPropertyValue(
+               'background-color');
+       let computedColor =
+           document.defaultView.getComputedStyle(marks[0]).getPropertyValue(
+               'color');
+       expect(computedBackgroundColor).toEqual('rgb(0, 250, 250)');
+       expect(computedColor).toEqual('rgb(255, 165, 0)');
 
-    // mark within <b>
-    computedBackgroundColor =
-        document.defaultView.getComputedStyle(marks[1]).getPropertyValue(
-            'background-color');
-    computedColor =
-        document.defaultView.getComputedStyle(marks[1]).getPropertyValue(
-            'color');
-    expect(computedBackgroundColor).toEqual('rgb(230, 230, 250)');
-    expect(computedColor).toEqual('rgb(255, 165, 0)');
+       // mark within <b>
+       computedBackgroundColor =
+           document.defaultView.getComputedStyle(marks[1]).getPropertyValue(
+               'background-color');
+       computedColor =
+           document.defaultView.getComputedStyle(marks[1]).getPropertyValue(
+               'color');
+       expect(computedBackgroundColor).toEqual('rgb(230, 230, 250)');
+       expect(computedColor).toEqual('rgb(255, 165, 0)');
 
-    // mark within <p>
-    computedBackgroundColor =
-        document.defaultView.getComputedStyle(marks[2]).getPropertyValue(
-            'background-color');
-    computedColor =
-        document.defaultView.getComputedStyle(marks[2]).getPropertyValue(
-            'color');
-    expect(computedBackgroundColor).toEqual('rgb(0, 250, 250)');
-    expect(computedColor).toEqual('rgb(130, 130, 25)');
-  });
+       // mark within <p>
+       computedBackgroundColor =
+           document.defaultView.getComputedStyle(marks[2]).getPropertyValue(
+               'background-color');
+       computedColor =
+           document.defaultView.getComputedStyle(marks[2]).getPropertyValue(
+               'color');
+       expect(computedBackgroundColor).toEqual('rgb(0, 250, 250)');
+       expect(computedColor).toEqual('rgb(130, 130, 25)');
+     });
 });

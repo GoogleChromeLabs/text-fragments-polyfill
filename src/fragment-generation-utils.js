@@ -18,6 +18,8 @@ import * as fragments from './text-fragment-utils.js';
 
 const MAX_EXACT_MATCH_LENGTH = 300;
 const ITERATIONS_BEFORE_ADDING_CONTEXT = 3;
+const TRUNCATE_RANGE_CHECK_CHARS = 10000;
+const MAX_DEPTH = 500;
 
 // Desired max run time, in ms. Can be overwritten.
 let timeoutDurationMs = 500;
@@ -155,6 +157,66 @@ export const generateFragment = (selection, startTime = Date.now()) => {
     checkTimeout();
   }
   return {status: GenerateFragmentStatus.AMBIGUOUS};
+};
+
+/**
+ * Checks whether fragment generation can be attempted for a given range. This
+ * checks a handful of simple conditions: the range must be nonempty, not inside
+ * an <input>, etc. A true return is not a guarantee that fragment generation
+ * will succeed; instead, this is a way to quickly rule out generation in cases
+ * where a failure is predictable.
+ * @param {Range} range
+ * @return {boolean} - true if fragment generation may proceed; false otherwise.
+ */
+export const isValidRangeForFragmentGeneration = (range) => {
+  // Check that the range isn't just punctuation and whitespace. Only check the
+  // first |TRUNCATE_RANGE_CHECK_CHARS| to put an upper bound on runtime; ranges
+  // that start with (e.g.) thousands of periods should be rare.
+  // This also implicitly ensures the selection isn't in an input or textarea
+  // field, as document.selection contains an empty range in these cases.
+  if (!range.toString()
+           .substring(0, TRUNCATE_RANGE_CHECK_CHARS)
+           .match(fragments.internal.NON_BOUNDARY_CHARS)) {
+    return false;
+  }
+
+  // Check for iframe
+  try {
+    if (range.startContainer.ownerDocument.defaultView !== window.top) {
+      return false;
+    }
+  } catch {
+    // If accessing window.top throws an error, this is in a cross-origin
+    // iframe.
+    return false;
+  }
+
+  // Walk up the DOM to ensure that the range isn't inside an editable. Limit
+  // the search depth to |MAX_DEPTH| to constrain runtime.
+  let node = range.commonAncestorContainer;
+  let numIterations = 0;
+  while (node) {
+    if (node.nodeType == Node.ELEMENT_NODE) {
+      if (['TEXTAREA', 'INPUT'].includes(node.tagName)) {
+        return false;
+      }
+
+      const editable = node.attributes.getNamedItem('contenteditable');
+      if (editable && editable.value !== 'false') {
+        return false;
+      }
+
+      // Cap the number of iterations at |MAX_PRECONDITION_DEPTH| to put an
+      // upper bound on runtime.
+      numIterations++;
+      if (numIterations >= MAX_DEPTH) {
+        return false;
+      }
+    }
+    node = node.parentNode;
+  }
+
+  return true;
 };
 
 /**

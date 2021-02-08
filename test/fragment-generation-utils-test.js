@@ -652,4 +652,71 @@ describe('FragmentGenerationUtils', function() {
       return thrown.isTimeout
     });
   });
+
+  it('identifies bad ranges as ineligible', async function() {
+    document.body.innerHTML = __html__['range-eligibility.html'];
+    const range = document.createRange();
+
+    range.selectNodeContents(document.getElementById('regular-string'));
+    expect(generationUtils.isValidRangeForFragmentGeneration(range)).toBeTrue();
+
+    range.selectNodeContents(document.getElementById('inline-image'));
+    expect(generationUtils.isValidRangeForFragmentGeneration(range)).toBeTrue();
+
+    range.selectNodeContents(document.getElementById('punctuation-only'));
+    expect(generationUtils.isValidRangeForFragmentGeneration(range))
+        .toBeFalse();
+
+    range.selectNodeContents(document.getElementById('inside-an-editable'));
+    expect(generationUtils.isValidRangeForFragmentGeneration(range))
+        .toBeFalse();
+
+    range.selectNodeContents(document.getElementById('textarea'));
+    expect(generationUtils.isValidRangeForFragmentGeneration(range))
+        .toBeFalse();
+
+    range.selectNodeContents(document.getElementById('input'));
+    expect(generationUtils.isValidRangeForFragmentGeneration(range))
+        .toBeFalse();
+
+    const iframe = document.createElement('iframe');
+    const setupIframe = new Promise((resolve, reject) => {
+      iframe.srcdoc = '<p>test words</p>';
+      iframe.onload = () => resolve();
+      iframe.onerror = () => reject(new Error());
+      document.body.appendChild(iframe);
+    });
+    await setupIframe;
+    range.selectNodeContents(
+        iframe.contentDocument.getElementsByTagName('p')[0]);
+    expect(generationUtils.isValidRangeForFragmentGeneration(range))
+        .toBeFalse();
+
+    // Should work for a long (1000) string of punctuation with a regular
+    // character at the end, but not a *really really* long (100k) one.
+    const longString = document.createElement('p');
+    let longStringContents = ' '.repeat(1000) + 'a';
+    longString.textContent = longStringContents;
+    range.selectNodeContents(longString);
+    expect(generationUtils.isValidRangeForFragmentGeneration(range)).toBeTrue();
+    longStringContents = ' '.repeat(100000) + 'a';
+    longString.textContent = longStringContents;
+    range.selectNodeContents(longString);
+    expect(generationUtils.isValidRangeForFragmentGeneration(range))
+        .toBeFalse();
+
+    // Set up a really deep hierarchy and make sure we don't traverse the whole
+    // thing
+    let node = document.createElement('div');
+    document.body.appendChild(node);
+    for (let i = 0; i < 1000; i++) {
+      const newNode = document.createElement('div');
+      node.appendChild(newNode);
+      node = newNode;
+    }
+    node.textContent = 'hello';
+    range.selectNodeContents(node);
+    expect(generationUtils.isValidRangeForFragmentGeneration(range))
+        .toBeFalse();
+  });
 });
