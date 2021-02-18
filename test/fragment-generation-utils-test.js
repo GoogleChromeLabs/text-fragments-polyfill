@@ -626,14 +626,16 @@ describe('FragmentGenerationUtils', function() {
     selection.addRange(range);
 
     expect(function() {
-      generationUtils.generateFragment(selection, Date.now() - 1000);
+      generationUtils.forTesting.doGenerateFragment(
+          selection, Date.now() - 1000);
     }).toThrowMatching(function(thrown) {
       return thrown.isTimeout
     });
 
     generationUtils.setTimeout(2000);
     expect(function() {
-      generationUtils.generateFragment(selection, Date.now() - 1000);
+      generationUtils.forTesting.doGenerateFragment(
+          selection, Date.now() - 1000);
     }).not.toThrowMatching(function(thrown) {
       return thrown.isTimeout
     });

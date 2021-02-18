@@ -23,32 +23,16 @@ const MAX_DEPTH = 500;
 
 // Desired max run time, in ms. Can be overwritten.
 let timeoutDurationMs = 500;
-
 let t0;  // Start timestamp for fragment generation
-
-const checkTimeout = () => {
-  const delta = Date.now() - t0;
-  if (delta > timeoutDurationMs) {
-    const timeoutError =
-        new Error(`Fragment generation timed out after ${delta} ms.`);
-    timeoutError.isTimeout = true;
-    throw timeoutError;
-  }
-};
-
-const recordStartTime = (newStartTime) => {
-  t0 = newStartTime;
-};
 
 /**
  * Allows overriding the max runtime to specify a different interval. Fragment
  * generation will halt and throw an error after this amount of time.
  * @param {Number} newTimeoutDurationMs - the desired timeout length, in ms.
  */
-export const setTimeout =
-    (newTimeoutDurationMs) => {
-      timeoutDurationMs = newTimeoutDurationMs;
-    }
+export const setTimeout = (newTimeoutDurationMs) => {
+  timeoutDurationMs = newTimeoutDurationMs;
+};
 
 /**
  * Enum indicating the success, or failure reason, of generateFragment.
@@ -56,8 +40,9 @@ export const setTimeout =
 export const GenerateFragmentStatus = {
   SUCCESS: 0,            // A fragment was generated.
   INVALID_SELECTION: 1,  // The selection provided could not be used.
-  AMBIGUOUS: 2  // No unique fragment could be identified for this selection.
-}
+  AMBIGUOUS: 2,  // No unique fragment could be identified for this selection.
+  TIMEOUT: 3     // Computation could not complete in time.
+};
 
 /**
  * @typedef {Object} GenerateFragmentResult
@@ -73,10 +58,83 @@ export const GenerateFragmentStatus = {
  * @param {Date} [startTime] - the time when generation began, for timeout
  *     purposes. Defaults to current timestamp.
  * @return {GenerateFragmentResult}
+ */
+export const generateFragment = (selection, startTime = Date.now()) => {
+  try {
+    return doGenerateFragment(selection, startTime);
+  } catch (err) {
+    return {status: GenerateFragmentStatus.TIMEOUT};
+  }
+};
+
+/**
+ * Checks whether fragment generation can be attempted for a given range. This
+ * checks a handful of simple conditions: the range must be nonempty, not inside
+ * an <input>, etc. A true return is not a guarantee that fragment generation
+ * will succeed; instead, this is a way to quickly rule out generation in cases
+ * where a failure is predictable.
+ * @param {Range} range
+ * @return {boolean} - true if fragment generation may proceed; false otherwise.
+ */
+export const isValidRangeForFragmentGeneration = (range) => {
+  // Check that the range isn't just punctuation and whitespace. Only check the
+  // first |TRUNCATE_RANGE_CHECK_CHARS| to put an upper bound on runtime; ranges
+  // that start with (e.g.) thousands of periods should be rare.
+  // This also implicitly ensures the selection isn't in an input or textarea
+  // field, as document.selection contains an empty range in these cases.
+  if (!range.toString()
+           .substring(0, TRUNCATE_RANGE_CHECK_CHARS)
+           .match(fragments.internal.NON_BOUNDARY_CHARS)) {
+    return false;
+  }
+
+  // Check for iframe
+  try {
+    if (range.startContainer.ownerDocument.defaultView !== window.top) {
+      return false;
+    }
+  } catch {
+    // If accessing window.top throws an error, this is in a cross-origin
+    // iframe.
+    return false;
+  }
+
+  // Walk up the DOM to ensure that the range isn't inside an editable. Limit
+  // the search depth to |MAX_DEPTH| to constrain runtime.
+  let node = range.commonAncestorContainer;
+  let numIterations = 0;
+  while (node) {
+    if (node.nodeType == Node.ELEMENT_NODE) {
+      if (['TEXTAREA', 'INPUT'].includes(node.tagName)) {
+        return false;
+      }
+
+      const editable = node.attributes.getNamedItem('contenteditable');
+      if (editable && editable.value !== 'false') {
+        return false;
+      }
+
+      // Cap the number of iterations at |MAX_PRECONDITION_DEPTH| to put an
+      // upper bound on runtime.
+      numIterations++;
+      if (numIterations >= MAX_DEPTH) {
+        return false;
+      }
+    }
+    node = node.parentNode;
+  }
+
+  return true;
+};
+
+/* eslint-disable valid-jsdoc */
+/**
+ * @see {@link generateFragment} - this method wraps the error-throwing portions
+ *     of that method.
  * @throws {Error} - Will throw if computation takes longer than the accepted
  *     timeout length.
  */
-export const generateFragment = (selection, startTime = Date.now()) => {
+const doGenerateFragment = (selection, startTime) => {
   recordStartTime(startTime);
 
   let range;
@@ -160,63 +218,26 @@ export const generateFragment = (selection, startTime = Date.now()) => {
 };
 
 /**
- * Checks whether fragment generation can be attempted for a given range. This
- * checks a handful of simple conditions: the range must be nonempty, not inside
- * an <input>, etc. A true return is not a guarantee that fragment generation
- * will succeed; instead, this is a way to quickly rule out generation in cases
- * where a failure is predictable.
- * @param {Range} range
- * @return {boolean} - true if fragment generation may proceed; false otherwise.
+ * @throws {Error} - if the timeout duration has been exceeded, an error will
+ *     be thrown so that execution can be halted.
  */
-export const isValidRangeForFragmentGeneration = (range) => {
-  // Check that the range isn't just punctuation and whitespace. Only check the
-  // first |TRUNCATE_RANGE_CHECK_CHARS| to put an upper bound on runtime; ranges
-  // that start with (e.g.) thousands of periods should be rare.
-  // This also implicitly ensures the selection isn't in an input or textarea
-  // field, as document.selection contains an empty range in these cases.
-  if (!range.toString()
-           .substring(0, TRUNCATE_RANGE_CHECK_CHARS)
-           .match(fragments.internal.NON_BOUNDARY_CHARS)) {
-    return false;
+const checkTimeout = () => {
+  const delta = Date.now() - t0;
+  if (delta > timeoutDurationMs) {
+    const timeoutError =
+        new Error(`Fragment generation timed out after ${delta} ms.`);
+    timeoutError.isTimeout = true;
+    throw timeoutError;
   }
+};
 
-  // Check for iframe
-  try {
-    if (range.startContainer.ownerDocument.defaultView !== window.top) {
-      return false;
-    }
-  } catch {
-    // If accessing window.top throws an error, this is in a cross-origin
-    // iframe.
-    return false;
-  }
-
-  // Walk up the DOM to ensure that the range isn't inside an editable. Limit
-  // the search depth to |MAX_DEPTH| to constrain runtime.
-  let node = range.commonAncestorContainer;
-  let numIterations = 0;
-  while (node) {
-    if (node.nodeType == Node.ELEMENT_NODE) {
-      if (['TEXTAREA', 'INPUT'].includes(node.tagName)) {
-        return false;
-      }
-
-      const editable = node.attributes.getNamedItem('contenteditable');
-      if (editable && editable.value !== 'false') {
-        return false;
-      }
-
-      // Cap the number of iterations at |MAX_PRECONDITION_DEPTH| to put an
-      // upper bound on runtime.
-      numIterations++;
-      if (numIterations >= MAX_DEPTH) {
-        return false;
-      }
-    }
-    node = node.parentNode;
-  }
-
-  return true;
+/**
+ * Call at the start of fragment generation to set the baseline for timeout
+ * checking.
+ * @param {Date} newStartTime - the timestamp when fragment generation began
+ */
+const recordStartTime = (newStartTime) => {
+  t0 = newStartTime;
 };
 
 /**
@@ -1114,6 +1135,7 @@ export const forTesting = {
   backwardTraverse: backwardTraverse,
   containsBlockBoundary: containsBlockBoundary,
   createForwardOverrideMap: createForwardOverrideMap,
+  doGenerateFragment: doGenerateFragment,
   expandRangeEndToWordBound: expandRangeEndToWordBound,
   expandRangeStartToWordBound: expandRangeStartToWordBound,
   findWordEndBoundInTextNode: findWordEndBoundInTextNode,
