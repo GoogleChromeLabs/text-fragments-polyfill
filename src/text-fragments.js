@@ -44,7 +44,11 @@ import * as utils from './text-fragment-utils.js';
     }
   };
   if (document.readyState !== 'complete') {
-    window.addEventListener('DOMContentLoaded', init);
+    document.addEventListener('readystatechange', event => {
+      if (event.target.readyState === 'complete') {
+        init();
+      }
+    });
   } else {
     init();
   }
