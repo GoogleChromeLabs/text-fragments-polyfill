@@ -297,7 +297,7 @@ describe('FragmentGenerationUtils', function() {
         .toEqual('f...oo');
   })
 
-  fit('can find the search space for range-based fragments', function() {
+  it('can find the search space for range-based fragments', function() {
     document.body.innerHTML = __html__['marks_test.html'];
     const range = document.createRange();
 
