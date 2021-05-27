@@ -13,7 +13,7 @@ browsers that don't support it directly.
         #:~:text=This%20article%20is,kept%20as%20a%20pet
       </a>
       rendered in Safari on an iOS device, with
-      <a href="https://github.com/GoogleChromeLabs/text-fragments-polyfill/blob/master/src/text-fragments.js">
+      <a href="https://github.com/GoogleChromeLabs/text-fragments-polyfill/blob/main/src/text-fragments.js">
         <code>text-fragments.js</code>
       </a>
       injected via Web Inspector.
@@ -88,7 +88,7 @@ does not support Text Fragments.
    does not support Text Fragments URLs directly, for example, Safari.
 1. Hack, reload, hack,…
 1. You can modify the Text Fragments URLs directly in
-   [`/demo/index.html`](https://github.com/GoogleChromeLabs/text-fragments-polyfill/blob/master/demo/index.html)
+   [`/demo/index.html`](https://github.com/GoogleChromeLabs/text-fragments-polyfill/blob/main/demo/index.html)
    (look for `location.hash`).
 
 ## License
