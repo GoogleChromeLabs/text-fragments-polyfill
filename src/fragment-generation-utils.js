@@ -278,6 +278,8 @@ const getSearchSpaceForStart = (range) => {
       const trimmed = trimBoundary(candidate.toString());
       if (trimmed.length > 0) {
         return trimmed;
+      } else {
+        return undefined;
       }
     }
     node = forwardTraverse(walker, map);

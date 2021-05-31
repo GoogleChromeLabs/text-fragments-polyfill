@@ -358,6 +358,13 @@ describe('FragmentGenerationUtils', function() {
     expect(fragmentUtils.forTesting.normalizeString(
                generationUtils.forTesting.getSearchSpaceForEnd(range)))
         .toEqual('div with lots of different stuff');
+
+    // End boundary is a series of non-word characters at the end of a block
+    document.body.innerHTML = __html__['non-word-boundaries.html'];
+    range.setStart(document.getElementById('em').firstChild, 4);
+    range.setEnd(document.body, 3);
+    expect(generationUtils.forTesting.getSearchSpaceForStart(range))
+        .toEqual(undefined);
   });
 
   it('can generate progressively larger fragments across blocks', function() {
