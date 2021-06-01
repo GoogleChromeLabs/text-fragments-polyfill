@@ -989,13 +989,17 @@ const createForwardOverrideMap = (walker) => {
       }
     }
 
-    // Set the mapping from the found child to its ancestor.
+    // Remember the current override, if any, for the found child.
+    const previousOverride = overrideMap.get(walker.currentNode);
+
+    // Set a mapping from the found child to its ancestor.
     if (walker.currentNode !== node) overrideMap.set(walker.currentNode, node);
 
-    // Next, set a mapping from the ancestor to the node it displaced in the
-    // ordering. This might get overwritten later if another ancestor needs to
-    // get inserted in the ordering too.
-    overrideMap.set(node, walker.nextNode());
+    // Also set a mapping from the ancestor to the child's next node, which is
+    // |TreeWalker.nextNode()| unless it had already been overridden in the map.
+    // This override might change in a later iteration if another ancestor needs
+    // to get inserted in the ordering too.
+    overrideMap.set(node, previousOverride || walker.nextNode());
 
     // Reset the walker to where it was before we traversed downwards.
     walker.currentNode = node;

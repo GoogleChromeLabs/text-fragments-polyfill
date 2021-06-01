@@ -266,6 +266,31 @@ describe('FragmentGenerationUtils', function() {
     expect(traversalOrder).toEqual([
       'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l'
     ]);
+
+    // Also check a simple case that was previously causing cycles
+    document.body.innerHTML = __html__['non-word-boundaries.html'];
+    const walker2 = document.createTreeWalker(document.body);
+    walker2.currentNode = document.getElementById('em').firstChild;
+    const override =
+        generationUtils.forTesting.createForwardOverrideMap(walker2);
+    traversalOrder.splice(0);
+    const seen = new Set();
+    while (generationUtils.forTesting.forwardTraverse(walker2, override) !=
+           null) {
+      expect(seen.has(walker2.currentNode)).toBeFalse();
+
+      // |expect()| does not stop execution, and |forwardTraverse()| does not
+      // check the timeout, so we have to manually break to avoid an infinite
+      // loop in case of cycles
+      if (seen.has(walker2.currentNode)) {
+        break;
+      }
+      if (walker2.currentNode.id) {
+        traversalOrder.push(walker2.currentNode.id);
+      }
+      seen.add(walker2.currentNode);
+    }
+    expect(traversalOrder).toEqual(['em', 'p']);
   });
 
   it('can traverse in reverse order for finding block boundaries', function() {
