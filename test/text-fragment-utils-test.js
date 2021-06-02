@@ -45,9 +45,9 @@ describe('TextFragmentUtils', function() {
     const directive = {text: [{textStart: 'trivial test of'}]};
     utils.processFragmentDirectives(directive);
 
-    expect(document.body.innerHTML)
+    expect(document.body.innerHTML.replace(/\s/g, ''))
         .toEqual(
-            __html__['basic_test.expected.html'],
+            __html__['basic_test.expected.html'].replace(/\s/g, ''),
         );
   });
 
@@ -558,12 +558,13 @@ describe('TextFragmentUtils', function() {
        expect(computedBackgroundColor).toEqual('rgb(230, 230, 250)');
        expect(computedColor).toEqual('rgb(255, 165, 0)');
 
-       // mark within <p>
+       // mark within <p> (which is at index 3 because there's a mark around the
+       // line return between the <b> and the <p>)
        computedBackgroundColor =
-           document.defaultView.getComputedStyle(marks[2]).getPropertyValue(
+           document.defaultView.getComputedStyle(marks[3]).getPropertyValue(
                'background-color');
        computedColor =
-           document.defaultView.getComputedStyle(marks[2]).getPropertyValue(
+           document.defaultView.getComputedStyle(marks[3]).getPropertyValue(
                'color');
        expect(computedBackgroundColor).toEqual('rgb(0, 250, 250)');
        expect(computedColor).toEqual('rgb(130, 130, 25)');
