@@ -94,7 +94,7 @@ describe('TextFragmentUtils', function() {
 
   it('works with prefix-based matches across block boundaries', function() {
     document.body.innerHTML = window.__html__['complicated-layout.html'];
-    const directives = utils.getFragmentDirectives('#:~:text=test-,a');
+    const directives = utils.getFragmentDirectives('#:~:text=test.-,a');
     const parsedDirectives = utils.parseFragmentDirectives(directives);
     const processedDirectives = utils.processFragmentDirectives(
         parsedDirectives,
@@ -165,6 +165,21 @@ describe('TextFragmentUtils', function() {
         parsedDirectives,
         )['text'];
     expect(processedDirectives[0].length).toEqual(0);
+  });
+
+  it('does not ignore punctuation after matching a prefix', function() {
+    document.body.innerHTML = window.__html__['ambiguous-match-2.html'];
+    const directives = utils.getFragmentDirectives(
+        '#:~:text=prefix-,selection_start,selection_end,-suffix');
+    const parsedDirectives = utils.parseFragmentDirectives(directives);
+    const processedDirectives = utils.processFragmentDirectives(
+        parsedDirectives,
+        )['text'];
+    expect(processedDirectives.length).toEqual(1);
+    expect(marksArrayToString(processedDirectives[0]))
+        .toEqual(
+            'selection_start target2 selection_end',
+        );
   });
 
   it('can wrap a complex structure in <mark>s', function() {
@@ -275,15 +290,15 @@ describe('TextFragmentUtils', function() {
 
     // From the start of the node, this is essentially just trimming off the
     // leading whitespace.
-    utils.forTesting.advanceRangeStartToNonBoundary(range);
+    utils.forTesting.advanceRangeStartToNonWhitespace(range);
     expect(utils.forTesting.normalizeString(range.toString()))
         .toEqual(
             'this is a really ',
         );
 
     // If we repeat, nothing changes, since the range already starts on a
-    // non-boundary char.
-    utils.forTesting.advanceRangeStartToNonBoundary(range);
+    // non-whitespace char.
+    utils.forTesting.advanceRangeStartToNonWhitespace(range);
     expect(utils.forTesting.normalizeString(range.toString()))
         .toEqual(
             'this is a really ',
@@ -293,10 +308,21 @@ describe('TextFragmentUtils', function() {
     // will move past this node's trailing whitespace, into the next text node,
     // and past that node's leading whitespace.
     range.setStart(elt, 10);
-    utils.forTesting.advanceRangeStartToNonBoundary(range);
+    utils.forTesting.advanceRangeStartToNonWhitespace(range);
     expect(utils.forTesting.normalizeString(range.toString()))
         .toEqual(
             'a really ',
+        );
+
+    // Test that the algorithm doesn't skip punctuation by setting the start
+    // offset to the period at the end of the content. The range start shouldn't
+    // change, since it's already at a non-whitespace position.
+    range.setStart(document.getElementById('f').nextSibling, 8);
+    range.setEndAfter(document.body);
+    utils.forTesting.advanceRangeStartToNonWhitespace(range);
+    expect(utils.forTesting.normalizeString(range.toString()))
+        .toEqual(
+            '. ',
         );
   });
 

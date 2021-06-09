@@ -168,12 +168,13 @@ export const processTextFragmentDirective = (textFragment) => {
       );
 
       // The search space for textStart is everything after the prefix and
-      // before the end of the top-level search range.
+      // before the end of the top-level search range, starting at the next non-
+      // whitespace position.
       const matchRange = document.createRange();
       matchRange.setStart(prefixMatch.endContainer, prefixMatch.endOffset);
       matchRange.setEnd(searchRange.endContainer, searchRange.endOffset);
 
-      advanceRangeStartToNonBoundary(matchRange);
+      advanceRangeStartToNonWhitespace(matchRange);
       if (matchRange.collapsed) {
         break;
       }
@@ -314,7 +315,7 @@ const checkSuffix = (suffix, potentialMatch, searchRange) => {
       potentialMatch.endOffset,
   );
   suffixRange.setEnd(searchRange.endContainer, searchRange.endOffset);
-  advanceRangeStartToNonBoundary(suffixRange);
+  advanceRangeStartToNonWhitespace(suffixRange);
 
   const suffixMatch = findTextInRange(suffix, suffixRange);
   // If suffix wasn't found anywhere in the suffixRange, then there's no
@@ -351,11 +352,10 @@ const advanceRangeStartPastOffset = (range, node, offset) => {
 };
 
 /**
- * Modifies |range| to start at the next non-boundary (i.e., not whitespace
- * or punctuation) character.
+ * Modifies |range| to start at the next non-whitespace position.
  * @param {Range} range - the range to mutate
  */
-const advanceRangeStartToNonBoundary = (range) => {
+const advanceRangeStartToNonWhitespace = (range) => {
   const walker = document.createTreeWalker(
       range.commonAncestorContainer,
       NodeFilter.SHOW_TEXT,
@@ -371,7 +371,7 @@ const advanceRangeStartToNonBoundary = (range) => {
 
     if (node.textContent.length > range.startOffset) {
       const firstChar = node.textContent[range.startOffset];
-      if (!firstChar.match(BOUNDARY_CHARS)) {
+      if (!firstChar.match(/\s/)) {
         return;
       }
     }
@@ -801,7 +801,7 @@ const normalizeString = (str) => {
  */
 export const forTesting = {
   advanceRangeStartPastOffset: advanceRangeStartPastOffset,
-  advanceRangeStartToNonBoundary: advanceRangeStartToNonBoundary,
+  advanceRangeStartToNonWhitespace: advanceRangeStartToNonWhitespace,
   findRangeFromNodeList: findRangeFromNodeList,
   findTextInRange: findTextInRange,
   getBoundaryPointAtIndex: getBoundaryPointAtIndex,
