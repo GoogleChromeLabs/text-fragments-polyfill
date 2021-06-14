@@ -185,8 +185,8 @@ const doGenerateFragment = (selection, startTime) => {
       // was found. That means textStart and textEnd *share* a search space, so
       // our approach must ensure the substrings chosen as candidates don't
       // overlap.
-      factory = new FragmentFactory().setSharedSearchSpace(
-          trimBoundary(range.toString()));
+      factory =
+          new FragmentFactory().setSharedSearchSpace(range.toString().trim());
     }
   }
 
@@ -243,12 +243,12 @@ const recordStartTime = (newStartTime) => {
 /**
  * Finds the search space for parameters when using range or suffix match.
  * This is the text from the start of the range to the first block boundary,
- * trimmed to remove any leading/trailing boundary characters.
+ * trimmed to remove any leading/trailing whitespace characters.
  * @param {Range} range - the range which will be highlighted.
  * @return {String|Undefined} - the text which may be used for constructing a
  *     textStart parameter identifying this range. Will return undefined if no
  *     block boundaries are found inside this range, or if all the candidate
- *     ranges were empty (or included only boundary characters).
+ *     ranges were empty (or included only whitespace characters).
  */
 const getSearchSpaceForStart = (range) => {
   let node = getFirstNodeForBlockSearch(range);
@@ -275,7 +275,7 @@ const getSearchSpaceForStart = (range) => {
     if (isBlock(node)) {
       const candidate = range.cloneRange();
       candidate.setEnd(tempRange.startContainer, tempRange.startOffset);
-      const trimmed = trimBoundary(candidate.toString());
+      const trimmed = candidate.toString().trim();
       if (trimmed.length > 0) {
         return trimmed;
       }
@@ -288,12 +288,12 @@ const getSearchSpaceForStart = (range) => {
 /**
  * Finds the search space for parameters when using range or prefix match.
  * This is the text from the last block boundary to the end of the range,
- * trimmed to remove any leading/trailing boundary characters.
+ * trimmed to remove any leading/trailing whitespace characters.
  * @param {Range} range - the range which will be highlighted.
  * @return {String|Undefined} - the text which may be used for constructing a
  *     textEnd parameter identifying this range. Will return undefined if no
  *     block boundaries are found inside this range, or if all the candidate
- *     ranges were empty (or included only boundary characters).
+ *     ranges were empty (or included only whitespace characters).
  */
 const getSearchSpaceForEnd = (range) => {
   let node = getLastNodeForBlockSearch(range);
@@ -320,7 +320,7 @@ const getSearchSpaceForEnd = (range) => {
     if (isBlock(node)) {
       const candidate = range.cloneRange();
       candidate.setStart(tempRange.endContainer, tempRange.endOffset);
-      const trimmed = trimBoundary(candidate.toString());
+      const trimmed = candidate.toString().trim();
       if (trimmed.length > 0) {
         return trimmed;
       }
@@ -371,22 +371,21 @@ const FragmentFactory = class {
       fragment = {textStart: this.exactTextMatch};
     } else {
       fragment = {
-        textStart: trimBoundary(
-            this.getStartSearchSpace().substring(0, this.startOffset)),
-        textEnd:
-            trimBoundary(this.getEndSearchSpace().substring(this.endOffset)),
+        textStart:
+            this.getStartSearchSpace().substring(0, this.startOffset).trim(),
+        textEnd: this.getEndSearchSpace().substring(this.endOffset).trim(),
       };
     }
     if (this.prefixOffset != null) {
-      const prefix = trimBoundary(
-          this.getPrefixSearchSpace().substring(this.prefixOffset));
+      const prefix =
+          this.getPrefixSearchSpace().substring(this.prefixOffset).trim();
       if (prefix) {
         fragment.prefix = prefix;
       }
     }
     if (this.suffixOffset != null) {
-      const suffix = trimBoundary(
-          this.getSuffixSearchSpace().substring(0, this.suffixOffset));
+      const suffix =
+          this.getSuffixSearchSpace().substring(0, this.suffixOffset).trim();
       if (suffix) {
         fragment.suffix = suffix;
       }

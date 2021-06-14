@@ -62,7 +62,7 @@ describe('FragmentGenerationUtils', function() {
     expect(result.status)
         .toEqual(generationUtils.GenerateFragmentStatus.SUCCESS);
     expect(result.fragment.textStart).toEqual('This');
-    expect(result.fragment.textEnd).toEqual('it');
+    expect(result.fragment.textEnd).toEqual('it.');
     expect(result.fragment.prefix).toBeUndefined();
     expect(result.fragment.suffix).toBeUndefined();
   });
@@ -333,7 +333,7 @@ describe('FragmentGenerationUtils', function() {
         .toEqual('this is');
     expect(fragmentUtils.forTesting.normalizeString(
                generationUtils.forTesting.getSearchSpaceForEnd(range)))
-        .toEqual('div with lots of different stuff in it');
+        .toEqual('div with lots of different stuff in it.');
 
     // Starts and ends inside a text node. No block boundaries, so we should get
     // an undefined return.
@@ -352,7 +352,7 @@ describe('FragmentGenerationUtils', function() {
         .toEqual('elaborate');
     expect(fragmentUtils.forTesting.normalizeString(
                generationUtils.forTesting.getSearchSpaceForEnd(range)))
-        .toEqual('div with lots of different stuff in it');
+        .toEqual('div with lots of different stuff in it.');
 
     // Ends inside one block, started outside that block
     range.selectNodeContents(document.getElementById('a'));
@@ -389,7 +389,7 @@ describe('FragmentGenerationUtils', function() {
     range.setStart(document.getElementById('em').firstChild, 4);
     range.setEnd(document.body, 3);
     expect(generationUtils.forTesting.getSearchSpaceForStart(range))
-        .toEqual(undefined);
+        .toEqual('...');
   });
 
   it('can generate progressively larger fragments across blocks', function() {
