@@ -311,17 +311,6 @@ describe('FragmentGenerationUtils', function() {
     ]);
   });
 
-  it('can trim leading/trailing boundary characters from a string', function() {
-    expect(generationUtils.forTesting.trimBoundary('foo')).toEqual('foo');
-    expect(generationUtils.forTesting.trimBoundary(' foo')).toEqual('foo');
-    expect(generationUtils.forTesting.trimBoundary('foo ')).toEqual('foo');
-    expect(generationUtils.forTesting.trimBoundary('  foo  ')).toEqual('foo');
-    expect(generationUtils.forTesting.trimBoundary('\n\'[]!foö...'))
-        .toEqual('foö');
-    expect(generationUtils.forTesting.trimBoundary('...f...oo...'))
-        .toEqual('f...oo');
-  })
-
   it('can find the search space for range-based fragments', function() {
     document.body.innerHTML = __html__['marks_test.html'];
     const range = document.createRange();

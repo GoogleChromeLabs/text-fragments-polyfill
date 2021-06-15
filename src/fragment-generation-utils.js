@@ -694,24 +694,6 @@ const isUniquelyIdentifying = (fragment) => {
 };
 
 /**
- * Analogous to the standard String trim method, but removes any boundary chars,
- * not just whitespace.
- * @param {String} string - the string to trim
- * @return {String} - the trimmed string
- */
-const trimBoundary = (string) => {
-  const startIndex = string.search(fragments.internal.NON_BOUNDARY_CHARS);
-
-  let endIndex =
-      reverseString(string).search(fragments.internal.NON_BOUNDARY_CHARS);
-  if (endIndex !== -1) endIndex = string.length - endIndex;
-
-  if (startIndex === -1 || endIndex === -1 || startIndex >= endIndex) return '';
-
-  return string.substring(startIndex, endIndex);
-};
-
-/**
  * Reverses a string. Compound unicode characters are preserved.
  * @param {String} string - the string to reverse
  * @return {String} - sdrawkcab |gnirts|
@@ -1148,7 +1130,6 @@ export const forTesting = {
   getSearchSpaceForEnd: getSearchSpaceForEnd,
   getSearchSpaceForStart: getSearchSpaceForStart,
   recordStartTime: recordStartTime,
-  trimBoundary: trimBoundary,
 };
 
 // Allow importing module from closure-compiler projects that haven't migrated
