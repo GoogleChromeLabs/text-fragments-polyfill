@@ -146,6 +146,22 @@ describe('TextFragmentUtils', function() {
         .toEqual('target suffix2 prefix1 target suffix2 prefix2 target');
   });
 
+  it('respects br tags when highlighting', function() {
+    document.body.innerHTML = window.__html__['br-tags.html'];
+    const directives = utils.getFragmentDirectives(
+        '#:~:text=elle%20a%20bris%C3%A9',
+    );
+    const parsedDirectives = utils.parseFragmentDirectives(directives);
+    const processedDirectives = utils.processFragmentDirectives(
+        parsedDirectives,
+        )['text'];
+    const marks = processedDirectives[0];
+    expect(marksArrayToString(marks))
+        .toEqual(
+            'elle a brisé',
+        );
+  });
+
   it('will ignore text matches without a matching prefix', function() {
     document.body.innerHTML = window.__html__['ambiguous-match.html'];
     const directives = utils.getFragmentDirectives('#:~:text=prefix3-,target');
