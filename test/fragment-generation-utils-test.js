@@ -82,6 +82,25 @@ describe('FragmentGenerationUtils', function() {
        expect(result.fragment.textEnd).toEqual('words words words');
      });
 
+  it('respects br tags when generating fragments', function() {
+    document.body.innerHTML = __html__['br-tags.html'];
+
+    const target = document.createRange();
+    const selection = window.getSelection();
+    // Choose start/end points to include a couple inline <br>s
+    const startnode = document.body.firstChild.childNodes[6];
+    const endnode = document.body.firstChild.childNodes[7];
+    target.setStart(startnode, 0);
+    target.setEnd(endnode, 1);
+    selection.removeAllRanges();
+    selection.addRange(target);
+
+    const result = generationUtils.generateFragment(selection);
+    expect(result.status)
+        .toEqual(generationUtils.GenerateFragmentStatus.SUCCESS);
+    expect(result.fragment.textStart).toEqual('elle a brise');
+  });
+
   it('can detect if a range contains a block boundary', function() {
     document.body.innerHTML = __html__['marks_test.html'];
     const range = document.createRange();
