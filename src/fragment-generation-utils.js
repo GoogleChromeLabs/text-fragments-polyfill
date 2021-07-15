@@ -200,7 +200,7 @@ const doGenerateFragment = (selection, startTime) => {
   const prefixSearchSpace = getSearchSpaceForEnd(prefixRange);
   const suffixSearchSpace = getSearchSpaceForStart(suffixRange);
 
-  if (prefixSearchSpace && suffixSearchSpace) {
+  if (prefixSearchSpace || suffixSearchSpace) {
     factory.setPrefixAndSuffixSearchSpace(prefixSearchSpace, suffixSearchSpace);
   }
 
@@ -584,12 +584,16 @@ const FragmentFactory = class {
    *     assignment
    */
   setPrefixAndSuffixSearchSpace(prefixSearchSpace, suffixSearchSpace) {
-    this.prefixSearchSpace = prefixSearchSpace;
-    this.backwardsPrefixSearchSpace = reverseString(prefixSearchSpace);
-    this.prefixOffset = prefixSearchSpace.length;
+    if (prefixSearchSpace) {
+      this.prefixSearchSpace = prefixSearchSpace;
+      this.backwardsPrefixSearchSpace = reverseString(prefixSearchSpace);
+      this.prefixOffset = prefixSearchSpace.length;
+    }
 
-    this.suffixSearchSpace = suffixSearchSpace;
-    this.suffixOffset = 0;
+    if (suffixSearchSpace) {
+      this.suffixSearchSpace = suffixSearchSpace;
+      this.suffixOffset = 0;
+    }
 
     return this;
   }

@@ -101,6 +101,44 @@ describe('FragmentGenerationUtils', function() {
     expect(result.fragment.textStart).toEqual('elle a brise');
   });
 
+  it('handles a prefix without a suffix', function() {
+    document.body.innerHTML = __html__['prefix-suffix-at-edges.html'];
+
+    const target = document.createRange();
+    const selection = window.getSelection();
+    const startnode = document.body.firstChild.firstChild;
+    target.setStart(startnode, 21);
+    target.setEnd(startnode, 27);
+    selection.removeAllRanges();
+    selection.addRange(target);
+
+    const result = generationUtils.generateFragment(selection);
+    expect(result.status)
+        .toEqual(generationUtils.GenerateFragmentStatus.SUCCESS);
+    expect(result.fragment.textStart).toEqual('target');
+    expect(result.fragment.prefix).toEqual('prefix');
+    expect(result.fragment.suffix).toBeUndefined();
+  });
+
+  it('handles a suffix without a prefix', function() {
+    document.body.innerHTML = __html__['prefix-suffix-at-edges.html'];
+
+    const target = document.createRange();
+    const selection = window.getSelection();
+    const startnode = document.body.firstChild.firstChild;
+    target.setStart(startnode, 0);
+    target.setEnd(startnode, 6);
+    selection.removeAllRanges();
+    selection.addRange(target);
+
+    const result = generationUtils.generateFragment(selection);
+    expect(result.status)
+        .toEqual(generationUtils.GenerateFragmentStatus.SUCCESS);
+    expect(result.fragment.textStart).toEqual('target');
+    expect(result.fragment.suffix).toEqual('suffix');
+    expect(result.fragment.prefix).toBeUndefined();
+  });
+
   it('can detect if a range contains a block boundary', function() {
     document.body.innerHTML = __html__['marks_test.html'];
     const range = document.createRange();
