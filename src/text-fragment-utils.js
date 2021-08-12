@@ -732,49 +732,84 @@ const getBoundaryPointAtIndex = (index, textNodes, isEnd) => {
 
 /**
  * Checks if a substring is word-bounded in the context of a longer string.
- * It's not feasible to match the spec exactly as Intl.Segmenter is not yet
- * widely supported. Instead, returns true iff:
+ *
+ * If an Intl.Segmenter is provided for locale-specific segmenting, it will be
+ * used for this check. This is the most desirable option, but not supported in
+ * all browsers.
+ * 
+ * If one is not provided, a heuristic will be applied,
+ * returning true iff:
  *  - startPos == 0 OR char before start is a boundary char, AND
  *  - length indicates end of string OR char after end is a boundary char
  * Where boundary chars are whitespace/punctuation defined in the const above.
- *
  * This causes the known issue that some languages, notably Japanese, only match
  * at the level of roughly a full clause or sentence, rather than a word.
+ * 
  * @param {String} text - the text to search
  * @param {Number} startPos - the index of the start of the substring
  * @param {Number} length - the length of the substring
+ * @param {Intl.Segmenter} [segmenter] - a segmenter to be used for finding word
+ *     boundaries, if supported
  * @return {bool} - true iff startPos and length point to a word-bounded
  *     substring of |text|.
  */
-const isWordBounded = (text, startPos, length) => {
+const isWordBounded = (text, startPos, length, segmenter) => {
   if (startPos < 0 || startPos >= text.length || length <= 0 ||
       startPos + length > text.length) {
     return false;
   }
 
-  // If the first character is already a boundary, move it once.
-  if (text[startPos].match(BOUNDARY_CHARS)) {
-    ++startPos;
-    --length;
-    if (!length) {
+  if (segmenter) {
+    // If the Intl.Segmenter API is available on this client, use it for more
+    // reliable word boundary checking.
+
+    const segments = segmenter.segment(text);
+    const startSegment = segments.containing(startPos);
+    if (!startSegment) return false;
+    // If the start index is inside a word segment but not the first character
+    // in that segment, it's not word-bounded. If it's not a word segment, then
+    // it's punctuation, etc., so that counts for word bounding.
+    if (startSegment.isWordLike && startSegment.index != startPos) return false;
+
+    const endPos = startPos + length;
+    const endSegment = segments.containing(endPos);
+
+    // If there's no end segment found, it's because we're at the end of the
+    // text, which is a valid boundary. (Because of the preconditions we
+    // checked above, we know we aren't out of range.)
+    // If there is an end segment found, it must either be non-word-like (i.e.,
+    // punctuation/whitespace) or the endPos must indicate the first character
+    // of a new word.
+    if (endSegment && endSegment.isWordLike && endSegment.index != endPos)
       return false;
-    }
-  }
+  } else {
+    // We don't have Intl.Segmenter support, so fall back to checking whether or
+    // not the substring is flanked by boundary characters.
 
-  // If the last character is already a boundary, move it once.
-  if (text[startPos + length - 1].match(BOUNDARY_CHARS)) {
-    --length;
-    if (!length) {
+    // If the first character is already a boundary, move it once.
+    if (text[startPos].match(BOUNDARY_CHARS)) {
+      ++startPos;
+      --length;
+      if (!length) {
+        return false;
+      }
+    }
+
+    // If the last character is already a boundary, move it once.
+    if (text[startPos + length - 1].match(BOUNDARY_CHARS)) {
+      --length;
+      if (!length) {
+        return false;
+      }
+    }
+
+    if (startPos !== 0 && (!text[startPos - 1].match(BOUNDARY_CHARS)))
       return false;
-    }
+
+    if (startPos + length !== text.length &&
+        !text[startPos + length].match(BOUNDARY_CHARS))
+      return false;
   }
-
-  if (startPos !== 0 && (!text[startPos - 1].match(BOUNDARY_CHARS)))
-    return false;
-
-  if (startPos + length !== text.length &&
-      !text[startPos + length].match(BOUNDARY_CHARS))
-    return false;
 
   return true;
 };
