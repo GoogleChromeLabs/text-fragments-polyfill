@@ -1,5 +1,6 @@
 const playwright = require('playwright');
-process.env.WEBKIT_HEADLESS_BIN = playwright.webkit.executablePath();
+// TODO: Re-enable when working on CI
+// process.env.WEBKIT_HEADLESS_BIN = playwright.webkit.executablePath();
 process.env.FIREFOX_HEADLESS_BIN = playwright.firefox.executablePath();
 process.env.CHROMIUM_BIN = playwright.chromium.executablePath();
 
@@ -49,17 +50,14 @@ module.exports = function (config) {
     autoWatch: false,
 
     // start these browsers
-    // available browser launchers: https://npmjs.org/browse/keyword/karma-launcher
-    browsers: ['ChromiumHeadlessNoSandbox', 'FirefoxHeadless', 'WebkitHeadless'],
+    // TODO: WebkitHeadless would be great to add, but currently is causing issues on CI
+    browsers: ['ChromiumHeadlessNoSandbox', 'FirefoxHeadless'],
     customLaunchers: {
       ChromiumHeadlessNoSandbox: {
           base: 'ChromiumHeadless',
           flags: ['--no-sandbox']
       }
     },
-
-    // Safari on the CI bots can be slow.
-    browserNoActivityTimeout: 300000,
 
     client: {
       // We can't run in an iframe because some of the code under test is
