@@ -13,9 +13,11 @@ jobs:
 
     steps:
     - uses: actions/checkout@v2
-    - uses: actions/setup-node@v1
+    - uses: actions/setup-node@v2
       with:
-        node-version: 12
+        node-version: 14
+    - name: Install operating system dependencies
+      run: npx playwright install-deps
     - name: npm install, build, and test
       run: |
         npm install
