@@ -1,5 +1,7 @@
-// Karma configuration
-// Generated on Thu Jul 30 2020 18:25:01 GMT-0400 (Eastern Daylight Time)
+const playwright = require('playwright');
+process.env.WEBKIT_HEADLESS_BIN = playwright.webkit.executablePath();
+process.env.FIREFOX_HEADLESS_BIN = playwright.firefox.executablePath();
+process.env.CHROMIUM_BIN = playwright.chromium.executablePath();
 
 module.exports = function (config) {
   config.set({
@@ -48,10 +50,10 @@ module.exports = function (config) {
 
     // start these browsers
     // available browser launchers: https://npmjs.org/browse/keyword/karma-launcher
-    browsers: ['ChromeHeadlessNoSandbox'],
+    browsers: ['ChromiumHeadlessNoSandbox', 'FirefoxHeadless', 'WebkitHeadless'],
     customLaunchers: {
-      ChromeHeadlessNoSandbox: {
-          base: 'ChromeHeadless',
+      ChromiumHeadlessNoSandbox: {
+          base: 'ChromiumHeadless',
           flags: ['--no-sandbox']
       }
     },
