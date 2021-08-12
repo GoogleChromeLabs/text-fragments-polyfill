@@ -58,6 +58,9 @@ module.exports = function (config) {
       }
     },
 
+    // Safari on the CI bots can be slow.
+    browserNoActivityTimeout: 300000,
+
     client: {
       // We can't run in an iframe because some of the code under test is
       // checking if it's inside an iframe.
