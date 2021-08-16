@@ -293,7 +293,7 @@ describe('TextFragmentUtils', function() {
         );
   });
 
-  it('can advance a range start past boundary chars', function() {
+  it('can advance a range start past whitespace chars', function() {
     document.body.innerHTML = __html__['marks_test.html'];
     const range = document.createRange();
     const elt = document.getElementById('a').firstChild;
@@ -320,7 +320,7 @@ describe('TextFragmentUtils', function() {
             'this is a really ',
         );
 
-    // Offset 10 is after the last non-boundary char in this node. Advancing
+    // Offset 10 is after the last non-whitespace char in this node. Advancing
     // will move past this node's trailing whitespace, into the next text node,
     // and past that node's leading whitespace.
     range.setStart(elt, 10);
@@ -404,7 +404,7 @@ describe('TextFragmentUtils', function() {
         .toBeUndefined();
   });
 
-  it('can detect if a substring is word-bounded', function() {
+  it('can detect if a substring is word-bounded without a segmenter', function() {
     const trueCases = [
       {data: 'test', substring: 'test'},
       {data: 'multiword test string', substring: 'test'},
@@ -414,7 +414,8 @@ describe('TextFragmentUtils', function() {
       {data: 'text foo bar', substring: 'foo '},
       {data: 'text  foo bar', substring: '  foo'},
       {data: 'text foo bar', substring: ' foo '},
-      // Japanese has no spaces, so only punctuation works as a boundary.
+      // Japanese has no spaces, so only punctuation works as a boundary without
+      // Intl.Segmenter.
       {data: 'はい。いいえ。', substring: 'いいえ'},
       {data: '『パープル・レイン』', substring: 'パープル'},
     ];
@@ -425,9 +426,8 @@ describe('TextFragmentUtils', function() {
       {data: 'untested', substring: 'test'},
       {data: '  hello ', substring: '  '},
       {data: ' hello  ', substring: '  '},
-      // アルバム is an actual word. With proper Japanese word segmenting we
-      // could move this to the true cases, but for now we expect it to be
-      // rejected.
+      // アルバム is an actual word in Japanese, but without Intl.Segmenter we
+      // can't detect that, so we expect false here.
       {
         data:
             'プリンス・アンド・ザ・レヴォリューションによる1984年のアルバム。',
@@ -464,6 +464,90 @@ describe('TextFragmentUtils', function() {
                   '>',
               )
           .toEqual(false);
+    }
+  });
+
+  it('can detect if a substring is word-bounded with a segmenter', function() {
+    if (!Intl.Segmenter) {
+      pending('This configuration does not yet support Intl.Segmenter.');
+      return;
+    }
+
+    const testCases = [
+      {
+        lang: 'en',
+        matches: [
+          {data: 'test', substring: 'test'},
+          {data: 'multiword test string', substring: 'test'},
+          {data: 'the quick, brown dog', substring: 'the quick'},
+          {data: 'a "quotation" works', substring: 'quotation'},
+          {data: 'other\nspacing\t', substring: 'spacing'},
+          {data: 'text foo bar', substring: 'foo '},
+          {data: 'text  foo bar', substring: '  foo'},
+          {data: 'text foo bar', substring: ' foo '},
+          {data: 'there are 4 lights', substring: '4'},
+        ],
+        nonmatches: [
+          {data: 'testing', substring: 'test'},
+          {data: 'attest', substring: 'test'},
+          {data: 'untested', substring: 'test'},
+        ]
+      },
+      {
+        lang: 'jp',
+        matches: [
+          {data: 'はい。いいえ。', substring: 'いいえ'},
+          {data: '『パープル・レイン』', substring: 'パープル'},
+          {
+            data:
+                'プリンス・アンド・ザ・レヴォリューションによる1984年のアルバム。',
+            substring: 'アルバム',
+          },
+          {
+            data: '秋葉原（あきはばら）は、東京都千代田区の秋葉原駅周辺',
+            substring: '東京都',  // 東京都 is a full word (Tokyo)
+          },
+          {data: 'ウィキペディアへようこそ', substring: 'ようこそ'},
+        ],
+        nonmatches: [
+          {
+            data: 'ウィキペディアへようこそ',
+            substring: 'ようこ'
+          },  // ようこそ is the full word
+          {
+            data: '秋葉原（あきはばら）は、東京都千代田区の秋葉原駅周辺',
+            substring: '東京都千',  // 東京都 and 千代田区 are the full words
+          },
+        ]
+      }
+    ];
+    for (const testCase of testCases) {
+      const segmenter =
+          new Intl.Segmenter(testCase.lang, {granularity: 'word'});
+      for (const input of testCase.matches) {
+        const index = input.data.search(input.substring);
+        expect(
+            utils.forTesting.isWordBounded(
+                input.data, index, input.substring.length, segmenter),
+            )
+            .withContext(
+                'Is <' + input.substring + '> word-bounded in <' + input.data +
+                    '>',
+                )
+            .toEqual(true);
+      }
+      for (const input of testCase.nonmatches) {
+        const index = input.data.search(input.substring);
+        expect(
+            utils.forTesting.isWordBounded(
+                input.data, index, input.substring.length, segmenter),
+            )
+            .withContext(
+                'Is <' + input.substring + '> word-bounded in <' + input.data +
+                    '>',
+                )
+            .toEqual(false);
+      }
     }
   });
 
