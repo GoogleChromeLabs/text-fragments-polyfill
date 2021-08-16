@@ -736,7 +736,7 @@ const getBoundaryPointAtIndex = (index, textNodes, isEnd) => {
  * If an Intl.Segmenter is provided for locale-specific segmenting, it will be
  * used for this check. This is the most desirable option, but not supported in
  * all browsers.
- * 
+ *
  * If one is not provided, a heuristic will be applied,
  * returning true iff:
  *  - startPos == 0 OR char before start is a boundary char, AND
@@ -744,7 +744,7 @@ const getBoundaryPointAtIndex = (index, textNodes, isEnd) => {
  * Where boundary chars are whitespace/punctuation defined in the const above.
  * This causes the known issue that some languages, notably Japanese, only match
  * at the level of roughly a full clause or sentence, rather than a word.
- * 
+ *
  * @param {String} text - the text to search
  * @param {Number} startPos - the index of the start of the substring
  * @param {Number} length - the length of the substring
@@ -771,15 +771,17 @@ const isWordBounded = (text, startPos, length, segmenter) => {
     // it's punctuation, etc., so that counts for word bounding.
     if (startSegment.isWordLike && startSegment.index != startPos) return false;
 
+    // |endPos| points to the first character outside the target substring.
     const endPos = startPos + length;
     const endSegment = segments.containing(endPos);
 
     // If there's no end segment found, it's because we're at the end of the
     // text, which is a valid boundary. (Because of the preconditions we
     // checked above, we know we aren't out of range.)
-    // If there is an end segment found, it must either be non-word-like (i.e.,
-    // punctuation/whitespace) or the endPos must indicate the first character
-    // of a new word.
+    // If there's an end segment found but it's non-word-like, that's also OK,
+    // since punctuation and whitespace are acceptable boundaries.
+    // Lastly, if there's an end segment and it is word-like, then |endPos|
+    // needs to point to the start of that new word, or |endSegment.index|.
     if (endSegment && endSegment.isWordLike && endSegment.index != endPos)
       return false;
   } else {

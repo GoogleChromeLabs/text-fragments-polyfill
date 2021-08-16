@@ -503,10 +503,21 @@ describe('TextFragmentUtils', function() {
                 'プリンス・アンド・ザ・レヴォリューションによる1984年のアルバム。',
             substring: 'アルバム',
           },
+          {
+            data: '秋葉原（あきはばら）は、東京都千代田区の秋葉原駅周辺',
+            substring: '東京都',  // 東京都 is a full word (Tokyo)
+          },
           {data: 'ウィキペディアへようこそ', substring: 'ようこそ'},
         ],
         nonmatches: [
-          {data: 'ウィキペディアへようこそ', substring: 'ようこ'},
+          {
+            data: 'ウィキペディアへようこそ',
+            substring: 'ようこ'
+          },  // ようこそ is the full word
+          {
+            data: '秋葉原（あきはばら）は、東京都千代田区の秋葉原駅周辺',
+            substring: '東京都千',  // 東京都 and 千代田区 are the full words
+          },
         ]
       }
     ];
