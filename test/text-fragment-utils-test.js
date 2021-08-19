@@ -369,12 +369,14 @@ describe('TextFragmentUtils', function() {
     const docRange = document.createRange();
     docRange.selectNodeContents(rootNode);
 
+    let segmenter = null;
+    if (Intl.Segmenter) {
+      segmenter = new Intl.Segmenter('en', {granularity: 'word'});
+    }
+
     for (const input of simpleTestCases) {
       const range = utils.forTesting.findRangeFromNodeList(
-          input,
-          docRange,
-          allTextNodes,
-      );
+          input, docRange, allTextNodes, segmenter);
       expect(range)
           .withContext('No range found for <' + input + '>')
           .not.toBeUndefined();
@@ -385,20 +387,14 @@ describe('TextFragmentUtils', function() {
     // the word 'has'. We verify this by checking that the range's common
     // ancestor is the <b> tag, which in the HTML doc contains the word 'a'.
     const aRange = utils.forTesting.findRangeFromNodeList(
-        'a',
-        docRange,
-        allTextNodes,
-    );
+        'a', docRange, allTextNodes, segmenter);
     expect(aRange).withContext('No range found for <a>').not.toBeUndefined();
     expect(aRange.commonAncestorContainer.parentElement.nodeName).toEqual('B');
 
     // We expect no match to be found for a partial-word substring ("tüf" should
     // not match "stüff" in the document).
     const nullRange = utils.forTesting.findRangeFromNodeList(
-        'tüf',
-        docRange,
-        allTextNodes,
-    );
+        'tüf', docRange, allTextNodes, segmenter);
     expect(nullRange)
         .withContext('Unexpectedly found match for <tüf>')
         .toBeUndefined();
