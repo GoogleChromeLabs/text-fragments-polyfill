@@ -598,8 +598,16 @@ function* getElementsIn(root, filter) {
  */
 const findTextInRange = (query, range) => {
   const textNodeLists = getAllTextNodes(range.commonAncestorContainer, range);
+  let segmenter = null;
+  if (Intl.Segmenter) {
+    let lang = document.documentElement.lang;
+    if (!lang) {
+      lang = navigator.languages;
+    }
+    segmenter = new Intl.Segmenter(lang, {granularity: 'word'});
+  }
   for (const list of textNodeLists) {
-    const found = findRangeFromNodeList(query, range, list);
+    const found = findRangeFromNodeList(query, range, list, segmenter);
     if (found !== undefined) return found;
   }
   return undefined;
@@ -611,10 +619,12 @@ const findTextInRange = (query, range) => {
  * @param {String} query - the string to find
  * @param {Range} range - the range in which to search
  * @param {Node[]} textNodes - the visible text nodes within |range|
+ * @param {Intl.Segmenter} [segmenter] - a segmenter to be used for finding word
+ *     boundaries, if supported
  * @return {Range} - the found range, or undefined if no such range could be
  *     found
  */
-const findRangeFromNodeList = (query, range, textNodes) => {
+const findRangeFromNodeList = (query, range, textNodes, segmenter) => {
   if (!query || !range || !(textNodes || []).length) return undefined;
   const data = normalizeString(getTextContent(textNodes, 0, undefined));
   const normalizedQuery = normalizeString(query);
@@ -624,7 +634,7 @@ const findRangeFromNodeList = (query, range, textNodes) => {
   while (searchStart < data.length) {
     const matchIndex = data.indexOf(normalizedQuery, searchStart);
     if (matchIndex === -1) return undefined;
-    if (isWordBounded(data, matchIndex, normalizedQuery.length)) {
+    if (isWordBounded(data, matchIndex, normalizedQuery.length, segmenter)) {
       start = getBoundaryPointAtIndex(matchIndex, textNodes, /* isEnd=*/ false);
       end = getBoundaryPointAtIndex(
           matchIndex + normalizedQuery.length,
