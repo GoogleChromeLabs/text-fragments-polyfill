@@ -799,4 +799,36 @@ describe('FragmentGenerationUtils', function() {
     expect(generationUtils.isValidRangeForFragmentGeneration(range))
         .toBeFalse();
   });
+
+  it('can find text nodes in the same block as another node', function() {
+    const extractor =
+        (x) => {
+          return x.textContent.trim();
+        }
+
+               document.body.innerHTML = __html__['text-node-extraction.html'];
+    let node = document.getElementById('outer').childNodes[0];
+    let result = generationUtils.forTesting.getTextNodesInSameBlock(node);
+    expect(extractor(node)).toBe('0');
+    expect(result.preNodes.map(extractor)).toEqual([]);
+    expect(result.postNodes.map(extractor)).toEqual([]);
+
+    node = document.getElementById('inner').childNodes[0];
+    result = generationUtils.forTesting.getTextNodesInSameBlock(node);
+    expect(extractor(node)).toBe('1');
+    expect(result.preNodes.map(extractor)).toEqual([]);
+    expect(result.postNodes.map(extractor)).toEqual(['2', '3', '4', '5']);
+
+    node = document.getElementById('mid').childNodes[0];
+    result = generationUtils.forTesting.getTextNodesInSameBlock(node);
+    expect(extractor(node)).toBe('4');
+    expect(result.preNodes.map(extractor)).toEqual(['1', '2', '3']);
+    expect(result.postNodes.map(extractor)).toEqual(['5']);
+
+    node = document.getElementById('outer').childNodes[2];
+    result = generationUtils.forTesting.getTextNodesInSameBlock(node);
+    expect(extractor(node)).toBe('8');
+    expect(result.preNodes.map(extractor)).toEqual([]);
+    expect(result.postNodes.map(extractor)).toEqual([]);
+  });
 });

@@ -598,14 +598,8 @@ function* getElementsIn(root, filter) {
  */
 const findTextInRange = (query, range) => {
   const textNodeLists = getAllTextNodes(range.commonAncestorContainer, range);
-  let segmenter = null;
-  if (Intl.Segmenter) {
-    let lang = document.documentElement.lang;
-    if (!lang) {
-      lang = navigator.languages;
-    }
-    segmenter = new Intl.Segmenter(lang, {granularity: 'word'});
-  }
+  const segmenter = makeNewSegmenter();
+
   for (const list of textNodeLists) {
     const found = findRangeFromNodeList(query, range, list, segmenter);
     if (found !== undefined) return found;
@@ -844,6 +838,17 @@ const normalizeString = (str) => {
       .toLowerCase();
 };
 
+const makeNewSegmenter = () => {
+  if (Intl.Segmenter) {
+    let lang = document.documentElement.lang;
+    if (!lang) {
+      lang = navigator.languages;
+    }
+    return new Intl.Segmenter(lang, {granularity: 'word'});
+  }
+  return undefined;
+};
+
 /**
  * Should not be referenced except in the /test directory.
  */
@@ -868,6 +873,7 @@ export const internal = {
   NON_BOUNDARY_CHARS: NON_BOUNDARY_CHARS,
   filterFunction: filterFunction,
   normalizeString: normalizeString,
+  makeNewSegmenter: makeNewSegmenter,
 }
 
 // Allow importing module from closure-compiler projects that haven't migrated
