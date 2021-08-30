@@ -838,6 +838,11 @@ const normalizeString = (str) => {
       .toLowerCase();
 };
 
+/**
+ * @return {Intl.Segmenter|undefined} - a segmenter object suitable for finding
+ *     word boundaries. Returns undefined on browsers/platforms that do not yet
+ *     support the Intl.Segmenter API.
+ */
 const makeNewSegmenter = () => {
   if (Intl.Segmenter) {
     let lang = document.documentElement.lang;
