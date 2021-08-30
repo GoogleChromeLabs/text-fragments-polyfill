@@ -942,6 +942,57 @@ const expandRangeStartToWordBound = (range) => {
 };
 
 /**
+ * @typedef {Object} TextNodeLists - the result of traversing the DOM to
+ *     extract TextNodes
+ * @property {TextNode[]} preNodes - the nodes appearing before a specified
+ *     starting node
+ * @property {TextNode[]} postNodes - the nodes appearing after a specified
+ *     starting node
+ */
+
+/**
+ * Traverses the DOM to extact all TextNodes appearing in the same block level
+ * as |node| (i.e., those that are descendents of a common ancestor of |node|
+ * with no other block elements in between.)
+ * @param {TextNode} node
+ * @returns {TextNodeLists}
+ */
+const getTextNodesInSameBlock = (node) => {
+  const preNodes = [];
+  // First, backtraverse to get to a block boundary
+  const backWalker = makeWalkerForNode(node);
+  if (!backWalker) {
+    return;
+  }
+  const visited = new Set();
+  const origin = backWalker.currentNode;
+  let backNode = backwardTraverse(backWalker, visited, origin);
+  while (backNode != null && !isBlock(backNode)) {
+    if (backNode.nodeType === Node.TEXT_NODE) {
+      preNodes.push(backNode);
+    }
+    backNode = backwardTraverse(backWalker, visited, origin);
+  };
+  preNodes.reverse();
+
+  const postNodes = [];
+  const forwardWalker = makeWalkerForNode(node);
+  if (!forwardWalker) {
+    return;
+  }
+  const overrideMap = createForwardOverrideMap(forwardWalker);
+  let forwardNode = forwardTraverse(forwardWalker, overrideMap);
+  while (forwardNode != null && !isBlock(forwardNode)) {
+    if (forwardNode.nodeType === Node.TEXT_NODE) {
+      postNodes.push(forwardNode);
+    }
+    forwardNode = forwardTraverse(forwardWalker, overrideMap);
+  }
+
+  return {preNodes: preNodes, postNodes: postNodes};
+};
+
+/**
  * Helper method to create an override map which will "inject" the ancestors of
  * the walker's starting node into traversal order, when using forwardTraverse.
  * By traversing these ancestor nodes after their children (postorder), we can
@@ -1133,6 +1184,7 @@ export const forTesting = {
   FragmentFactory: FragmentFactory,
   getSearchSpaceForEnd: getSearchSpaceForEnd,
   getSearchSpaceForStart: getSearchSpaceForStart,
+  getTextNodesInSameBlock: getTextNodesInSameBlock,
   recordStartTime: recordStartTime,
 };
 
