@@ -241,6 +241,34 @@ describe('FragmentGenerationUtils', function() {
     expect(range.toString()).toEqual('block');
   });
 
+  it('can expand a range start to a word bound across nodes in Japanese',
+     function() {
+       if (!Intl.Segmenter) {
+         pending('This configuration does not yet support Intl.Segmenter.');
+         return;
+       }
+
+       document.body.innerHTML = __html__['jp-word-boundary.html'];
+       const range = document.createRange();
+       // The last text node contains a partial word and needs to include a char
+       // from the preceding <i> tag to make a full word.
+       const wordSuffix = document.getElementById('root').lastChild;
+       range.selectNodeContents(wordSuffix);
+       expect(range.toString()).toEqual('リーズ');
+
+       generationUtils.forTesting.expandRangeStartToWordBound(range);
+       expect(range.toString()).toEqual('シリーズ');
+
+       // This node contains the end of one word and the start of another, but
+       // in context is not a full word itself.
+       const innerText = document.getElementById('i').firstChild;
+       range.selectNodeContents(innerText);
+       expect(range.toString()).toEqual('ックシ');
+
+       generationUtils.forTesting.expandRangeStartToWordBound(range);
+       expect(range.toString()).toEqual('ソニックシ');
+     });
+
   it('can expand a range end to a word bound within a node', function() {
     document.body.innerHTML = __html__['word_bounds_test.html'];
     const range = document.createRange();
