@@ -893,46 +893,12 @@ const expandRangeStartToWordBound = (range) => {
     // Find the starting text node and offset (since the range may start with a
     // non-text node).
     const startNode = getFirstNodeForBlockSearch(range);
-    const startOffset =
-        startNode === range.startContainer ? range.startOffset : 0;
-
-    // Find the start index as an offset in the full text of the block in which
-    // the range starts.
-    const nodes = getTextNodesInSameBlock(startNode);
-    const preNodeText = nodes.preNodes.reduce((prev, cur) => {
-      return prev.concat(cur.textContent);
-    }, '');
-    const startOffsetInText = preNodeText.length + startOffset;
-
-    // Find the segment of the full block text containing the range start.
-    const postNodeText = nodes.postNodes.reduce((prev, cur) => {
-      return prev.concat(cur.textContent);
-    }, '');
-    const text = preNodeText.concat(startNode.textContent, postNodeText);
-    const startSegment = segmenter.segment(text).containing(startOffsetInText);
-
-    // Easy case: if the starting segment is not word-like (i.e., contains
-    // whitespace, punctuation, etc.) then nothing needs to be done because the
-    // range already starts between words.
-    if (!startSegment.isWordLike) {
-      return;
+    if (startNode !== range.startContainer) {
+      range.setStartBefore(startNode);
     }
 
-    // Otherwise, we need to find the node containing the text offset where the
-    // range should start.
-    const desiredOffsetInText = startSegment.index;
-    let newStartNodeIndexInText = 0;
-    const allNodes = [...nodes.preNodes, startNode, ...nodes.postNodes];
-    for (const node of allNodes) {
-      if (newStartNodeIndexInText <= desiredOffsetInText &&
-          desiredOffsetInText <
-              newStartNodeIndexInText + node.textContent.length) {
-        const offsetInNode = desiredOffsetInText - newStartNodeIndexInText;
-        range.setStart(node, offsetInNode);
-        return;
-      }
-      newStartNodeIndexInText += node.textContent.length;
-    }
+    expandToNearestWordBoundaryPointUsingSegments(
+        segmenter, /* expandForward= */ false, range);
   } else {
     // Simplest case: If we're in a text node, try to find a boundary char in
     // the same text node.
@@ -980,19 +946,138 @@ const expandRangeStartToWordBound = (range) => {
       }
 
       node = backwardTraverse(walker, visited, origin);
+      // We should never get here; the walker should eventually hit a block node
+      // or the root of the document. Collapse range so the caller can handle
+      // this as an error.
+      range.collapse();
     }
-    // We should never get here; the walker should eventually hit a block node
-    // or the root of the document. Collapse range so the caller can handle this
-    // as an error.
-    range.collapse();
   }
 };
+
+/**
+ * Uses Intl.Segmenter to shift the start or end of a range to a word boundary.
+ * Helper method for expandWord*ToWordBound methods.
+ * @param {Intl.Segmenter} segmenter - object to use for word segmenting
+ * @param {boolean} isRangeEnd - true if the range end should be modified, false
+ *     if the range start should be modified
+ * @param {Range} range - the range to modify
+ */
+const expandToNearestWordBoundaryPointUsingSegments =
+    (segmenter, isRangeEnd, range) => {
+      // Find the index as an offset in the full text of the block in which
+      // boundary occurs.
+      const boundary = isRangeEnd ?
+          {node: range.endContainer, offset: range.endOffset} :
+          {node: range.startContainer, offset: range.startOffset};
+
+      const nodes = getTextNodesInSameBlock(boundary.node);
+      const preNodeText = nodes.preNodes.reduce((prev, cur) => {
+        return prev.concat(cur.textContent);
+      }, '');
+
+      const innerNodeText = nodes.innerNodes.reduce((prev, cur) => {
+        return prev.concat(cur.textContent);
+      }, '');
+
+      let offsetInText = preNodeText.length;
+      if (boundary.node.nodeType === Node.TEXT_NODE) {
+        offsetInText += boundary.offset;
+      } else if (isRangeEnd) {
+        offsetInText += innerNodeText.length;
+      }
+
+      // Find the segment of the full block text containing the range start.
+      const postNodeText = nodes.postNodes.reduce((prev, cur) => {
+        return prev.concat(cur.textContent);
+      }, '');
+
+      const allNodes =
+          [...nodes.preNodes, ...nodes.innerNodes, ...nodes.postNodes];
+      const text = preNodeText.concat(innerNodeText, postNodeText);
+
+      const segments = segmenter.segment(text);
+      const foundSegment = segments.containing(offsetInText);
+
+      if (!foundSegment) {
+        if (isRangeEnd) {
+          range.setEndAfter(allNodes[allNodes.length - 1]);
+        } else {
+          range.setEndBefore(allNodes[0]);
+        }
+        return;
+      }
+
+      // Easy case: if the segment is not word-like (i.e., contains whitespace,
+      // punctuation, etc.) then nothing needs to be done because this
+      // boundary point is between words.
+      if (!foundSegment.isWordLike) {
+        return;
+      }
+
+      // Edge case: if we are at the first/last character of the segment, we
+      // need to check if the one before/after it is whitespace.
+      if (offsetInText === foundSegment.index) {
+        const prevSegment = segments.containing(offsetInText - 1);
+        // |prevSegment| will be undefined if |offsetInText| is 0
+        if (prevSegment && !prevSegment.isWordLike) {
+          return;
+        }
+      }
+      if (offsetInText === foundSegment.index + foundSegment.segment.length) {
+        const nextSegment = segments.containing(offsetInText + 1);
+        // |nextSegment| will be undefined if |offsetInText| is past the end of
+        // |text|
+        if (nextSegment && !nextSegment.isWordLike) {
+          return;
+        }
+      }
+
+      // We're inside a word. Based on |isRangeEnd|, the target offset will
+      // either be the start or the end of the found segment.
+      const desiredOffsetInText = isRangeEnd ?
+          foundSegment.index + foundSegment.segment.length :
+          foundSegment.index;
+      let newNodeIndexInText = 0;
+      for (const node of allNodes) {
+        if (newNodeIndexInText <= desiredOffsetInText &&
+            desiredOffsetInText <
+                newNodeIndexInText + node.textContent.length) {
+          const offsetInNode = desiredOffsetInText - newNodeIndexInText;
+          if (isRangeEnd) {
+            if (offsetInNode >= node.textContent.length) {
+              range.setEndAfter(node);
+            } else {
+              range.setEnd(node, offsetInNode);
+            }
+          } else {
+            if (offsetInNode >= node.textContent.length) {
+              range.setStartAfter(node);
+            } else {
+              range.setStart(node, offsetInNode);
+            }
+          }
+          return;
+        }
+        newNodeIndexInText += node.textContent.length;
+      }
+
+      // If we got here, then somehow the offset didn't fall within a node. As a
+      // fallback, move the range to the start/end of the block.
+      if (isRangeEnd) {
+        range.setEndAfter(allNodes[allNodes.length - 1]);
+      } else {
+        range.setStartBefore(allNodes[0]);
+      }
+    };
+
 
 /**
  * @typedef {Object} TextNodeLists - the result of traversing the DOM to
  *     extract TextNodes
  * @property {TextNode[]} preNodes - the nodes appearing before a specified
  *     starting node
+ * @property {TextNode[]} innerNodes - a list containing |node| if it is a
+ *     text node, or any text node children of |node|.
  * @property {TextNode[]} postNodes - the nodes appearing after a specified
  *     starting node
  */
@@ -1015,12 +1100,32 @@ const getTextNodesInSameBlock = (node) => {
   const origin = backWalker.currentNode;
   let backNode = backwardTraverse(backWalker, visited, origin);
   while (backNode != null && !isBlock(backNode)) {
+    checkTimeout();
     if (backNode.nodeType === Node.TEXT_NODE) {
       preNodes.push(backNode);
     }
     backNode = backwardTraverse(backWalker, visited, origin);
   };
   preNodes.reverse();
+
+  const innerNodes = [];
+  if (node.nodeType === Node.TEXT_NODE) {
+    innerNodes.push(node);
+  } else {
+    const walker = document.createTreeWalker(
+        node, NodeFilter.SHOW_ELEMENT | NodeFilter.SHOW_TEXT, (node) => {
+          return fragments.internal.filterFunction(node);
+        });
+    walker.currentNode = node;
+    let child = walker.nextNode();
+    while (child != null) {
+      checkTimeout();
+      if (child.nodeType === Node.TEXT_NODE) {
+        innerNodes.push(child);
+      }
+      child = walker.nextNode();
+    }
+  }
 
   const postNodes = [];
   const forwardWalker = makeWalkerForNode(node);
@@ -1030,13 +1135,14 @@ const getTextNodesInSameBlock = (node) => {
   const overrideMap = createForwardOverrideMap(forwardWalker);
   let forwardNode = forwardTraverse(forwardWalker, overrideMap);
   while (forwardNode != null && !isBlock(forwardNode)) {
+    checkTimeout();
     if (forwardNode.nodeType === Node.TEXT_NODE) {
       postNodes.push(forwardNode);
     }
     forwardNode = forwardTraverse(forwardWalker, overrideMap);
   }
 
-  return {preNodes: preNodes, postNodes: postNodes};
+  return {preNodes: preNodes, innerNodes: innerNodes, postNodes: postNodes};
 };
 
 /**
@@ -1122,32 +1228,31 @@ const forwardTraverse = (walker, overrideMap) => {
  *     the current node was unchanged (and thus, no further traversal is
  *     possible).
  */
-const backwardTraverse =
-    (walker, visited, origin) => {
-      // Infinite loop to avoid recursion. Will terminate since visited set
-      // guarantees children of a node are only traversed once, and parent node
-      // will be null once the root of the walker is reached.
-      while (true) {
-        checkTimeout();
-        // The first time we visit a node, we traverse its children backwards,
-        // unless it's an ancestor of the starting node.
-        if (!visited.has(walker.currentNode) &&
-            !walker.currentNode.contains(origin)) {
-          visited.add(walker.currentNode);
-          if (walker.lastChild() != null) {
-            return walker.currentNode;
-          }
-        }
-
-        if (walker.previousSibling() != null) {
-          return walker.currentNode;
-        } else if (walker.parentNode() == null) {
-          return null;
-        } else if (!visited.has(walker.currentNode)) {
-          return walker.currentNode;
-        }
+const backwardTraverse = (walker, visited, origin) => {
+  // Infinite loop to avoid recursion. Will terminate since visited set
+  // guarantees children of a node are only traversed once, and parent node
+  // will be null once the root of the walker is reached.
+  while (true) {
+    checkTimeout();
+    // The first time we visit a node, we traverse its children backwards,
+    // unless it's an ancestor of the starting node.
+    if (!visited.has(walker.currentNode) &&
+        !walker.currentNode.contains(origin)) {
+      visited.add(walker.currentNode);
+      if (walker.lastChild() != null) {
+        return walker.currentNode;
       }
     }
+
+    if (walker.previousSibling() != null) {
+      return walker.currentNode;
+    } else if (walker.parentNode() == null) {
+      return null;
+    } else if (!visited.has(walker.currentNode)) {
+      return walker.currentNode;
+    }
+  }
+};
 
 /**
  * Modifies the end of the range, if necessary, to ensure the selection text
@@ -1156,55 +1261,67 @@ const backwardTraverse =
  * @param {Range} range - the range to be modified
  */
 const expandRangeEndToWordBound = (range) => {
-  let initialOffset = range.endOffset;
-
-  let node = range.endContainer;
-  if (node.nodeType === Node.ELEMENT_NODE) {
-    if (range.endOffset < node.childNodes.length) {
-      node = node.childNodes[range.endOffset];
+  const segmenter = fragments.internal.makeNewSegmenter();
+  if (segmenter) {
+    // Find the ending text node and offset (since the range may end with a
+    // non-text node).
+    const endNode = getLastNodeForBlockSearch(range);
+    if (endNode !== range.endContainer) {
+      range.setEndAfter(endNode);
     }
-  }
+    expandToNearestWordBoundaryPointUsingSegments(
+        segmenter, /* expandForward= */ true, range);
+  } else {
+    let initialOffset = range.endOffset;
 
-  const walker = makeWalkerForNode(node);
-  if (!walker) {
-    return;
-  }
-  const override = createForwardOverrideMap(walker);
-
-  while (node != null) {
-    checkTimeout();
-
-    const newOffset = findWordEndBoundInTextNode(node, initialOffset);
-    // Future iterations should not use initialOffset; null it out so it is
-    // discarded.
-    initialOffset = null;
-
-    if (newOffset !== -1) {
-      range.setEnd(node, newOffset);
-      return;
-    }
-
-    // If |node| is a block node, then we've hit a block boundary, which counts
-    // as a word boundary.
-    if (isBlock(node)) {
-      if (node.contains(range.endContainer)) {
-        // If the selection starts inside |node|, then the correct range
-        // boundary is the *trailing* edge of |node|.
-        range.setEnd(node, node.childNodes.length);
-      } else {
-        // Otherwise, |node| is after the selection, so the correct boundary is
-        // the *leading* edge of |node|.
-        range.setEndBefore(node);
+    let node = range.endContainer;
+    if (node.nodeType === Node.ELEMENT_NODE) {
+      if (range.endOffset < node.childNodes.length) {
+        node = node.childNodes[range.endOffset];
       }
-      return;
     }
 
-    node = forwardTraverse(walker, override);
+    const walker = makeWalkerForNode(node);
+    if (!walker) {
+      return;
+    }
+    const override = createForwardOverrideMap(walker);
+
+    while (node != null) {
+      checkTimeout();
+
+      const newOffset = findWordEndBoundInTextNode(node, initialOffset);
+      // Future iterations should not use initialOffset; null it out so it is
+      // discarded.
+      initialOffset = null;
+
+      if (newOffset !== -1) {
+        range.setEnd(node, newOffset);
+        return;
+      }
+
+      // If |node| is a block node, then we've hit a block boundary, which
+      // counts as a word boundary.
+      if (isBlock(node)) {
+        if (node.contains(range.endContainer)) {
+          // If the selection starts inside |node|, then the correct range
+          // boundary is the *trailing* edge of |node|.
+          range.setEnd(node, node.childNodes.length);
+        } else {
+          // Otherwise, |node| is after the selection, so the correct boundary
+          // is the *leading* edge of |node|.
+          range.setEndBefore(node);
+        }
+        return;
+      }
+
+      node = forwardTraverse(walker, override);
+    }
+    // We should never get here; the walker should eventually hit a block node
+    // or the root of the document. Collapse range so the caller can handle this
+    // as an error.
+    range.collapse();
   }
-  // We should never get here; the walker should eventually hit a block node
-  // or the root of the document. Collapse range so the caller can handle this
-  // as an error.
-  range.collapse();
 };
 
 /**
