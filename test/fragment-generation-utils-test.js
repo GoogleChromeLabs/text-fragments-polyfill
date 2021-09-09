@@ -239,6 +239,10 @@ describe('FragmentGenerationUtils', function() {
 
     generationUtils.forTesting.expandRangeStartToWordBound(range);
     expect(range.toString()).toEqual('block');
+
+    // Repeat the process and expect it to be a no-op.
+    generationUtils.forTesting.expandRangeStartToWordBound(range);
+    expect(range.toString()).toEqual('block');
   });
 
   it('can expand a range start to a word bound across nodes in Japanese',
@@ -278,6 +282,10 @@ describe('FragmentGenerationUtils', function() {
     range.setEnd(textNodeInBlock, 3);
     expect(range.toString()).toEqual('Ins');
 
+    generationUtils.forTesting.expandRangeEndToWordBound(range);
+    expect(range.toString()).toEqual('Inside');
+
+    // Repeat the process and expect it to be a no-op.
     generationUtils.forTesting.expandRangeEndToWordBound(range);
     expect(range.toString()).toEqual('Inside');
   });
