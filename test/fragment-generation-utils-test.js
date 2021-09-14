@@ -529,6 +529,71 @@ describe('FragmentGenerationUtils', function() {
     expect(factory.embiggen()).toEqual(false);
   });
 
+
+  it('can generate progressively larger fragments across blocks in Japanese',
+     function() {
+       pending('Support for non-space-separated fragments is incomplete.');
+       return;
+
+       document.body.innerHTML = __html__['range-fragment-jp.html'];
+       const range = document.createRange();
+       range.selectNodeContents(document.getElementById('root'));
+
+       const startSpace =
+           generationUtils.forTesting.getSearchSpaceForStart(range);
+       const endSpace = generationUtils.forTesting.getSearchSpaceForEnd(range);
+
+       const factory = new generationUtils.forTesting.FragmentFactory()
+                           .setStartAndEndSearchSpace(startSpace, endSpace);
+
+       expect(factory.embiggen()).toEqual(true);
+       expect(startSpace.substring(0, factory.startOffset))
+           .toEqual('いただきます');
+       expect(endSpace.substring(factory.endOffset)).toEqual('いただきます');
+
+       expect(factory.tryToMakeUniqueFragment()).toBeUndefined();
+
+       expect(factory.embiggen()).toEqual(true);
+       expect(startSpace.substring(0, factory.startOffset))
+           .toEqual('いただきますいただきます');
+       expect(endSpace.substring(factory.endOffset))
+           .toEqual('いただきますいただきます');
+
+       expect(factory.tryToMakeUniqueFragment()).toBeUndefined();
+
+       expect(factory.embiggen()).toEqual(true);
+       expect(startSpace.substring(0, factory.startOffset))
+           .toEqual('いただきますいただきますいただきます');
+       expect(endSpace.substring(factory.endOffset))
+           .toEqual('いただきますいただきますいただきます');
+
+       expect(factory.tryToMakeUniqueFragment()).toBeUndefined();
+
+       expect(factory.embiggen()).toEqual(true);
+       expect(startSpace.substring(0, factory.startOffset))
+           .toEqual('いただきますいただきますいただきますご馳走様');
+       expect(endSpace.substring(factory.endOffset))
+           .toEqual('ご馳走様いただきますいただきますいただきます');
+
+       const fragment = factory.tryToMakeUniqueFragment();
+       expect(fragment).not.toBeUndefined();
+       expect(fragment.textStart)
+           .toEqual('いただきますいただきますいただきますご馳走様');
+       expect(fragment.textEnd)
+           .toEqual('ご馳走様いただきますいただきますいただきます');
+
+       expect(factory.embiggen()).toEqual(true);
+       expect(startSpace.substring(0, factory.startOffset))
+           .toEqual('いただきますいただきますいただきますご馳走様いただきます');
+       expect(endSpace.substring(factory.endOffset))
+           .toEqual('いただきますご馳走様いただきますいただきますいただきます');
+
+       expect(factory.embiggen()).toEqual(true);
+       expect(factory.embiggen()).toEqual(true);
+
+       expect(factory.embiggen()).toEqual(false);
+     });
+
   it('can generate progressively larger fragments within a block', function() {
     const sharedSpace = 'text1 text2 text3 text4 text5 text6 text7';
 
@@ -559,6 +624,41 @@ describe('FragmentGenerationUtils', function() {
 
     expect(factory.embiggen()).toEqual(false);
   });
+
+  it('can generate progressively larger fragments within a block in Japanese',
+     function() {
+       pending('Support for non-space-separated fragments is incomplete.');
+       return;
+
+       const sharedSpace = 'メガドライブゲームギアソニックドリームキャスト';
+
+       const factory = new generationUtils.forTesting.FragmentFactory()
+                           .setSharedSearchSpace(sharedSpace);
+
+       expect(factory.embiggen()).toEqual(true);
+       expect(sharedSpace.substring(0, factory.startOffset)).toEqual('メガ');
+       expect(sharedSpace.substring(factory.endOffset)).toEqual('キャスト');
+
+       expect(factory.embiggen()).toEqual(true);
+       expect(sharedSpace.substring(0, factory.startOffset))
+           .toEqual('メガドライブ');
+       expect(sharedSpace.substring(factory.endOffset))
+           .toEqual('ドリームキャスト');
+
+       expect(factory.embiggen()).toEqual(true);
+       expect(sharedSpace.substring(0, factory.startOffset))
+           .toEqual('メガドライブゲーム');
+       expect(sharedSpace.substring(factory.endOffset))
+           .toEqual('ソニックドリームキャスト');
+
+       expect(factory.embiggen()).toEqual(true);
+       expect(sharedSpace.substring(0, factory.startOffset))
+           .toEqual('メガドライブゲームギア');
+       expect(sharedSpace.substring(factory.endOffset))
+           .toEqual('ソニックドリームキャスト');
+
+       expect(factory.embiggen()).toEqual(false);
+     });
 
   it('can add context to a single-block range match', function() {
     const sharedSpace = 'text1 text2 text3 text4 text5 text6 text7';
@@ -644,6 +744,47 @@ describe('FragmentGenerationUtils', function() {
         .toEqual('prefix3 prefix2 prefix1');
     expect(suffixSpace.substring(0, factory.suffixOffset))
         .toEqual('suffix1 suffix2 suffix3');
+
+    expect(factory.embiggen()).toEqual(false);
+  });
+
+  it('can add context to an exact text match in Japanese', function() {
+    pending('Support for non-space-separated fragments is incomplete.');
+    return;
+
+    const sharedSpace = 'ソニック';
+    const prefixSpace = 'メガドライブゲームギア';
+    const suffixSpace = 'ドリームキャスト';
+
+    const factory =
+        new generationUtils.forTesting.FragmentFactory()
+            .setExactTextMatch(sharedSpace)
+            .setPrefixAndSuffixSearchSpace(prefixSpace, suffixSpace);
+
+    expect(factory.embiggen()).toEqual(true);
+    expect(factory.exactTextMatch).toEqual(exactText);
+    expect(prefixSpace.substring(factory.prefixOffset)).toEqual('ギア');
+    expect(suffixSpace.substring(0, factory.suffixOffset)).toEqual('ドリーム');
+
+    expect(factory.embiggen()).toEqual(true);
+    expect(factory.exactTextMatch).toEqual(exactText);
+    expect(prefixSpace.substring(factory.prefixOffset)).toEqual('ゲームギア');
+    expect(suffixSpace.substring(0, factory.suffixOffset))
+        .toEqual('ドリームキャスト');
+
+    expect(factory.embiggen()).toEqual(true);
+    expect(factory.exactTextMatch).toEqual(exactText);
+    expect(prefixSpace.substring(factory.prefixOffset))
+        .toEqual('ドライブゲームギア');
+    expect(suffixSpace.substring(0, factory.suffixOffset))
+        .toEqual('ドリームキャスト');
+
+    expect(factory.embiggen()).toEqual(true);
+    expect(factory.exactTextMatch).toEqual(exactText);
+    expect(prefixSpace.substring(factory.prefixOffset))
+        .toEqual('メガドライブゲームギア');
+    expect(suffixSpace.substring(0, factory.suffixOffset))
+        .toEqual('ドリームキャスト');
 
     expect(factory.embiggen()).toEqual(false);
   });
