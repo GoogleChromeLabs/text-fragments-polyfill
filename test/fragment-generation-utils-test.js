@@ -868,7 +868,7 @@ describe('FragmentGenerationUtils', function() {
     expect(fragmentUtils.forTesting.normalizeString(result.fragment.textStart))
         .toEqual('first named');
     expect(fragmentUtils.forTesting.normalizeString(result.fragment.textEnd))
-        .toEqual('2014');
+        .toEqual('3, 2014');
   });
 
   it('will halt generation after a certain time period', function() {

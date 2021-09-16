@@ -437,16 +437,22 @@ const FragmentFactory = class {
 
     if (canExpandRange) {
       if (this.startOffset < this.getStartSearchSpace().length) {
-        // Find the next boundary char.
-        // TODO: should keep going if we haven't added any non boundary chars.
-        const newStartOffset = this.getStartSearchSpace()
-                                   .substring(this.startOffset + 1)
-                                   .search(fragments.internal.BOUNDARY_CHARS);
-        if (newStartOffset === -1) {
-          this.startOffset = this.getStartSearchSpace().length;
-        } else {
-          this.startOffset = this.startOffset + 1 + newStartOffset;
-        }
+        // Shift to the next boundary char, and repeat until we've added a word
+        // char.
+        const oldStartOffset = this.startOffset;
+        do {
+          const newStartOffset = this.getStartSearchSpace()
+                                     .substring(this.startOffset + 1)
+                                     .search(fragments.internal.BOUNDARY_CHARS);
+          if (newStartOffset === -1) {
+            this.startOffset = this.getStartSearchSpace().length;
+          } else {
+            this.startOffset = this.startOffset + 1 + newStartOffset;
+          }
+        } while (this.startOffset < this.getStartSearchSpace().length &&
+                 this.getStartSearchSpace()
+                         .substring(oldStartOffset, this.startOffset)
+                         .search(fragments.internal.NON_BOUNDARY_CHARS) == -1);
 
         // Ensure we don't have overlapping start and end segments.
         if (this.mode === this.Mode.SHARED_START_AND_END) {
@@ -455,18 +461,25 @@ const FragmentFactory = class {
       }
 
       if (this.backwardsEndOffset() < this.getEndSearchSpace().length) {
-        // Find the next boundary char.
-        // TODO: should keep going if we haven't added any non boundary chars.
-        const newBackwardsOffset =
+        // Shift to the next boundary char, and repeat until we've added a word
+        // char.
+        const oldBackwardsOffset = this.backwardsEndOffset();
+        do {
+          const newBackwardsOffset =
+              this.getBackwardsEndSearchSpace()
+                  .substring(this.backwardsEndOffset() + 1)
+                  .search(fragments.internal.BOUNDARY_CHARS);
+          if (newBackwardsOffset === -1) {
+            this.setBackwardsEndOffset(this.getEndSearchSpace().length);
+          } else {
+            this.setBackwardsEndOffset(
+                this.backwardsEndOffset() + 1 + newBackwardsOffset);
+          }
+        } while (
+            this.backwardsEndOffset() < this.getEndSearchSpace().length &&
             this.getBackwardsEndSearchSpace()
-                .substring(this.backwardsEndOffset() + 1)
-                .search(fragments.internal.BOUNDARY_CHARS);
-        if (newBackwardsOffset === -1) {
-          this.setBackwardsEndOffset(this.getEndSearchSpace().length);
-        } else {
-          this.setBackwardsEndOffset(
-              this.backwardsEndOffset() + 1 + newBackwardsOffset);
-        }
+                    .substring(oldBackwardsOffset, this.backwardsEndOffset())
+                    .search(fragments.internal.NON_BOUNDARY_CHARS) == -1);
 
         // Ensure we don't have overlapping start and end segments.
         if (this.mode === this.Mode.SHARED_START_AND_END) {
@@ -477,28 +490,45 @@ const FragmentFactory = class {
 
     if (canExpandContext) {
       if (this.backwardsPrefixOffset() < this.getPrefixSearchSpace().length) {
-        const newBackwardsPrefixOffset =
+        // Shift to the next boundary char, and repeat until we've added a word
+        // char.
+        const oldBackwardsPrefixOffset = this.backwardsPrefixOffset();
+        do {
+          const newBackwardsPrefixOffset =
+              this.getBackwardsPrefixSearchSpace()
+                  .substring(this.backwardsPrefixOffset() + 1)
+                  .search(fragments.internal.BOUNDARY_CHARS);
+          if (newBackwardsPrefixOffset === -1) {
+            this.setBackwardsPrefixOffset(
+                this.getBackwardsPrefixSearchSpace().length);
+          } else {
+            this.setBackwardsPrefixOffset(
+                this.backwardsPrefixOffset() + 1 + newBackwardsPrefixOffset);
+          }
+        } while (
+            this.backwardsPrefixOffset() < this.getPrefixSearchSpace().length &&
             this.getBackwardsPrefixSearchSpace()
-                .substring(this.backwardsPrefixOffset() + 1)
-                .search(fragments.internal.BOUNDARY_CHARS);
-        if (newBackwardsPrefixOffset === -1) {
-          this.setBackwardsPrefixOffset(
-              this.getBackwardsPrefixSearchSpace().length);
-        } else {
-          this.setBackwardsPrefixOffset(
-              this.backwardsPrefixOffset() + 1 + newBackwardsPrefixOffset);
-        }
+                    .substring(
+                        oldBackwardsPrefixOffset, this.backwardsPrefixOffset())
+                    .search(fragments.internal.NON_BOUNDARY_CHARS) == -1);
       }
 
       if (this.suffixOffset < this.getSuffixSearchSpace().length) {
-        const newSuffixOffset = this.getSuffixSearchSpace()
-                                    .substring(this.suffixOffset + 1)
-                                    .search(fragments.internal.BOUNDARY_CHARS);
-        if (newSuffixOffset === -1) {
-          this.suffixOffset = this.getSuffixSearchSpace().length;
-        } else {
-          this.suffixOffset = this.suffixOffset + 1 + newSuffixOffset;
-        }
+        const oldSuffixOffset = this.suffixOffset;
+        do {
+          const newSuffixOffset =
+              this.getSuffixSearchSpace()
+                  .substring(this.suffixOffset + 1)
+                  .search(fragments.internal.BOUNDARY_CHARS);
+          if (newSuffixOffset === -1) {
+            this.suffixOffset = this.getSuffixSearchSpace().length;
+          } else {
+            this.suffixOffset = this.suffixOffset + 1 + newSuffixOffset;
+          }
+        } while (this.suffixOffset < this.getSuffixSearchSpace().length &&
+                 this.getSuffixSearchSpace()
+                         .substring(oldSuffixOffset, this.suffixOffset)
+                         .search(fragments.internal.NON_BOUNDARY_CHARS) == -1);
       }
     }
 
