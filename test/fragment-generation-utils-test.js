@@ -482,8 +482,10 @@ describe('FragmentGenerationUtils', function() {
     const startSpace = generationUtils.forTesting.getSearchSpaceForStart(range);
     const endSpace = generationUtils.forTesting.getSearchSpaceForEnd(range);
 
-    const factory = new generationUtils.forTesting.FragmentFactory()
-                        .setStartAndEndSearchSpace(startSpace, endSpace);
+    const factory =
+        new generationUtils.forTesting.FragmentFactory()
+            .setStartAndEndSearchSpace(startSpace, endSpace)
+            .useSegmenter(fragmentUtils.forTesting.makeNewSegmenter());
 
     expect(factory.embiggen()).toEqual(true);
     expect(startSpace.substring(0, factory.startOffset)).toEqual('repeat');
@@ -532,8 +534,10 @@ describe('FragmentGenerationUtils', function() {
 
   it('can generate progressively larger fragments across blocks in Japanese',
      function() {
-       pending('Support for non-space-separated fragments is incomplete.');
-       return;
+       if (!Intl.Segmenter) {
+         pending('This configuration does not yet support Intl.Segmenter.');
+         return;
+       }
 
        document.body.innerHTML = __html__['range-fragment-jp.html'];
        const range = document.createRange();
@@ -543,8 +547,10 @@ describe('FragmentGenerationUtils', function() {
            generationUtils.forTesting.getSearchSpaceForStart(range);
        const endSpace = generationUtils.forTesting.getSearchSpaceForEnd(range);
 
-       const factory = new generationUtils.forTesting.FragmentFactory()
-                           .setStartAndEndSearchSpace(startSpace, endSpace);
+       const factory =
+           new generationUtils.forTesting.FragmentFactory()
+               .setStartAndEndSearchSpace(startSpace, endSpace)
+               .useSegmenter(fragmentUtils.forTesting.makeNewSegmenter());
 
        expect(factory.embiggen()).toEqual(true);
        expect(startSpace.substring(0, factory.startOffset))
@@ -598,8 +604,9 @@ describe('FragmentGenerationUtils', function() {
     const sharedSpace = 'text1 text2 text3 text4 text5 text6 text7';
 
     const factory =
-        new generationUtils.forTesting.FragmentFactory().setSharedSearchSpace(
-            sharedSpace);
+        new generationUtils.forTesting.FragmentFactory()
+            .setSharedSearchSpace(sharedSpace)
+            .useSegmenter(fragmentUtils.forTesting.makeNewSegmenter());
 
     expect(factory.embiggen()).toEqual(true);
     expect(sharedSpace.substring(0, factory.startOffset)).toEqual('text1');
@@ -627,13 +634,17 @@ describe('FragmentGenerationUtils', function() {
 
   it('can generate progressively larger fragments within a block in Japanese',
      function() {
-       pending('Support for non-space-separated fragments is incomplete.');
-       return;
+       if (!Intl.Segmenter) {
+         pending('This configuration does not yet support Intl.Segmenter.');
+         return;
+       }
 
        const sharedSpace = 'メガドライブゲームギアソニックドリームキャスト';
 
-       const factory = new generationUtils.forTesting.FragmentFactory()
-                           .setSharedSearchSpace(sharedSpace);
+       const factory =
+           new generationUtils.forTesting.FragmentFactory()
+               .setSharedSearchSpace(sharedSpace)
+               .useSegmenter(fragmentUtils.forTesting.makeNewSegmenter());
 
        expect(factory.embiggen()).toEqual(true);
        expect(sharedSpace.substring(0, factory.startOffset)).toEqual('メガ');
@@ -668,7 +679,8 @@ describe('FragmentGenerationUtils', function() {
     const factory =
         new generationUtils.forTesting.FragmentFactory()
             .setSharedSearchSpace(sharedSpace)
-            .setPrefixAndSuffixSearchSpace(prefixSpace, suffixSpace);
+            .setPrefixAndSuffixSearchSpace(prefixSpace, suffixSpace)
+            .useSegmenter(fragmentUtils.forTesting.makeNewSegmenter());
 
     expect(factory.embiggen()).toEqual(true);
     expect(sharedSpace.substring(0, factory.startOffset)).toEqual('text1');
@@ -724,7 +736,8 @@ describe('FragmentGenerationUtils', function() {
     const factory =
         new generationUtils.forTesting.FragmentFactory()
             .setExactTextMatch(exactText)
-            .setPrefixAndSuffixSearchSpace(prefixSpace, suffixSpace);
+            .setPrefixAndSuffixSearchSpace(prefixSpace, suffixSpace)
+            .useSegmenter(fragmentUtils.forTesting.makeNewSegmenter());
 
     expect(factory.embiggen()).toEqual(true);
     expect(factory.exactTextMatch).toEqual(exactText);
@@ -749,17 +762,20 @@ describe('FragmentGenerationUtils', function() {
   });
 
   it('can add context to an exact text match in Japanese', function() {
-    pending('Support for non-space-separated fragments is incomplete.');
-    return;
+    if (!Intl.Segmenter) {
+      pending('This configuration does not yet support Intl.Segmenter.');
+      return;
+    }
 
-    const sharedSpace = 'ソニック';
+    const exactText = 'ソニック';
     const prefixSpace = 'メガドライブゲームギア';
     const suffixSpace = 'ドリームキャスト';
 
     const factory =
         new generationUtils.forTesting.FragmentFactory()
-            .setExactTextMatch(sharedSpace)
-            .setPrefixAndSuffixSearchSpace(prefixSpace, suffixSpace);
+            .setExactTextMatch(exactText)
+            .setPrefixAndSuffixSearchSpace(prefixSpace, suffixSpace)
+            .useSegmenter(fragmentUtils.forTesting.makeNewSegmenter());
 
     expect(factory.embiggen()).toEqual(true);
     expect(factory.exactTextMatch).toEqual(exactText);

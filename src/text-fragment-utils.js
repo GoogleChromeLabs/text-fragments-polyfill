@@ -864,6 +864,7 @@ export const forTesting = {
   findTextInRange: findTextInRange,
   getBoundaryPointAtIndex: getBoundaryPointAtIndex,
   isWordBounded: isWordBounded,
+  makeNewSegmenter: makeNewSegmenter,
   markRange: markRange,
   normalizeString: normalizeString,
   parseTextFragmentDirective: parseTextFragmentDirective,
