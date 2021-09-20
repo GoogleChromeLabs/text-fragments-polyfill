@@ -41,7 +41,8 @@ export const GenerateFragmentStatus = {
   SUCCESS: 0,            // A fragment was generated.
   INVALID_SELECTION: 1,  // The selection provided could not be used.
   AMBIGUOUS: 2,  // No unique fragment could be identified for this selection.
-  TIMEOUT: 3     // Computation could not complete in time.
+  TIMEOUT: 3,    // Computation could not complete in time.
+  EXECUTION_FAILED: 4  // An exception was raised during generation.
 };
 
 /**
@@ -63,7 +64,11 @@ export const generateFragment = (selection, startTime = Date.now()) => {
   try {
     return doGenerateFragment(selection, startTime);
   } catch (err) {
-    return {status: GenerateFragmentStatus.TIMEOUT};
+    if (err.isTimeout) {
+      return {status: GenerateFragmentStatus.TIMEOUT};
+    } else {
+      return {status: GenerateFragmentStatus.EXECUTION_FAILED};
+    }
   }
 };
 
