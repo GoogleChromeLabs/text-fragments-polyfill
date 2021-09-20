@@ -204,6 +204,8 @@ const doGenerateFragment = (selection, startTime) => {
     factory.setPrefixAndSuffixSearchSpace(prefixSearchSpace, suffixSearchSpace);
   }
 
+  factory.useSegmenter(fragments.internal.makeNewSegmenter());
+
   while (factory.embiggen()) {
     const fragment = factory.tryToMakeUniqueFragment();
     if (fragment != null) {
@@ -437,51 +439,66 @@ const FragmentFactory = class {
 
     if (canExpandRange) {
       if (this.startOffset < this.getStartSearchSpace().length) {
-        // Shift to the next boundary char, and repeat until we've added a word
-        // char.
-        const oldStartOffset = this.startOffset;
-        do {
-          const newStartOffset = this.getStartSearchSpace()
-                                     .substring(this.startOffset + 1)
-                                     .search(fragments.internal.BOUNDARY_CHARS);
-          if (newStartOffset === -1) {
-            this.startOffset = this.getStartSearchSpace().length;
-          } else {
-            this.startOffset = this.startOffset + 1 + newStartOffset;
-          }
-        } while (this.startOffset < this.getStartSearchSpace().length &&
-                 this.getStartSearchSpace()
-                         .substring(oldStartOffset, this.startOffset)
-                         .search(fragments.internal.NON_BOUNDARY_CHARS) == -1);
+        if (this.getStartSegments() != null) {
+          this.startOffset = this.getNextOffsetForwards(
+              this.getStartSegments(), this.startOffset,
+              this.getStartSearchSpace());
+        } else {
+          // We don't have a segmenter, so find the next boundary character
+          // instead. Shift to the next boundary char, and repeat until we've
+          // added a word char.
+          const oldStartOffset = this.startOffset;
+          do {
+            checkTimeout();
+            const newStartOffset =
+                this.getStartSearchSpace()
+                    .substring(this.startOffset + 1)
+                    .search(fragments.internal.BOUNDARY_CHARS);
+            if (newStartOffset === -1) {
+              this.startOffset = this.getStartSearchSpace().length;
+            } else {
+              this.startOffset = this.startOffset + 1 + newStartOffset;
+            }
+          } while (this.startOffset < this.getStartSearchSpace().length &&
+                   this.getStartSearchSpace()
+                           .substring(oldStartOffset, this.startOffset)
+                           .search(fragments.internal.NON_BOUNDARY_CHARS) ==
+                       -1);
+        }
 
-        // Ensure we don't have overlapping start and end segments.
+        // Ensure we don't have overlapping start and end offsets.
         if (this.mode === this.Mode.SHARED_START_AND_END) {
           this.startOffset = Math.min(this.startOffset, this.endOffset);
         }
       }
 
       if (this.backwardsEndOffset() < this.getEndSearchSpace().length) {
-        // Shift to the next boundary char, and repeat until we've added a word
-        // char.
-        const oldBackwardsOffset = this.backwardsEndOffset();
-        do {
-          const newBackwardsOffset =
+        if (this.getEndSegments() != null) {
+          this.endOffset = this.getNextOffsetBackwards(
+              this.getEndSegments(), this.endOffset);
+        } else {
+          // No segmenter, so shift to the next boundary char, and repeat until
+          // we've added a word char.
+          const oldBackwardsOffset = this.backwardsEndOffset();
+          do {
+            checkTimeout();
+            const newBackwardsOffset =
+                this.getBackwardsEndSearchSpace()
+                    .substring(this.backwardsEndOffset() + 1)
+                    .search(fragments.internal.BOUNDARY_CHARS);
+            if (newBackwardsOffset === -1) {
+              this.setBackwardsEndOffset(this.getEndSearchSpace().length);
+            } else {
+              this.setBackwardsEndOffset(
+                  this.backwardsEndOffset() + 1 + newBackwardsOffset);
+            }
+          } while (
+              this.backwardsEndOffset() < this.getEndSearchSpace().length &&
               this.getBackwardsEndSearchSpace()
-                  .substring(this.backwardsEndOffset() + 1)
-                  .search(fragments.internal.BOUNDARY_CHARS);
-          if (newBackwardsOffset === -1) {
-            this.setBackwardsEndOffset(this.getEndSearchSpace().length);
-          } else {
-            this.setBackwardsEndOffset(
-                this.backwardsEndOffset() + 1 + newBackwardsOffset);
-          }
-        } while (
-            this.backwardsEndOffset() < this.getEndSearchSpace().length &&
-            this.getBackwardsEndSearchSpace()
-                    .substring(oldBackwardsOffset, this.backwardsEndOffset())
-                    .search(fragments.internal.NON_BOUNDARY_CHARS) == -1);
-
-        // Ensure we don't have overlapping start and end segments.
+                      .substring(oldBackwardsOffset, this.backwardsEndOffset())
+                      .search(fragments.internal.NON_BOUNDARY_CHARS) == -1);
+        }
+        // Ensure we don't have overlapping start and end offsets.
         if (this.mode === this.Mode.SHARED_START_AND_END) {
           this.endOffset = Math.max(this.startOffset, this.endOffset);
         }
@@ -490,45 +507,59 @@ const FragmentFactory = class {
 
     if (canExpandContext) {
       if (this.backwardsPrefixOffset() < this.getPrefixSearchSpace().length) {
-        // Shift to the next boundary char, and repeat until we've added a word
-        // char.
-        const oldBackwardsPrefixOffset = this.backwardsPrefixOffset();
-        do {
-          const newBackwardsPrefixOffset =
-              this.getBackwardsPrefixSearchSpace()
-                  .substring(this.backwardsPrefixOffset() + 1)
-                  .search(fragments.internal.BOUNDARY_CHARS);
-          if (newBackwardsPrefixOffset === -1) {
-            this.setBackwardsPrefixOffset(
-                this.getBackwardsPrefixSearchSpace().length);
-          } else {
-            this.setBackwardsPrefixOffset(
-                this.backwardsPrefixOffset() + 1 + newBackwardsPrefixOffset);
-          }
-        } while (
-            this.backwardsPrefixOffset() < this.getPrefixSearchSpace().length &&
-            this.getBackwardsPrefixSearchSpace()
-                    .substring(
-                        oldBackwardsPrefixOffset, this.backwardsPrefixOffset())
-                    .search(fragments.internal.NON_BOUNDARY_CHARS) == -1);
+        if (this.getPrefixSegments() != null) {
+          this.prefixOffset = this.getNextOffsetBackwards(
+              this.getPrefixSegments(), this.prefixOffset);
+        } else {
+          // Shift to the next boundary char, and repeat until we've added a
+          // word char.
+          const oldBackwardsPrefixOffset = this.backwardsPrefixOffset();
+          do {
+            checkTimeout();
+            const newBackwardsPrefixOffset =
+                this.getBackwardsPrefixSearchSpace()
+                    .substring(this.backwardsPrefixOffset() + 1)
+                    .search(fragments.internal.BOUNDARY_CHARS);
+            if (newBackwardsPrefixOffset === -1) {
+              this.setBackwardsPrefixOffset(
+                  this.getBackwardsPrefixSearchSpace().length);
+            } else {
+              this.setBackwardsPrefixOffset(
+                  this.backwardsPrefixOffset() + 1 + newBackwardsPrefixOffset);
+            }
+          } while (this.backwardsPrefixOffset() <
+                       this.getPrefixSearchSpace().length &&
+                   this.getBackwardsPrefixSearchSpace()
+                           .substring(
+                               oldBackwardsPrefixOffset,
+                               this.backwardsPrefixOffset())
+                           .search(fragments.internal.NON_BOUNDARY_CHARS) ==
+                       -1);
+        }
       }
-
       if (this.suffixOffset < this.getSuffixSearchSpace().length) {
-        const oldSuffixOffset = this.suffixOffset;
-        do {
-          const newSuffixOffset =
-              this.getSuffixSearchSpace()
-                  .substring(this.suffixOffset + 1)
-                  .search(fragments.internal.BOUNDARY_CHARS);
-          if (newSuffixOffset === -1) {
-            this.suffixOffset = this.getSuffixSearchSpace().length;
-          } else {
-            this.suffixOffset = this.suffixOffset + 1 + newSuffixOffset;
-          }
-        } while (this.suffixOffset < this.getSuffixSearchSpace().length &&
-                 this.getSuffixSearchSpace()
-                         .substring(oldSuffixOffset, this.suffixOffset)
-                         .search(fragments.internal.NON_BOUNDARY_CHARS) == -1);
+        if (this.getSuffixSegments() != null) {
+          this.suffixOffset = this.getNextOffsetForwards(
+              this.getSuffixSegments(), this.suffixOffset, this.suffixOffset);
+        } else {
+          const oldSuffixOffset = this.suffixOffset;
+          do {
+            checkTimeout();
+            const newSuffixOffset =
+                this.getSuffixSearchSpace()
+                    .substring(this.suffixOffset + 1)
+                    .search(fragments.internal.BOUNDARY_CHARS);
+            if (newSuffixOffset === -1) {
+              this.suffixOffset = this.getSuffixSearchSpace().length;
+            } else {
+              this.suffixOffset = this.suffixOffset + 1 + newSuffixOffset;
+            }
+          } while (this.suffixOffset < this.getSuffixSearchSpace().length &&
+                   this.getSuffixSearchSpace()
+                           .substring(oldSuffixOffset, this.suffixOffset)
+                           .search(fragments.internal.NON_BOUNDARY_CHARS) ==
+                       -1);
+        }
       }
     }
 
@@ -629,6 +660,104 @@ const FragmentFactory = class {
   }
 
   /**
+   * Sets up the factory to use an instance of Intl.Segmenter when identifying
+   * the start/end of words. |segmenter| is not actually retained; instead it is
+   * used to create segment objects which are cached.
+   *
+   * This must be called AFTER any calls to setStartAndEndSearchSpace,
+   * setSharedSearchSpace, and/or setPrefixAndSuffixSearchSpace, as these search
+   * spaces will be segmented immediately.
+   *
+   * @param {Intl.Segmenter | Undefined} segmenter
+   * @returns {FragmentFactory} - returns |this| to allow call chaining and
+   *     assignment
+   */
+  useSegmenter(segmenter) {
+    if (segmenter == null) {
+      return this;
+    }
+
+    if (this.mode === this.Mode.ALL_PARTS) {
+      this.startSegments = segmenter.segment(this.startSearchSpace);
+      this.endSegments = segmenter.segment(this.endSearchSpace);
+    } else if (this.mode === this.Mode.SHARED_START_AND_END) {
+      this.sharedSegments = segmenter.segment(this.sharedSearchSpace);
+    }
+
+    if (this.prefixSearchSpace) {
+      this.prefixSegments = segmenter.segment(this.prefixSearchSpace);
+    }
+    if (this.suffixSearchSpace) {
+      this.suffixSegments = segmenter.segment(this.suffixSearchSpace);
+    }
+
+    return this;
+  }
+
+  /**
+   * Helper method for embiggening using Intl.Segmenter. Finds the next offset
+   * to be tried in the forwards direction (i.e., a prefix of the search space).
+   * @param {Segments} segments - the output of segmenting the desired search
+   *     space using Intl.Segmenter
+   * @param {number} offset - the current offset
+   * @param {string} searchSpace - the search space that was segmented
+   * @returns {number} - the next offset which should be tried.
+   */
+  getNextOffsetForwards(segments, offset, searchSpace) {
+    // Find the nearest wordlike segment and move to the end of it.
+    let currentSegment = segments.containing(offset);
+    while (currentSegment != null) {
+      checkTimeout();
+      const currentSegmentEnd =
+          currentSegment.index + currentSegment.segment.length;
+      if (currentSegment.isWordLike) {
+        return currentSegmentEnd;
+      }
+      currentSegment = segments.containing(currentSegmentEnd);
+    }
+    // If we didn't find a wordlike segment by the end of the string, set the
+    // offset to the full search space.
+    return searchSpace.length;
+  }
+
+  /**
+   * Helper method for embiggening using Intl.Segmenter. Finds the next offset
+   * to be tried in the backwards direction (i.e., a suffix of the search
+   * space).
+   * @param {Segments} segments - the output of segmenting the desired search
+   *     space using Intl.Segmenter
+   * @param {number} offset - the current offset
+   * @returns {number} - the next offset which should be tried.
+   */
+  getNextOffsetBackwards(segments, offset) {
+    // Find the nearest wordlike segment and move to the start of it.
+    let currentSegment = segments.containing(offset);
+
+    // Handle two edge cases:
+    //     1. |offset| is at the end of the search space, so |currentSegment|
+    //        is undefined
+    //     2. We're already at the start of a segment, so moving to the start of
+    //        |currentSegment| would be a no-op.
+    // In both cases, the solution is to grab the segment immediately
+    // prior to this offset.
+    if (!currentSegment || offset == currentSegment.index) {
+      // If offset is 0, this will return null, which is handled below.
+      currentSegment = segments.containing(offset - 1);
+    }
+
+    while (currentSegment != null) {
+      checkTimeout();
+      if (currentSegment.isWordLike) {
+        return currentSegment.index;
+      }
+      currentSegment = segments.containing(currentSegment.index - 1);
+    }
+    // If we didn't find a wordlike segment by the start of the string,
+    // set the offset to the full search space.
+    return 0;
+  }
+
+  /**
    * @return {String} - the string to be used as the search space for textStart
    */
   getStartSearchSpace() {
@@ -638,12 +767,32 @@ const FragmentFactory = class {
   }
 
   /**
+   * @returns {Segments | Undefined} - the result of segmenting the start search
+   *     space using Intl.Segmenter, or undefined if a segmenter was not
+   *     provided.
+   */
+  getStartSegments() {
+    return this.mode === this.Mode.SHARED_START_AND_END ? this.sharedSegments :
+                                                          this.startSegments;
+  }
+
+  /**
    * @return {String} - the string to be used as the search space for textEnd
    */
   getEndSearchSpace() {
     return this.mode === this.Mode.SHARED_START_AND_END ?
         this.sharedSearchSpace :
         this.endSearchSpace;
+  }
+
+  /**
+   * @returns {Segments | Undefined} - the result of segmenting the end search
+   *     space using Intl.Segmenter, or undefined if a segmenter was not
+   *     provided.
+   */
+  getEndSegments() {
+    return this.mode === this.Mode.SHARED_START_AND_END ? this.sharedSegments :
+                                                          this.endSegments;
   }
 
   /**
@@ -664,6 +813,15 @@ const FragmentFactory = class {
   }
 
   /**
+   * @returns {Segments | Undefined} - the result of segmenting the prefix
+   *     search space using Intl.Segmenter, or undefined if a segmenter was not
+   *     provided.
+   */
+  getPrefixSegments() {
+    return this.prefixSegments;
+  }
+
+  /**
    * @return {String} - the string to be used as the search space for prefix,
    *     backwards.
    */
@@ -676,6 +834,15 @@ const FragmentFactory = class {
    */
   getSuffixSearchSpace() {
     return this.suffixSearchSpace;
+  }
+
+  /**
+   * @returns {Segments | Undefined} - the result of segmenting the suffix
+   *     search space using Intl.Segmenter, or undefined if a segmenter was not
+   *     provided.
+   */
+  getSuffixSegments() {
+    return this.suffixSegments;
   }
 
   /**
