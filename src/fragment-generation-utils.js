@@ -507,9 +507,9 @@ const FragmentFactory = class {
 
     if (canExpandContext) {
       if (this.backwardsPrefixOffset() < this.getPrefixSearchSpace().length) {
-        if (this.prefixSegments != null) {
+        if (this.getPrefixSegments() != null) {
           this.prefixOffset = this.getNextOffsetBackwards(
-              this.prefixSegments, this.prefixOffset);
+              this.getPrefixSegments(), this.prefixOffset);
         } else {
           // Shift to the next boundary char, and repeat until we've added a
           // word char.
@@ -538,9 +538,9 @@ const FragmentFactory = class {
         }
       }
       if (this.suffixOffset < this.getSuffixSearchSpace().length) {
-        if (this.suffixSegments != null) {
+        if (this.getSuffixSegments() != null) {
           this.suffixOffset = this.getNextOffsetForwards(
-              this.suffixSegments, this.suffixOffset, this.suffixOffset);
+              this.getSuffixSegments(), this.suffixOffset, this.suffixOffset);
         } else {
           const oldSuffixOffset = this.suffixOffset;
           do {
@@ -769,7 +769,7 @@ const FragmentFactory = class {
   /**
    * @returns {Segments | Undefined} - the result of segmenting the start search
    *     space using Intl.Segmenter, or undefined if a segmenter was not
-   * provided.
+   *     provided.
    */
   getStartSegments() {
     return this.mode === this.Mode.SHARED_START_AND_END ? this.sharedSegments :
@@ -788,7 +788,7 @@ const FragmentFactory = class {
   /**
    * @returns {Segments | Undefined} - the result of segmenting the end search
    *     space using Intl.Segmenter, or undefined if a segmenter was not
-   * provided.
+   *     provided.
    */
   getEndSegments() {
     return this.mode === this.Mode.SHARED_START_AND_END ? this.sharedSegments :
@@ -813,6 +813,15 @@ const FragmentFactory = class {
   }
 
   /**
+   * @returns {Segments | Undefined} - the result of segmenting the prefix
+   *     search space using Intl.Segmenter, or undefined if a segmenter was not
+   *     provided.
+   */
+  getPrefixSegments() {
+    return this.prefixSegments;
+  }
+
+  /**
    * @return {String} - the string to be used as the search space for prefix,
    *     backwards.
    */
@@ -825,6 +834,15 @@ const FragmentFactory = class {
    */
   getSuffixSearchSpace() {
     return this.suffixSearchSpace;
+  }
+
+  /**
+   * @returns {Segments | Undefined} - the result of segmenting the suffix
+   *     search space using Intl.Segmenter, or undefined if a segmenter was not
+   *     provided.
+   */
+  getSuffixSegments() {
+    return this.suffixSegments;
   }
 
   /**
