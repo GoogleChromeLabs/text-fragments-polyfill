@@ -519,7 +519,9 @@ const FragmentFactory = class {
     }
 
     let canExpandContext = false;
-    if (!canExpandRange ||  // TODO: check if range match is < 20 chars
+    if (!canExpandRange ||
+        this.startOffset + this.backwardsEndOffset() <
+            MIN_LENGTH_WITHOUT_CONTEXT ||
         this.numIterations >= ITERATIONS_BEFORE_ADDING_CONTEXT) {
       // Check if there's any unused search space left.
       if ((this.backwardsPrefixOffset() != null &&
