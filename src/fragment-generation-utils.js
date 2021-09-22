@@ -17,7 +17,10 @@
 import * as fragments from './text-fragment-utils.js';
 
 const MAX_EXACT_MATCH_LENGTH = 300;
-const ITERATIONS_BEFORE_ADDING_CONTEXT = 3;
+const MIN_LENGTH_WITHOUT_CONTEXT = 20;
+const ITERATIONS_BEFORE_ADDING_CONTEXT = 1;
+const WORDS_TO_ADD_FIRST_ITERATION = 3;
+const WORDS_TO_ADD_SUBSEQUENT_ITERATIONS = 1;
 const TRUNCATE_RANGE_CHECK_CHARS = 10000;
 const MAX_DEPTH = 500;
 
@@ -158,14 +161,15 @@ const doGenerateFragment = (selection, startTime) => {
 
   let factory;
 
-  // First, try the easy case of just using the range text as the fragment.
-  const exactText = fragments.internal.normalizeString(range.toString());
-  const exactMatchResult = canUseExactMatch(range);
-  if (exactMatchResult) {
+  if (canUseExactMatch(range)) {
+    const exactText = fragments.internal.normalizeString(range.toString());
     const fragment = {
       textStart: exactText,
     };
-    if (isUniquelyIdentifying(fragment)) {
+    // If the exact text is long enough to be used on its own, try this and skip
+    // the longer process below.
+    if (exactText.length >= MIN_LENGTH_WITHOUT_CONTEXT &&
+        isUniquelyIdentifying(fragment)) {
       return {
         status: GenerateFragmentStatus.SUCCESS,
         fragment: fragment,
@@ -427,32 +431,23 @@ const FragmentFactory = class {
       canExpandRange = false;
     }
 
-    let canExpandContext = false;
-    // Context is only added when the range match space is exhausted, or after
-    // a set number of iterations, whichever comes first.
-    if (!canExpandRange ||
-        this.numIterations >= ITERATIONS_BEFORE_ADDING_CONTEXT) {
-      // Check if there's any unused search space left.
-      if ((this.backwardsPrefixOffset() != null &&
-           this.backwardsPrefixOffset() !==
-               this.getPrefixSearchSpace().length) ||
-          (this.suffixOffset != null &&
-           this.suffixOffset !== this.getSuffixSearchSpace().length)) {
-        canExpandContext = true;
-      }
-    }
-
     if (canExpandRange) {
+      const desiredIterations = this.getNumberOfRangeWordsToAdd();
       if (this.startOffset < this.getStartSearchSpace().length) {
+        let i = 0;
         if (this.getStartSegments() != null) {
-          this.startOffset = this.getNextOffsetForwards(
-              this.getStartSegments(), this.startOffset,
-              this.getStartSearchSpace());
+          while (i < desiredIterations &&
+                 this.startOffset < this.getStartSearchSpace().length) {
+            this.startOffset = this.getNextOffsetForwards(
+                this.getStartSegments(), this.startOffset,
+                this.getStartSearchSpace());
+            i++;
+          }
         } else {
           // We don't have a segmenter, so find the next boundary character
           // instead. Shift to the next boundary char, and repeat until we've
           // added a word char.
-          const oldStartOffset = this.startOffset;
+          let oldStartOffset = this.startOffset;
           do {
             checkTimeout();
             const newStartOffset =
@@ -464,11 +459,15 @@ const FragmentFactory = class {
             } else {
               this.startOffset = this.startOffset + 1 + newStartOffset;
             }
+            // Only count as an iteration if a word character was added.
+            if (this.getStartSearchSpace()
+                    .substring(oldStartOffset, this.startOffset)
+                    .search(fragments.internal.NON_BOUNDARY_CHARS) !== -1) {
+              oldStartOffset = this.startOffset;
+              i++;
+            }
           } while (this.startOffset < this.getStartSearchSpace().length &&
-                   this.getStartSearchSpace()
-                           .substring(oldStartOffset, this.startOffset)
-                           .search(fragments.internal.NON_BOUNDARY_CHARS) ==
-                       -1);
+                   i < desiredIterations);
         }
 
         // Ensure we don't have overlapping start and end offsets.
@@ -478,13 +477,17 @@ const FragmentFactory = class {
       }
 
       if (this.backwardsEndOffset() < this.getEndSearchSpace().length) {
+        let i = 0;
         if (this.getEndSegments() != null) {
-          this.endOffset = this.getNextOffsetBackwards(
-              this.getEndSegments(), this.endOffset);
+          while (i < desiredIterations && this.endOffset > 0) {
+            this.endOffset = this.getNextOffsetBackwards(
+                this.getEndSegments(), this.endOffset);
+            i++;
+          }
         } else {
           // No segmenter, so shift to the next boundary char, and repeat until
           // we've added a word char.
-          const oldBackwardsOffset = this.backwardsEndOffset();
+          let oldBackwardsEndOffset = this.backwardsEndOffset();
           do {
             checkTimeout();
             const newBackwardsOffset =
@@ -497,11 +500,16 @@ const FragmentFactory = class {
               this.setBackwardsEndOffset(
                   this.backwardsEndOffset() + 1 + newBackwardsOffset);
             }
-          } while (
-              this.backwardsEndOffset() < this.getEndSearchSpace().length &&
-              this.getBackwardsEndSearchSpace()
-                      .substring(oldBackwardsOffset, this.backwardsEndOffset())
-                      .search(fragments.internal.NON_BOUNDARY_CHARS) == -1);
+            // Only count as an iteration if a word character was added.
+            if (this.getBackwardsEndSearchSpace()
+                    .substring(oldBackwardsEndOffset, this.backwardsEndOffset())
+                    .search(fragments.internal.NON_BOUNDARY_CHARS) !== -1) {
+              oldBackwardsEndOffset = this.backwardsEndOffset();
+              i++;
+            }
+          } while (this.backwardsEndOffset() <
+                       this.getEndSearchSpace().length &&
+                   i < desiredIterations);
         }
         // Ensure we don't have overlapping start and end offsets.
         if (this.mode === this.Mode.SHARED_START_AND_END) {
@@ -510,15 +518,33 @@ const FragmentFactory = class {
       }
     }
 
+    let canExpandContext = false;
+    if (!canExpandRange ||  // TODO: check if range match is < 20 chars
+        this.numIterations >= ITERATIONS_BEFORE_ADDING_CONTEXT) {
+      // Check if there's any unused search space left.
+      if ((this.backwardsPrefixOffset() != null &&
+           this.backwardsPrefixOffset() !==
+               this.getPrefixSearchSpace().length) ||
+          (this.suffixOffset != null &&
+           this.suffixOffset !== this.getSuffixSearchSpace().length)) {
+        canExpandContext = true;
+      }
+    }
+
     if (canExpandContext) {
+      const desiredIterations = this.getNumberOfContextWordsToAdd();
       if (this.backwardsPrefixOffset() < this.getPrefixSearchSpace().length) {
+        let i = 0;
         if (this.getPrefixSegments() != null) {
-          this.prefixOffset = this.getNextOffsetBackwards(
-              this.getPrefixSegments(), this.prefixOffset);
+          while (i < desiredIterations && this.prefixOffset > 0) {
+            this.prefixOffset = this.getNextOffsetBackwards(
+                this.getPrefixSegments(), this.prefixOffset);
+            i++;
+          }
         } else {
           // Shift to the next boundary char, and repeat until we've added a
           // word char.
-          const oldBackwardsPrefixOffset = this.backwardsPrefixOffset();
+          let oldBackwardsPrefixOffset = this.backwardsPrefixOffset();
           do {
             checkTimeout();
             const newBackwardsPrefixOffset =
@@ -532,22 +558,30 @@ const FragmentFactory = class {
               this.setBackwardsPrefixOffset(
                   this.backwardsPrefixOffset() + 1 + newBackwardsPrefixOffset);
             }
+            // Only count as an iteration if a word character was added.
+            if (this.getBackwardsPrefixSearchSpace()
+                    .substring(
+                        oldBackwardsPrefixOffset, this.backwardsPrefixOffset())
+                    .search(fragments.internal.NON_BOUNDARY_CHARS) !== -1) {
+              oldBackwardsPrefixOffset = this.backwardsPrefixOffset();
+              i++;
+            }
           } while (this.backwardsPrefixOffset() <
                        this.getPrefixSearchSpace().length &&
-                   this.getBackwardsPrefixSearchSpace()
-                           .substring(
-                               oldBackwardsPrefixOffset,
-                               this.backwardsPrefixOffset())
-                           .search(fragments.internal.NON_BOUNDARY_CHARS) ==
-                       -1);
+                   i < desiredIterations);
         }
       }
       if (this.suffixOffset < this.getSuffixSearchSpace().length) {
+        let i = 0;
         if (this.getSuffixSegments() != null) {
-          this.suffixOffset = this.getNextOffsetForwards(
-              this.getSuffixSegments(), this.suffixOffset, this.suffixOffset);
+          while (i < desiredIterations &&
+                 this.suffixOffset < this.getSuffixSearchSpace().length) {
+            this.suffixOffset = this.getNextOffsetForwards(
+                this.getSuffixSegments(), this.suffixOffset, this.suffixOffset);
+            i++;
+          }
         } else {
-          const oldSuffixOffset = this.suffixOffset;
+          let oldSuffixOffset = this.suffixOffset;
           do {
             checkTimeout();
             const newSuffixOffset =
@@ -559,15 +593,18 @@ const FragmentFactory = class {
             } else {
               this.suffixOffset = this.suffixOffset + 1 + newSuffixOffset;
             }
+            // Only count as an iteration if a word character was added.
+            if (this.getSuffixSearchSpace()
+                    .substring(oldSuffixOffset, this.suffixOffset)
+                    .search(fragments.internal.NON_BOUNDARY_CHARS) !== -1) {
+              oldSuffixOffset = this.suffixOffset;
+              i++;
+            }
           } while (this.suffixOffset < this.getSuffixSearchSpace().length &&
-                   this.getSuffixSearchSpace()
-                           .substring(oldSuffixOffset, this.suffixOffset)
-                           .search(fragments.internal.NON_BOUNDARY_CHARS) ==
-                       -1);
+                   i < desiredIterations);
         }
       }
     }
-
     this.numIterations++;
 
     // TODO: check if this exceeds the total length limit
@@ -697,6 +734,30 @@ const FragmentFactory = class {
     }
 
     return this;
+  }
+
+  /**
+   * @returns {number} - how many words should be added to the prefix and suffix
+   *     when embiggening. This changes depending on the current state of the
+   *     prefix/suffix, so it should be invoked once per embiggen, before either
+   *     is modified.
+   */
+  getNumberOfContextWordsToAdd() {
+    return (this.backwardsPrefixOffset() === 0 && this.suffixOffset === 0) ?
+        WORDS_TO_ADD_FIRST_ITERATION :
+        WORDS_TO_ADD_SUBSEQUENT_ITERATIONS;
+  }
+
+  /**
+   * @returns {number} - how many words should be added to textStart and textEnd
+   *     when embiggening. This changes depending on the current state of
+   *     textStart/textEnd, so it should be invoked once per embiggen, before
+   *     either is modified.
+   */
+  getNumberOfRangeWordsToAdd() {
+    return (this.startOffset === 0 && this.backwardsEndOffset() === 0) ?
+        WORDS_TO_ADD_FIRST_ITERATION :
+        WORDS_TO_ADD_SUBSEQUENT_ITERATIONS;
   }
 
   /**

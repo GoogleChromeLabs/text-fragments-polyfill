@@ -46,7 +46,7 @@ describe('FragmentGenerationUtils', function() {
     expect(result.status)
         .toEqual(generationUtils.GenerateFragmentStatus.SUCCESS);
     expect(result.fragment.textStart).toEqual('elaborate');
-    expect(result.fragment.textEnd).toEqual('stuff');
+    expect(result.fragment.textEnd).toEqual('of different stuff');
     expect(result.fragment.prefix).toBeUndefined();
     expect(result.fragment.suffix).toBeUndefined();
 
@@ -61,8 +61,8 @@ describe('FragmentGenerationUtils', function() {
     result = generationUtils.generateFragment(selection);
     expect(result.status)
         .toEqual(generationUtils.GenerateFragmentStatus.SUCCESS);
-    expect(result.fragment.textStart).toEqual('This');
-    expect(result.fragment.textEnd).toEqual('it.');
+    expect(result.fragment.textStart).toEqual('This is');
+    expect(result.fragment.textEnd).toEqual('stuff\n  in it.');
     expect(result.fragment.prefix).toBeUndefined();
     expect(result.fragment.suffix).toBeUndefined();
   });
@@ -488,19 +488,6 @@ describe('FragmentGenerationUtils', function() {
             .useSegmenter(fragmentUtils.forTesting.makeNewSegmenter());
 
     expect(factory.embiggen()).toEqual(true);
-    expect(startSpace.substring(0, factory.startOffset)).toEqual('repeat');
-    expect(endSpace.substring(factory.endOffset)).toEqual('repeat');
-
-    expect(factory.tryToMakeUniqueFragment()).toBeUndefined();
-
-    expect(factory.embiggen()).toEqual(true);
-    expect(startSpace.substring(0, factory.startOffset))
-        .toEqual('repeat repeat');
-    expect(endSpace.substring(factory.endOffset)).toEqual('repeat repeat');
-
-    expect(factory.tryToMakeUniqueFragment()).toBeUndefined();
-
-    expect(factory.embiggen()).toEqual(true);
     expect(startSpace.substring(0, factory.startOffset))
         .toEqual('repeat repeat repeat');
     expect(endSpace.substring(factory.endOffset))
@@ -554,21 +541,6 @@ describe('FragmentGenerationUtils', function() {
 
        expect(factory.embiggen()).toEqual(true);
        expect(startSpace.substring(0, factory.startOffset))
-           .toEqual('いただきます');
-       expect(endSpace.substring(factory.endOffset)).toEqual('いただきます');
-
-       expect(factory.tryToMakeUniqueFragment()).toBeUndefined();
-
-       expect(factory.embiggen()).toEqual(true);
-       expect(startSpace.substring(0, factory.startOffset))
-           .toEqual('いただきますいただきます');
-       expect(endSpace.substring(factory.endOffset))
-           .toEqual('いただきますいただきます');
-
-       expect(factory.tryToMakeUniqueFragment()).toBeUndefined();
-
-       expect(factory.embiggen()).toEqual(true);
-       expect(startSpace.substring(0, factory.startOffset))
            .toEqual('いただきますいただきますいただきます');
        expect(endSpace.substring(factory.endOffset))
            .toEqual('いただきますいただきますいただきます');
@@ -601,7 +573,8 @@ describe('FragmentGenerationUtils', function() {
      });
 
   it('can generate progressively larger fragments within a block', function() {
-    const sharedSpace = 'text1 text2 text3 text4 text5 text6 text7';
+    const sharedSpace =
+        'text1 text2  text3 text4, text5 text6 text7 text8 text9 text10';
 
     const factory =
         new generationUtils.forTesting.FragmentFactory()
@@ -609,25 +582,28 @@ describe('FragmentGenerationUtils', function() {
             .useSegmenter(fragmentUtils.forTesting.makeNewSegmenter());
 
     expect(factory.embiggen()).toEqual(true);
-    expect(sharedSpace.substring(0, factory.startOffset)).toEqual('text1');
-    expect(sharedSpace.substring(factory.endOffset)).toEqual('text7');
-
-    expect(factory.embiggen()).toEqual(true);
     expect(sharedSpace.substring(0, factory.startOffset))
-        .toEqual('text1 text2');
-    expect(sharedSpace.substring(factory.endOffset)).toEqual('text6 text7');
-
-    expect(factory.embiggen()).toEqual(true);
-    expect(sharedSpace.substring(0, factory.startOffset))
-        .toEqual('text1 text2 text3');
+        .toEqual('text1 text2  text3');
     expect(sharedSpace.substring(factory.endOffset))
-        .toEqual('text5 text6 text7');
+        .toEqual('text8 text9 text10');
 
     expect(factory.embiggen()).toEqual(true);
     expect(sharedSpace.substring(0, factory.startOffset))
-        .toEqual('text1 text2 text3 text4');
+        .toEqual('text1 text2  text3 text4');
     expect(sharedSpace.substring(factory.endOffset))
-        .toEqual(' text5 text6 text7');
+        .toEqual('text7 text8 text9 text10');
+
+    expect(factory.embiggen()).toEqual(true);
+    expect(sharedSpace.substring(0, factory.startOffset))
+        .toEqual('text1 text2  text3 text4, text5');
+    expect(sharedSpace.substring(factory.endOffset))
+        .toEqual('text6 text7 text8 text9 text10');
+
+    expect(factory.embiggen()).toEqual(true);
+    expect(sharedSpace.substring(0, factory.startOffset))
+        .toEqual('text1 text2  text3 text4, text5 ');
+    expect(sharedSpace.substring(factory.endOffset))
+        .toEqual('text6 text7 text8 text9 text10');
 
     expect(factory.embiggen()).toEqual(false);
   });
@@ -645,16 +621,6 @@ describe('FragmentGenerationUtils', function() {
            new generationUtils.forTesting.FragmentFactory()
                .setSharedSearchSpace(sharedSpace)
                .useSegmenter(fragmentUtils.forTesting.makeNewSegmenter());
-
-       expect(factory.embiggen()).toEqual(true);
-       expect(sharedSpace.substring(0, factory.startOffset)).toEqual('メガ');
-       expect(sharedSpace.substring(factory.endOffset)).toEqual('キャスト');
-
-       expect(factory.embiggen()).toEqual(true);
-       expect(sharedSpace.substring(0, factory.startOffset))
-           .toEqual('メガドライブ');
-       expect(sharedSpace.substring(factory.endOffset))
-           .toEqual('ドリームキャスト');
 
        expect(factory.embiggen()).toEqual(true);
        expect(sharedSpace.substring(0, factory.startOffset))
@@ -683,37 +649,10 @@ describe('FragmentGenerationUtils', function() {
             .useSegmenter(fragmentUtils.forTesting.makeNewSegmenter());
 
     expect(factory.embiggen()).toEqual(true);
-    expect(sharedSpace.substring(0, factory.startOffset)).toEqual('text1');
-    expect(sharedSpace.substring(factory.endOffset)).toEqual('text7');
-
-    expect(factory.embiggen()).toEqual(true);
-    expect(sharedSpace.substring(0, factory.startOffset))
-        .toEqual('text1 text2');
-    expect(sharedSpace.substring(factory.endOffset)).toEqual('text6 text7');
-
-    expect(factory.embiggen()).toEqual(true);
     expect(sharedSpace.substring(0, factory.startOffset))
         .toEqual('text1 text2 text3');
     expect(sharedSpace.substring(factory.endOffset))
         .toEqual('text5 text6 text7');
-
-    expect(factory.embiggen()).toEqual(true);
-    expect(sharedSpace.substring(0, factory.startOffset))
-        .toEqual('text1 text2 text3 text4');
-    expect(sharedSpace.substring(factory.endOffset))
-        .toEqual(' text5 text6 text7');
-    expect(prefixSpace.substring(factory.prefixOffset)).toEqual('prefix1');
-    expect(suffixSpace.substring(0, factory.suffixOffset)).toEqual('suffix1');
-
-    expect(factory.embiggen()).toEqual(true);
-    expect(sharedSpace.substring(0, factory.startOffset))
-        .toEqual('text1 text2 text3 text4');
-    expect(sharedSpace.substring(factory.endOffset))
-        .toEqual(' text5 text6 text7');
-    expect(prefixSpace.substring(factory.prefixOffset))
-        .toEqual('prefix2 prefix1');
-    expect(suffixSpace.substring(0, factory.suffixOffset))
-        .toEqual('suffix1 suffix2');
 
     expect(factory.embiggen()).toEqual(true);
     expect(sharedSpace.substring(0, factory.startOffset))
@@ -730,8 +669,8 @@ describe('FragmentGenerationUtils', function() {
 
   it('can add context to an exact text match', function() {
     const exactText = 'text1 text2 text3 text4 text5 text6 text7';
-    const prefixSpace = 'prefix3 prefix2 prefix1';
-    const suffixSpace = 'suffix1 suffix2 suffix3';
+    const prefixSpace = 'prefix4 prefix3 prefix2 prefix1';
+    const suffixSpace = 'suffix1 suffix2 suffix3 suffix4';
 
     const factory =
         new generationUtils.forTesting.FragmentFactory()
@@ -741,22 +680,17 @@ describe('FragmentGenerationUtils', function() {
 
     expect(factory.embiggen()).toEqual(true);
     expect(factory.exactTextMatch).toEqual(exactText);
-    expect(prefixSpace.substring(factory.prefixOffset)).toEqual('prefix1');
-    expect(suffixSpace.substring(0, factory.suffixOffset)).toEqual('suffix1');
-
-    expect(factory.embiggen()).toEqual(true);
-    expect(factory.exactTextMatch).toEqual(exactText);
-    expect(prefixSpace.substring(factory.prefixOffset))
-        .toEqual('prefix2 prefix1');
-    expect(suffixSpace.substring(0, factory.suffixOffset))
-        .toEqual('suffix1 suffix2');
-
-    expect(factory.embiggen()).toEqual(true);
-    expect(factory.exactTextMatch).toEqual(exactText);
     expect(prefixSpace.substring(factory.prefixOffset))
         .toEqual('prefix3 prefix2 prefix1');
     expect(suffixSpace.substring(0, factory.suffixOffset))
         .toEqual('suffix1 suffix2 suffix3');
+
+    expect(factory.embiggen()).toEqual(true);
+    expect(factory.exactTextMatch).toEqual(exactText);
+    expect(prefixSpace.substring(factory.prefixOffset))
+        .toEqual('prefix4 prefix3 prefix2 prefix1');
+    expect(suffixSpace.substring(0, factory.suffixOffset))
+        .toEqual('suffix1 suffix2 suffix3 suffix4');
 
     expect(factory.embiggen()).toEqual(false);
   });
@@ -776,17 +710,6 @@ describe('FragmentGenerationUtils', function() {
             .setExactTextMatch(exactText)
             .setPrefixAndSuffixSearchSpace(prefixSpace, suffixSpace)
             .useSegmenter(fragmentUtils.forTesting.makeNewSegmenter());
-
-    expect(factory.embiggen()).toEqual(true);
-    expect(factory.exactTextMatch).toEqual(exactText);
-    expect(prefixSpace.substring(factory.prefixOffset)).toEqual('ギア');
-    expect(suffixSpace.substring(0, factory.suffixOffset)).toEqual('ドリーム');
-
-    expect(factory.embiggen()).toEqual(true);
-    expect(factory.exactTextMatch).toEqual(exactText);
-    expect(prefixSpace.substring(factory.prefixOffset)).toEqual('ゲームギア');
-    expect(suffixSpace.substring(0, factory.suffixOffset))
-        .toEqual('ドリームキャスト');
 
     expect(factory.embiggen()).toEqual(true);
     expect(factory.exactTextMatch).toEqual(exactText);
@@ -821,7 +744,7 @@ describe('FragmentGenerationUtils', function() {
     expect(result.fragment.textStart).toEqual('target');
     expect(result.fragment.textEnd).toBeUndefined();
     expect(result.fragment.prefix).toEqual('prefix1');
-    expect(result.fragment.suffix).toEqual('suffix1');
+    expect(result.fragment.suffix).toEqual('suffix1 prefix2\n  target');
 
     target.selectNodeContents(document.getElementById('target3'));
     selection.removeAllRanges();
@@ -830,8 +753,8 @@ describe('FragmentGenerationUtils', function() {
     result = generationUtils.generateFragment(selection);
     expect(result.fragment.textStart).toEqual('target');
     expect(result.fragment.textEnd).toBeUndefined();
-    expect(result.fragment.prefix).toEqual('prefix1');
-    expect(result.fragment.suffix).toEqual('suffix2');
+    expect(result.fragment.prefix).toEqual('target suffix2 prefix1');
+    expect(result.fragment.suffix).toEqual('suffix2\n  prefix2 target');
   });
 
   it('can generate prefixes/suffixes to distinguish long matches', function() {
@@ -882,9 +805,9 @@ describe('FragmentGenerationUtils', function() {
 
     result = generationUtils.generateFragment(selection);
     expect(fragmentUtils.forTesting.normalizeString(result.fragment.textStart))
-        .toEqual('first named');
+        .toEqual('first named entity');
     expect(fragmentUtils.forTesting.normalizeString(result.fragment.textEnd))
-        .toEqual('3, 2014');
+        .toEqual('june 3, 2014');
   });
 
   it('will halt generation after a certain time period', function() {
