@@ -947,4 +947,80 @@ describe('FragmentGenerationUtils', function() {
     expect(result.preNodes.map(extractor)).toEqual([]);
     expect(result.postNodes.map(extractor)).toEqual([]);
   });
+
+  it('adds context on the first iteration for short range-based matches',
+     function() {
+       const startSpace = 'a .b  c d';
+       const endSpace = 'w x \'y\' z';
+       const prefixSpace = '4 3 2 1';
+       const suffixSpace = '1 2 3 4';
+
+       // The first iteration will add 7 characters each to the start and end,
+       // and 14 is below the threshold (20), so context will be added on the
+       // first iteration.
+
+       const factory =
+           new generationUtils.forTesting.FragmentFactory()
+               .setStartAndEndSearchSpace(startSpace, endSpace)
+               .setPrefixAndSuffixSearchSpace(prefixSpace, suffixSpace)
+               .useSegmenter(fragmentUtils.forTesting.makeNewSegmenter());
+
+       expect(factory.embiggen()).toEqual(true);
+       expect(startSpace.substring(0, factory.startOffset)).toEqual('a .b  c');
+       expect(endSpace.substring(factory.endOffset)).toEqual('x \'y\' z');
+       expect(prefixSpace.substring(factory.prefixOffset)).toEqual('3 2 1');
+       expect(suffixSpace.substring(0, factory.suffixOffset)).toEqual('1 2 3');
+
+       expect(factory.embiggen()).toEqual(true);
+       expect(startSpace.substring(0, factory.startOffset))
+           .toEqual('a .b  c d');
+       expect(endSpace.substring(factory.endOffset)).toEqual('w x \'y\' z');
+       expect(prefixSpace.substring(factory.prefixOffset)).toEqual('4 3 2 1');
+       expect(suffixSpace.substring(0, factory.suffixOffset))
+           .toEqual('1 2 3 4');
+
+       expect(factory.embiggen()).toEqual(false);
+     });
+
+  it('adds no context on the first iteration for long range-based matches',
+     function() {
+       const startSpace = 'internationalization .b  c d';
+       const endSpace = 'w x \'y\' z';
+       const prefixSpace = '4 3 2 1';
+       const suffixSpace = '1 2 3 4';
+
+       // "internationalization" is a 20-letter word, so any attempt at a
+       // range-based match will easily exceed the 20-character threshold.
+       // The first iteration should not include context.
+
+       const factory =
+           new generationUtils.forTesting.FragmentFactory()
+               .setStartAndEndSearchSpace(startSpace, endSpace)
+               .setPrefixAndSuffixSearchSpace(prefixSpace, suffixSpace)
+               .useSegmenter(fragmentUtils.forTesting.makeNewSegmenter());
+
+       expect(factory.embiggen()).toEqual(true);
+       expect(startSpace.substring(0, factory.startOffset))
+           .toEqual('internationalization .b  c');
+       expect(endSpace.substring(factory.endOffset)).toEqual('x \'y\' z');
+       expect(prefixSpace.substring(factory.prefixOffset)).toEqual('');
+       expect(suffixSpace.substring(0, factory.suffixOffset)).toEqual('');
+
+       expect(factory.embiggen()).toEqual(true);
+       expect(startSpace.substring(0, factory.startOffset))
+           .toEqual('internationalization .b  c d');
+       expect(endSpace.substring(factory.endOffset)).toEqual('w x \'y\' z');
+       expect(prefixSpace.substring(factory.prefixOffset)).toEqual('3 2 1');
+       expect(suffixSpace.substring(0, factory.suffixOffset)).toEqual('1 2 3');
+
+       expect(factory.embiggen()).toEqual(true);
+       expect(startSpace.substring(0, factory.startOffset))
+           .toEqual('internationalization .b  c d');
+       expect(endSpace.substring(factory.endOffset)).toEqual('w x \'y\' z');
+       expect(prefixSpace.substring(factory.prefixOffset)).toEqual('4 3 2 1');
+       expect(suffixSpace.substring(0, factory.suffixOffset))
+           .toEqual('1 2 3 4');
+
+       expect(factory.embiggen()).toEqual(false);
+     });
 });
