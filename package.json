@@ -5,7 +5,10 @@
   "main": "./dist/text-fragments.js",
   "browser": "./dist/text-fragments.js",
   "module": "./dist/text-fragments.js",
-  "exports": "./dist/text-fragments.js",
+  "exports": {
+    ".": "./dist/text-fragments.js",
+    "./dist/fragment-generation-utils.js": "./dist/fragment-generation-utils.js"
+  },
   "unpkg": "./dist/text-fragments.js",
   "files": [
     "src",
