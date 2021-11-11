@@ -1,6 +1,18 @@
 import * as generationUtils from '../src/fragment-generation-utils.js';
 import * as fragmentUtils from '../src/text-fragment-utils.js';
 
+/**
+ * Tests should call this method immediately if they rely on Intl.Segmenter
+ * support. This will cause them to be skipped on platforms that don't have
+ * the needed functionality.
+ */
+function requireIntlSegmenterSupport() {
+  if (!Intl.Segmenter) {
+    pending('This configuration does not yet support Intl.Segmenter.');
+    return;
+  }
+};
+
 describe('FragmentGenerationUtils', function() {
   beforeEach(function() {
     generationUtils.setTimeout(500);
@@ -247,10 +259,7 @@ describe('FragmentGenerationUtils', function() {
 
   it('can expand a range start to a word bound across nodes in Japanese',
      function() {
-       if (!Intl.Segmenter) {
-         pending('This configuration does not yet support Intl.Segmenter.');
-         return;
-       }
+       requireIntlSegmenterSupport();
 
        document.body.innerHTML = __html__['jp-word-boundary.html'];
        const range = document.createRange();
@@ -521,10 +530,7 @@ describe('FragmentGenerationUtils', function() {
 
   it('can generate progressively larger fragments across blocks in Japanese',
      function() {
-       if (!Intl.Segmenter) {
-         pending('This configuration does not yet support Intl.Segmenter.');
-         return;
-       }
+       requireIntlSegmenterSupport();
 
        document.body.innerHTML = __html__['range-fragment-jp.html'];
        const range = document.createRange();
@@ -610,10 +616,7 @@ describe('FragmentGenerationUtils', function() {
 
   it('can generate progressively larger fragments within a block in Japanese',
      function() {
-       if (!Intl.Segmenter) {
-         pending('This configuration does not yet support Intl.Segmenter.');
-         return;
-       }
+       requireIntlSegmenterSupport();
 
        const sharedSpace = 'メガドライブゲームギアソニックドリームキャスト';
 
@@ -696,10 +699,7 @@ describe('FragmentGenerationUtils', function() {
   });
 
   it('can add context to an exact text match in Japanese', function() {
-    if (!Intl.Segmenter) {
-      pending('This configuration does not yet support Intl.Segmenter.');
-      return;
-    }
+    requireIntlSegmenterSupport();
 
     const exactText = 'ソニック';
     const prefixSpace = 'メガドライブゲームギア';
@@ -1022,5 +1022,26 @@ describe('FragmentGenerationUtils', function() {
            .toEqual('1 2 3 4');
 
        expect(factory.embiggen()).toEqual(false);
+     });
+
+  it('does not include extraneous characters in Japanese fragments',
+     function() {
+       requireIntlSegmenterSupport();
+       document.body.innerHTML = __html__['jp-sentence.html'];
+
+       // Pick out 3 words from the sentence.
+       const target = document.createRange();
+       const selection = window.getSelection();
+       const root = document.getElementById('root').firstChild;
+       target.setStart(root, 25);
+       target.setEnd(root, 30);
+       expect(target.toString()).toEqual('てこの崇高');
+       selection.removeAllRanges();
+       selection.addRange(target);
+
+       const output = generationUtils.generateFragment(selection);
+       expect(output.status)
+           .toEqual(generationUtils.GenerateFragmentStatus.SUCCESS);
+       expect(output.fragment.textStart).toEqual('てこの崇高');
      });
 });

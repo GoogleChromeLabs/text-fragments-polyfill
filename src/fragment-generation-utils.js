@@ -1279,22 +1279,11 @@ const expandToNearestWordBoundaryPointUsingSegments =
         return;
       }
 
-      // Edge case: if we are at the first/last character of the segment, we
-      // need to check if the one before/after it is whitespace.
-      if (offsetInText === foundSegment.index) {
-        const prevSegment = segments.containing(offsetInText - 1);
-        // |prevSegment| will be undefined if |offsetInText| is 0
-        if (prevSegment && !prevSegment.isWordLike) {
-          return;
-        }
-      }
-      if (offsetInText === foundSegment.index + foundSegment.segment.length) {
-        const nextSegment = segments.containing(offsetInText + 1);
-        // |nextSegment| will be undefined if |offsetInText| is past the end of
-        // |text|
-        if (nextSegment && !nextSegment.isWordLike) {
-          return;
-        }
+      // Another easy case: if we are at the first/last character of the
+      // segment, then we're done.
+      if (offsetInText === foundSegment.index ||
+          offsetInText === foundSegment.index + foundSegment.segment.length) {
+        return;
       }
 
       // We're inside a word. Based on |isRangeEnd|, the target offset will
