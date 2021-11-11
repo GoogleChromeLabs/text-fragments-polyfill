@@ -7,7 +7,8 @@
   "module": "./dist/text-fragments.js",
   "exports": {
     ".": "./dist/text-fragments.js",
-    "./dist/fragment-generation-utils.js": "./dist/fragment-generation-utils.js"
+    "./dist/fragment-generation-utils.js": "./dist/fragment-generation-utils.js",
+    "./package.json": "./package.json"
   },
   "unpkg": "./dist/text-fragments.js",
   "files": [
