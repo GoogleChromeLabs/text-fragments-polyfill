@@ -271,9 +271,16 @@ const getSearchSpaceForStart = (range) => {
   if (!walker) {
     return undefined;
   }
-  const map = createForwardOverrideMap(walker);
-  const origin = node;
 
+  const finishedSubtrees = new Set();
+  // If the range starts after the last child of an element node
+  // don't visit its subtree because it's not included in the range.
+  if (range.startContainer.nodeType === Node.ELEMENT_NODE &&
+      range.startOffset === range.startContainer.childNodes.length) {
+    finishedSubtrees.add(range.startContainer);
+  }
+  const origin = node;
+  const textAccumulator = new BlockTextAccumulator(range, true);
   // tempRange monitors whether we've exhausted our search space yet.
   const tempRange = range.cloneRange();
   while (!tempRange.collapsed && node != null) {
@@ -285,17 +292,16 @@ const getSearchSpaceForStart = (range) => {
     } else {
       tempRange.setStartBefore(node);
     }
+    // Add node to accumulator to keep track of text inside the current block
+    // boundaries
+    textAccumulator.appendNode(node);
 
-    // If |node| is a block node, then we've hit a block boundary.
-    if (isBlock(node)) {
-      const candidate = range.cloneRange();
-      candidate.setEnd(tempRange.startContainer, tempRange.startOffset);
-      const trimmed = candidate.toString().trim();
-      if (trimmed.length > 0) {
-        return trimmed;
-      }
+    // If the accumulator found a non empty block boundary we've got our search
+    // space.
+    if (textAccumulator.textInBlock !== null) {
+      return textAccumulator.textInBlock;
     }
-    node = forwardTraverse(walker, map);
+    node = forwardTraverse(walker, finishedSubtrees);
   }
   return undefined;
 };
@@ -316,8 +322,16 @@ const getSearchSpaceForEnd = (range) => {
   if (!walker) {
     return undefined;
   }
-  const visited = new Set();
+  const finishedSubtrees = new Set();
+  // If the range ends before the first child of an element node
+  // don't visit its subtree because it's not included in the range.
+  if (range.endContainer.nodeType === Node.ELEMENT_NODE &&
+      range.endOffset === 0) {
+    finishedSubtrees.add(range.endContainer);
+  }
+
   const origin = node;
+  const textAccumulator = new BlockTextAccumulator(range, false);
 
   // tempRange monitors whether we've exhausted our search space yet.
   const tempRange = range.cloneRange();
@@ -331,16 +345,17 @@ const getSearchSpaceForEnd = (range) => {
       tempRange.setEndAfter(node);
     }
 
-    // If |node| is a block node, then we've hit a block boundary.
-    if (isBlock(node)) {
-      const candidate = range.cloneRange();
-      candidate.setStart(tempRange.endContainer, tempRange.endOffset);
-      const trimmed = candidate.toString().trim();
-      if (trimmed.length > 0) {
-        return trimmed;
-      }
+    // Add node to accumulator to keep track of text inside the current block
+    // boundaries.
+    textAccumulator.appendNode(node);
+
+    // If the accumulator found a non empty block boundary we've got our search
+    // space.
+    if (textAccumulator.textInBlock !== null) {
+      return textAccumulator.textInBlock;
     }
-    node = backwardTraverse(walker, visited, origin);
+
+    node = backwardTraverse(walker, finishedSubtrees);
   }
   return undefined;
 };
@@ -958,6 +973,105 @@ const FragmentFactory = class {
 };
 
 /**
+ * Helper class to calculate visible text from the start or end of a range
+ * until a block boundary is reached or the range is exhausted.
+ */
+const BlockTextAccumulator = class {
+  /**
+   * @param {Range} searchRange - the range for which the text in the last or
+   *     first non empty block boundary will be calculated
+   * @param {boolean} isForwardTraversal - true if nodes in
+   *     searchRange will be forward traversed
+   */
+  constructor(searchRange, isForwardTraversal) {
+    this.searchRange = searchRange;
+    this.isForwardTraversal = isForwardTraversal;
+    this.textFound = false;
+    this.textNodes = [];
+    this.textInBlock = null;
+  }
+  /**
+   * Adds the next node in the search space range traversal to the accumulator.
+   * The accumulator then will keep track of the text nodes in the range until a
+   * block boundary is found. Once a block boundary is found and the content of
+   * the text nodes in the boundary is non empty, the property textInBlock will
+   * be set with the content of the text nodes, trimmed of leading and trailing
+   * whitespaces.
+   * @param {Node} node - next node in the traversal of the searchRange
+   */
+  appendNode(node) {
+    // If we already calculated the text in the block boundary just ignore any
+    // calls to append nodes.
+    if (this.textInBlock !== null) {
+      return;
+    }
+    // We found a block boundary, check if there's text inside and set it to
+    // textInBlock or keep going to the next block boundary.
+    if (isBlock(node)) {
+      if (this.textFound) {
+        // When traversing backwards the nodes are pushed in reverse order.
+        // Reversing them to get them in the right order.
+        if (!this.isForwardTraversal) {
+          this.textNodes.reverse();
+        }
+        // Concatenate all the text nodes in the block boundary and trim any
+        // trailing and leading whitespaces.
+        this.textInBlock = this.textNodes.map(textNode => textNode.textContent)
+                               .join('')
+                               .trim();
+      } else {
+        // Discard the text nodes visited so far since they are empty and we'll
+        // continue searching in the next block boundary.
+        this.textNodes = [];
+      }
+      return;
+    }
+
+    // Ignore non text nodes.
+    if (!isText(node)) return;
+
+    // Get the part of node inside the search range. This is to avoid
+    // accumulating text that's not inside the range.
+    const nodeToInsert = this.getNodeIntersectionWithRange(node);
+
+    // Keep track of any text found in the block boundary.
+    this.textFound = this.textFound || nodeToInsert.textContent.trim() !== '';
+
+    this.textNodes.push(nodeToInsert);
+  }
+
+  /**
+   * Calculates the intersection of a node with searchRange and returns a Text
+   * Node with the intersection
+   * @param {Node} node - the node to intercept with searchRange
+   * @returns {Node} - node if node is fully within searchRange or a Text Node
+   *     with the substring of the content of node inside the search range
+   */
+  getNodeIntersectionWithRange(node) {
+    let startOffset = null;
+    let endOffset = null;
+
+    if (node === this.searchRange.startContainer &&
+        this.searchRange.startOffset !== 0) {
+      startOffset = this.searchRange.startOffset;
+    }
+
+    if (node === this.searchRange.endContainer &&
+        this.searchRange.endOffset !== node.textContent.length) {
+      endOffset = this.searchRange.endOffset;
+    }
+    if (startOffset !== null || endOffset !== null) {
+      return {
+        textContent: node.textContent.substring(
+            startOffset ?? 0, endOffset ?? node.textContent.length)
+      };
+    }
+
+    return node;
+  }
+};
+
+/**
  * @param {TextFragment} fragment - the candidate fragment
  * @return {boolean} - true iff the candidate fragment identifies exactly one
  *     portion of the document.
@@ -1037,12 +1151,12 @@ const containsBlockBoundary = (range) => {
   if (!walker) {
     return false;
   }
-  const map = createForwardOverrideMap(walker);
+  const finishedSubtrees = new Set();
 
   while (!tempRange.collapsed && node != null) {
     if (isBlock(node)) return true;
     if (node != null) tempRange.setStartAfter(node);
-    node = forwardTraverse(walker, map);
+    node = forwardTraverse(walker, finishedSubtrees);
     checkTimeout();
   }
   return false;
@@ -1188,10 +1302,9 @@ const expandRangeStartToWordBound = (range) => {
     if (!walker) {
       return;
     }
-    const visited = new Set();
-    const origin = walker.currentNode;
+    const finishedSubtrees = new Set();
 
-    let node = backwardTraverse(walker, visited, origin);
+    let node = backwardTraverse(walker, finishedSubtrees);
     while (node != null) {
       const newOffset = findWordStartBoundInTextNode(node);
       if (newOffset !== -1) {
@@ -1214,7 +1327,7 @@ const expandRangeStartToWordBound = (range) => {
         return;
       }
 
-      node = backwardTraverse(walker, visited, origin);
+      node = backwardTraverse(walker, finishedSubtrees);
       // We should never get here; the walker should eventually hit a block node
       // or the root of the document. Collapse range so the caller can handle
       // this as an error.
@@ -1341,7 +1454,7 @@ const expandToNearestWordBoundaryPointUsingSegments =
  */
 
 /**
- * Traverses the DOM to extact all TextNodes appearing in the same block level
+ * Traverses the DOM to extract all TextNodes appearing in the same block level
  * as |node| (i.e., those that are descendents of a common ancestor of |node|
  * with no other block elements in between.)
  * @param {TextNode} node
@@ -1354,15 +1467,14 @@ const getTextNodesInSameBlock = (node) => {
   if (!backWalker) {
     return;
   }
-  const visited = new Set();
-  const origin = backWalker.currentNode;
-  let backNode = backwardTraverse(backWalker, visited, origin);
+  const finishedSubtrees = new Set();
+  let backNode = backwardTraverse(backWalker, finishedSubtrees);
   while (backNode != null && !isBlock(backNode)) {
     checkTimeout();
     if (backNode.nodeType === Node.TEXT_NODE) {
       preNodes.push(backNode);
     }
-    backNode = backwardTraverse(backWalker, visited, origin);
+    backNode = backwardTraverse(backWalker, finishedSubtrees);
   };
   preNodes.reverse();
 
@@ -1390,126 +1502,97 @@ const getTextNodesInSameBlock = (node) => {
   if (!forwardWalker) {
     return;
   }
-  const overrideMap = createForwardOverrideMap(forwardWalker);
-  let forwardNode = forwardTraverse(forwardWalker, overrideMap);
+  // Forward traverse from node after having finished its subtree
+  // to get text nodes after it until we find a block boundary.
+  const finishedSubtreesForward = new Set([node]);
+  let forwardNode = forwardTraverse(forwardWalker, finishedSubtreesForward);
   while (forwardNode != null && !isBlock(forwardNode)) {
     checkTimeout();
     if (forwardNode.nodeType === Node.TEXT_NODE) {
       postNodes.push(forwardNode);
     }
-    forwardNode = forwardTraverse(forwardWalker, overrideMap);
+    forwardNode = forwardTraverse(forwardWalker, finishedSubtreesForward);
   }
 
   return {preNodes: preNodes, innerNodes: innerNodes, postNodes: postNodes};
 };
 
 /**
- * Helper method to create an override map which will "inject" the ancestors of
- * the walker's starting node into traversal order, when using forwardTraverse.
- * By traversing these ancestor nodes after their children (postorder), we can
- * ensure that, if the walker's origin node is inside of a block element, the
- * end of that element is properly treated as a boundary.
- * @param {TreeWalker} walker - the TreeWalker that will be traversed
- * @return {Map<Node, Node>} - the Map to be passed to forwardTraverse
+ * Performs traversal on a TreeWalker, visiting each subtree in document order.
+ * When visiting a subtree not already visited (its root not in finishedSubtrees
+ * ), first the root is emitted then the subtree is traversed, then the root is
+ * emitted again and then the next subtree in document order is visited.
+ *
+ * Subtree's roots are emitted twice to signal the beginning and ending of
+ * element nodes. This is useful for ensuring the ends of block boundaries are
+ * found.
+ * @param {TreeWalker} walker - the TreeWalker to be traversed
+ * @param {Set} finishedSubtrees - set of subtree roots already visited
+ * @return {Node} - next node in the traversal
  */
-const createForwardOverrideMap = (walker) => {
-  // Store the current state so it can be restored at the end.
-  const walkerOrigin = walker.currentNode;
-
-  const ancestors = new Set();
-  const overrideMap = new Map();
-
-  do {
-    // Hold on to the current node so we can reset the walker later.
-    const node = walker.currentNode;
-    ancestors.add(node);
-
-    // The override map needs to point from the last (grand*)child of |node|
-    // back to |node|, so that we traverse |node| only after all of its
-    // children. If we hit another ancestor of the origin, use that instead
-    // (since it's already part of a postorder chain in our map).
-    while (walker.lastChild() != null) {
-      if (ancestors.has(walker.currentNode)) {
-        break;
-      }
+const forwardTraverse = (walker, finishedSubtrees) => {
+  // If current node's subtree is not already finished
+  // try to go first down the subtree.
+  if (!finishedSubtrees.has(walker.currentNode)) {
+    const firstChild = walker.firstChild();
+    if (firstChild !== null) {
+      return firstChild;
     }
+  }
 
-    // Remember the current override, if any, for the found child.
-    const previousOverride = overrideMap.get(walker.currentNode);
+  // If no subtree go to next sibling if any.
+  const nextSibling = walker.nextSibling();
+  if (nextSibling !== null) {
+    return nextSibling;
+  }
 
-    // Set a mapping from the found child to its ancestor.
-    if (walker.currentNode !== node) overrideMap.set(walker.currentNode, node);
+  // If no sibling go back to parent and mark it as finished.
+  const parent = walker.parentNode();
 
-    // Also set a mapping from the ancestor to the child's next node, which is
-    // |TreeWalker.nextNode()| unless it had already been overridden in the map.
-    // This override might change in a later iteration if another ancestor needs
-    // to get inserted in the ordering too.
-    overrideMap.set(node, previousOverride || walker.nextNode());
+  if (parent !== null) {
+    finishedSubtrees.add(parent);
+  }
 
-    // Reset the walker to where it was before we traversed downwards.
-    walker.currentNode = node;
-  } while (walker.parentNode() != null);
-
-  walker.currentNode = walkerOrigin;
-  return overrideMap;
+  return parent;
 };
 
 /**
- * Performs traversal on a TreeWalker, using document order except when a node
- * has an entry in |overrideMap|, in which case navigation skips to the
- * indicated destination. This is useful for ensuring the ends of block
- * boundaries are found.
+ * Performs backwards traversal on a TreeWalker, visiting each subtree in
+ * backwards document order. When visiting a subtree not already visited (its
+ * root not in finishedSubtrees ), first the root is emitted then the subtree is
+ * backward traversed, then the root is emitted again and then the previous
+ * subtree in document order is visited.
+ *
+ * Subtree's roots are emitted twice to signal the beginning and ending of
+ * element nodes. This is useful for ensuring  block boundaries are found.
  * @param {TreeWalker} walker - the TreeWalker to be traversed
- * @param {Map<Node, Node>} overrideMap - maps nodes to the nodes which should
- *     follow them during traversal, if this differs from document order
- * @return {Node} - |walker|'s new current node, or null if the current node
- *     was unchanged (and thus, no further traversal is possible)
+ * @param {Set} finishedSubtrees - set of subtree roots already visited
+ * @return {Node} - next node in the backwards traversal
  */
-const forwardTraverse = (walker, overrideMap) => {
-  if (overrideMap.has(walker.currentNode)) {
-    const override = overrideMap.get(walker.currentNode);
-    if (override != null) walker.currentNode = override;
-    return override;
-  }
-  return walker.nextNode();
-};
-
-/**
- * Performs backwards traversal on a TreeWalker, such that parent nodes are
- * encountered *before* their children (except when they are ancestors of the
- * starting node |origin|). This is useful for finding block boundaries.
- * @param {TreeWalker} walker - the TreeWalker to be traversed
- * @param {Set<Node>} visited - a set used to avoid repeat iterations. Should be
- *     empty the first time this method is called.
- * @param {Node} origin - the node where traversal started
- * @return {Node} - |walker|'s new current node, or null if
- *     the current node was unchanged (and thus, no further traversal is
- *     possible).
- */
-const backwardTraverse = (walker, visited, origin) => {
-  // Infinite loop to avoid recursion. Will terminate since visited set
-  // guarantees children of a node are only traversed once, and parent node
-  // will be null once the root of the walker is reached.
-  while (true) {
-    checkTimeout();
-    // The first time we visit a node, we traverse its children backwards,
-    // unless it's an ancestor of the starting node.
-    if (!visited.has(walker.currentNode) &&
-        !walker.currentNode.contains(origin)) {
-      visited.add(walker.currentNode);
-      if (walker.lastChild() != null) {
-        return walker.currentNode;
-      }
-    }
-
-    if (walker.previousSibling() != null) {
-      return walker.currentNode;
-    } else if (walker.parentNode() == null) {
-      return null;
-    } else if (!visited.has(walker.currentNode)) {
-      return walker.currentNode;
+const backwardTraverse = (walker, finishedSubtrees) => {
+  // If current node's subtree is not already finished
+  // try to go first down the subtree.
+  if (!finishedSubtrees.has(walker.currentNode)) {
+    const lastChild = walker.lastChild();
+    if (lastChild !== null) {
+      return lastChild;
     }
   }
+
+  // If no subtree go to previous sibling if any.
+  const previousSibling = walker.previousSibling();
+  if (previousSibling !== null) {
+    return previousSibling;
+  }
+
+  // If no sibling go back to parent and mark it as finished.
+  const parent = walker.parentNode();
+
+  if (parent !== null) {
+    finishedSubtrees.add(parent);
+  }
+
+  return parent;
 };
 
 /**
@@ -1543,7 +1626,9 @@ const expandRangeEndToWordBound = (range) => {
     if (!walker) {
       return;
     }
-    const override = createForwardOverrideMap(walker);
+    // We'll traverse the dom after node's subtree to try to find
+    // either a word or block boundary.
+    const finishedSubtrees = new Set([node]);
 
     while (node != null) {
       checkTimeout();
@@ -1573,7 +1658,7 @@ const expandRangeEndToWordBound = (range) => {
         return;
       }
 
-      node = forwardTraverse(walker, override);
+      node = forwardTraverse(walker, finishedSubtrees);
     }
     // We should never get here; the walker should eventually hit a block node
     // or the root of the document. Collapse range so the caller can handle this
@@ -1585,7 +1670,7 @@ const expandRangeEndToWordBound = (range) => {
 /**
  * Helper to determine if a node is a block element or not.
  * @param {Node} node - the node to evaluate
- * @return {Boolean} true iff the node is an element classified as block-level
+ * @return {Boolean} - true if the node is an element classified as block-level
  */
 const isBlock = (node) => {
   return node.nodeType === Node.ELEMENT_NODE &&
@@ -1593,10 +1678,18 @@ const isBlock = (node) => {
        node.tagName === 'HTML' || node.tagName === 'BODY');
 };
 
+/**
+ * Helper to determine if a node is a Text Node or not
+ * @param {Node} node - the node to evaluate
+ * @returns {Boolean} - true if the node is a Text Node
+ */
+const isText = (node) => {
+  return node.nodeType === Node.TEXT_NODE;
+};
+
 export const forTesting = {
   backwardTraverse: backwardTraverse,
   containsBlockBoundary: containsBlockBoundary,
-  createForwardOverrideMap: createForwardOverrideMap,
   doGenerateFragment: doGenerateFragment,
   expandRangeEndToWordBound: expandRangeEndToWordBound,
   expandRangeStartToWordBound: expandRangeStartToWordBound,
