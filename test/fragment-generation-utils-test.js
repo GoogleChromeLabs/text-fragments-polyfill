@@ -366,7 +366,8 @@ describe('FragmentGenerationUtils', function() {
       }
     }
     expect(traversalOrder).toEqual([
-      'b', 'c', 'd', 'e', 'c', 'f', 'g', 'h', 'i', 'h', 'j', 'k', 'k', 'j', 'g', 'l'
+      'b', 'c', 'd', 'e', 'c', 'f', 'g', 'h', 'i', 'h', 'j', 'k', 'k', 'j', 'g',
+      'l'
     ]);
 
     // Also check a simple case that was previously causing cycles
@@ -401,8 +402,8 @@ describe('FragmentGenerationUtils', function() {
     walker.currentNode = origin;
     const visited = new Set();
     const traversalOrder = [];
-    while (generationUtils.forTesting.backwardTraverse(
-               walker, visited) != null) {
+    while (generationUtils.forTesting.backwardTraverse(walker, visited) !=
+           null) {
       if (walker.currentNode.id != null) {
         traversalOrder.push(walker.currentNode.id);
       }
@@ -1064,233 +1065,234 @@ describe('FragmentGenerationUtils', function() {
      });
   // forwardTraverse tests
   it('Given walker with non finished current node\n' +
-    'and current node has visible children\n' +
-    'When forwardTraverse is called\n' +
-    'Then the first visible child of current node is returned',
-    function () {
-      document.body.innerHTML = __html__['traversal_tests.html'];
+         'and current node has visible children\n' +
+         'When forwardTraverse is called\n' +
+         'Then the first visible child of current node is returned',
+     function() {
+       document.body.innerHTML = __html__['traversal_tests.html'];
 
-      const root = document.getElementById('1');
-      const firstChild = root.firstChild;
+       const root = document.getElementById('1');
+       const firstChild = root.firstChild;
 
-      const walker = document.createTreeWalker(root);
-      walker.currentNode = root;
-      const finishedNodes = new Set();
+       const walker = document.createTreeWalker(root);
+       walker.currentNode = root;
+       const finishedNodes = new Set();
 
-      expect(generationUtils.forTesting.forwardTraverse(walker, finishedNodes))
-        .toEqual(firstChild);
+       expect(generationUtils.forTesting.forwardTraverse(walker, finishedNodes))
+           .toEqual(firstChild);
 
-      expect(walker.currentNode).toEqual(firstChild);
-    });
-
-  it('Given walker with non finished current node\n' +
-    'and current node has no visible children\n' +
-    'and current node has a visible next sibling\n' +
-    'When forwardTraverse is called\n' +
-    'Then the next visible sibling of current node is returned',
-    function () {
-      document.body.innerHTML = __html__['traversal_tests.html'];
-
-      const root = document.getElementById('1');
-      const currentNode = document.getElementById('2').firstChild;
-      const nextSibling = document.getElementById('3');
-
-      const walker = document.createTreeWalker(root);
-      walker.currentNode = currentNode;
-      const finishedNodes = new Set();
-
-      expect(generationUtils.forTesting.forwardTraverse(walker, finishedNodes))
-        .toEqual(nextSibling);
-
-      expect(walker.currentNode).toEqual(nextSibling);
-    });
+       expect(walker.currentNode).toEqual(firstChild);
+     });
 
   it('Given walker with non finished current node\n' +
-    'and current node has no visible children\n' +
-    'and current node has no visible next siblings\n' +
-    'When forwardTraverse is called\n' +
-    'Then the parent of current node is returned\n' +
-    'and the parent of current node is marked as finished',
-    function () {
-      document.body.innerHTML = __html__['traversal_tests.html'];
+         'and current node has no visible children\n' +
+         'and current node has a visible next sibling\n' +
+         'When forwardTraverse is called\n' +
+         'Then the next visible sibling of current node is returned',
+     function() {
+       document.body.innerHTML = __html__['traversal_tests.html'];
 
-      const root = document.getElementById('1');
-      const parent = document.getElementById('3');
-      const currentNode = parent.lastChild;
+       const root = document.getElementById('1');
+       const currentNode = document.getElementById('2').firstChild;
+       const nextSibling = document.getElementById('3');
 
-      const walker = document.createTreeWalker(root);
-      walker.currentNode = currentNode;
-      const finishedNodes = new Set();
+       const walker = document.createTreeWalker(root);
+       walker.currentNode = currentNode;
+       const finishedNodes = new Set();
 
-      expect(generationUtils.forTesting.forwardTraverse(walker, finishedNodes))
-        .toEqual(parent);
+       expect(generationUtils.forTesting.forwardTraverse(walker, finishedNodes))
+           .toEqual(nextSibling);
 
-      expect(walker.currentNode).toEqual(parent);
+       expect(walker.currentNode).toEqual(nextSibling);
+     });
 
-      expect(finishedNodes.has(parent))
-        .toBeTrue();
-    });
+  it('Given walker with non finished current node\n' +
+         'and current node has no visible children\n' +
+         'and current node has no visible next siblings\n' +
+         'When forwardTraverse is called\n' +
+         'Then the parent of current node is returned\n' +
+         'and the parent of current node is marked as finished',
+     function() {
+       document.body.innerHTML = __html__['traversal_tests.html'];
 
-  it('Given walker with finished current node\n' +
-    'and current node has visible children\n' +
-    'and current node has no visible next sibling\n' +
-    'When forwardTraverse is called\n' +
-    'Then the parent of current node is returned\n' +
-    'and the parent of current node is marked as finished',
-    function () {
-      document.body.innerHTML = __html__['traversal_tests.html'];
+       const root = document.getElementById('1');
+       const parent = document.getElementById('3');
+       const currentNode = parent.lastChild;
 
-      const root = document.getElementById('1');
-      const currentNode = root.lastChild;
+       const walker = document.createTreeWalker(root);
+       walker.currentNode = currentNode;
+       const finishedNodes = new Set();
 
-      const walker = document.createTreeWalker(root);
-      walker.currentNode = currentNode;
+       expect(generationUtils.forTesting.forwardTraverse(walker, finishedNodes))
+           .toEqual(parent);
 
-      const finishedNodes = new Set([currentNode]);
+       expect(walker.currentNode).toEqual(parent);
 
-      expect(generationUtils.forTesting.forwardTraverse(walker, finishedNodes))
-        .toEqual(root);
-
-      expect(walker.currentNode).toEqual(root);
-
-      expect(finishedNodes.has(root))
-        .toBeTrue();
-    });
+       expect(finishedNodes.has(parent)).toBeTrue();
+     });
 
   it('Given walker with finished current node\n' +
-    'and current node has visible next sibling\n' +
-    'When forwardTraverse is called\n' +
-    'Then the next visible sibling of current node is returned',
-    function () {
-      document.body.innerHTML = __html__['traversal_tests.html'];
+         'and current node has visible children\n' +
+         'and current node has no visible next sibling\n' +
+         'When forwardTraverse is called\n' +
+         'Then the parent of current node is returned\n' +
+         'and the parent of current node is marked as finished',
+     function() {
+       document.body.innerHTML = __html__['traversal_tests.html'];
 
-      const parent = document.getElementById('2');
-      const currentNode = document.getElementById('3');
-      const nextSibling = document.getElementById('4');
+       const root = document.getElementById('1');
+       const currentNode = root.lastChild;
 
-      const walker = document.createTreeWalker(parent);
-      walker.currentNode = currentNode;
-      const finishedNodes = new Set([currentNode]);
+       const walker = document.createTreeWalker(root);
+       walker.currentNode = currentNode;
 
-      expect(generationUtils.forTesting.forwardTraverse(walker, finishedNodes))
-        .toEqual(nextSibling);
+       const finishedNodes = new Set([currentNode]);
 
-      expect(walker.currentNode).toEqual(nextSibling);
-    });
+       expect(generationUtils.forTesting.forwardTraverse(walker, finishedNodes))
+           .toEqual(root);
+
+       expect(walker.currentNode).toEqual(root);
+
+       expect(finishedNodes.has(root)).toBeTrue();
+     });
+
+  it('Given walker with finished current node\n' +
+         'and current node has visible next sibling\n' +
+         'When forwardTraverse is called\n' +
+         'Then the next visible sibling of current node is returned',
+     function() {
+       document.body.innerHTML = __html__['traversal_tests.html'];
+
+       const parent = document.getElementById('2');
+       const currentNode = document.getElementById('3');
+       const nextSibling = document.getElementById('4');
+
+       const walker = document.createTreeWalker(parent);
+       walker.currentNode = currentNode;
+       const finishedNodes = new Set([currentNode]);
+
+       expect(generationUtils.forTesting.forwardTraverse(walker, finishedNodes))
+           .toEqual(nextSibling);
+
+       expect(walker.currentNode).toEqual(nextSibling);
+     });
 
   // backwardTraverse tests
   it('Given walker with non finished current node\n' +
-    'and current node has visible children\n' +
-    'When backwardTraverse is called\n' +
-    'Then the last visible child of current node is returned',
-    function () {
-      document.body.innerHTML = __html__['traversal_tests.html'];
+         'and current node has visible children\n' +
+         'When backwardTraverse is called\n' +
+         'Then the last visible child of current node is returned',
+     function() {
+       document.body.innerHTML = __html__['traversal_tests.html'];
 
-      const root = document.getElementById('2');
-      const lastChild = root.lastChild;
+       const root = document.getElementById('2');
+       const lastChild = root.lastChild;
 
-      const walker = document.createTreeWalker(root);
-      walker.currentNode = root;
-      const finishedNodes = new Set();
+       const walker = document.createTreeWalker(root);
+       walker.currentNode = root;
+       const finishedNodes = new Set();
 
-      expect(generationUtils.forTesting.backwardTraverse(walker, finishedNodes))
-        .toEqual(lastChild);
+       expect(
+           generationUtils.forTesting.backwardTraverse(walker, finishedNodes))
+           .toEqual(lastChild);
 
-      expect(walker.currentNode).toEqual(lastChild);
-    });
-
-  it('Given walker with non finished current node\n' +
-    'and current node has no visible children\n' +
-    'and current node has a visible previous sibling\n' +
-    'When backwardTraverse is called\n' +
-    'Then the previous visible sibling of current node is returned',
-    function () {
-      document.body.innerHTML = __html__['traversal_tests.html'];
-
-      const root = document.getElementById('1');
-      const currentNode = document.getElementById('2').lastChild;
-      const previousSibling = document.getElementById('4');
-
-      const walker = document.createTreeWalker(root);
-      walker.currentNode = currentNode;
-      const finishedNodes = new Set();
-
-      expect(generationUtils.forTesting.backwardTraverse(walker, finishedNodes))
-        .toEqual(previousSibling);
-
-      expect(walker.currentNode).toEqual(previousSibling);
-    });
+       expect(walker.currentNode).toEqual(lastChild);
+     });
 
   it('Given walker with non finished current node\n' +
-    'and current node has no visible children\n' +
-    'and current node has no visible previous sibling\n' +
-    'When backwardTraverse is called\n' +
-    'Then the parent of current node is returned\n' +
-    'and the parent of current node is marked as finished',
-    function () {
-      document.body.innerHTML = __html__['traversal_tests.html'];
+         'and current node has no visible children\n' +
+         'and current node has a visible previous sibling\n' +
+         'When backwardTraverse is called\n' +
+         'Then the previous visible sibling of current node is returned',
+     function() {
+       document.body.innerHTML = __html__['traversal_tests.html'];
 
-      const root = document.getElementById('1');
-      const parent = document.getElementById('3');
-      const currentNode = parent.firstChild;
+       const root = document.getElementById('1');
+       const currentNode = document.getElementById('2').lastChild;
+       const previousSibling = document.getElementById('4');
 
-      const walker = document.createTreeWalker(root);
-      walker.currentNode = currentNode;
-      const finishedNodes = new Set();
+       const walker = document.createTreeWalker(root);
+       walker.currentNode = currentNode;
+       const finishedNodes = new Set();
 
-      expect(generationUtils.forTesting.backwardTraverse(walker, finishedNodes))
-        .toEqual(parent);
+       expect(
+           generationUtils.forTesting.backwardTraverse(walker, finishedNodes))
+           .toEqual(previousSibling);
 
-      expect(walker.currentNode).toEqual(parent);
+       expect(walker.currentNode).toEqual(previousSibling);
+     });
 
-      expect(finishedNodes.has(parent))
-        .toBeTrue();
-    });
+  it('Given walker with non finished current node\n' +
+         'and current node has no visible children\n' +
+         'and current node has no visible previous sibling\n' +
+         'When backwardTraverse is called\n' +
+         'Then the parent of current node is returned\n' +
+         'and the parent of current node is marked as finished',
+     function() {
+       document.body.innerHTML = __html__['traversal_tests.html'];
 
-  it('Given walker with finished current node\n' +
-    'and current node has visible children\n' +
-    'and current node has no visible previous sibling\n' +
-    'When backwardTraverse is called\n' +
-    'Then the parent of current node is returned\n' +
-    'and the parent of current node is marked as finished',
-    function () {
-      document.body.innerHTML = __html__['traversal_tests.html'];
+       const root = document.getElementById('1');
+       const parent = document.getElementById('3');
+       const currentNode = parent.firstChild;
 
-      const parent = document.getElementById('5');
-      const currentNode = document.getElementById('6');
+       const walker = document.createTreeWalker(root);
+       walker.currentNode = currentNode;
+       const finishedNodes = new Set();
 
-      const walker = document.createTreeWalker(parent);
-      walker.currentNode = currentNode;
+       expect(
+           generationUtils.forTesting.backwardTraverse(walker, finishedNodes))
+           .toEqual(parent);
 
-      const finishedNodes = new Set([currentNode]);
+       expect(walker.currentNode).toEqual(parent);
 
-      expect(generationUtils.forTesting.backwardTraverse(walker, finishedNodes))
-        .toEqual(parent);
-
-      expect(walker.currentNode).toEqual(parent);
-
-      expect(finishedNodes.has(parent))
-        .toBeTrue();
-    });
+       expect(finishedNodes.has(parent)).toBeTrue();
+     });
 
   it('Given walker with finished current node\n' +
-    'and current node has visible previous sibling\n' +
-    'When backwardTraverse is called\n' +
-    'Then the previous visible sibling of current node is returned',
-    function () {
-      document.body.innerHTML = __html__['traversal_tests.html'];
+         'and current node has visible children\n' +
+         'and current node has no visible previous sibling\n' +
+         'When backwardTraverse is called\n' +
+         'Then the parent of current node is returned\n' +
+         'and the parent of current node is marked as finished',
+     function() {
+       document.body.innerHTML = __html__['traversal_tests.html'];
 
-      const parent = document.getElementById('2');
-      const currentNode = document.getElementById('4');
-      const previousSibling = document.getElementById('3');
+       const parent = document.getElementById('5');
+       const currentNode = document.getElementById('6');
 
-      const walker = document.createTreeWalker(parent);
-      walker.currentNode = currentNode;
-      const finishedNodes = new Set([currentNode]);
+       const walker = document.createTreeWalker(parent);
+       walker.currentNode = currentNode;
 
-      expect(generationUtils.forTesting.backwardTraverse(walker, finishedNodes))
-        .toEqual(previousSibling);
+       const finishedNodes = new Set([currentNode]);
 
-      expect(walker.currentNode).toEqual(previousSibling);
-    });
+       expect(
+           generationUtils.forTesting.backwardTraverse(walker, finishedNodes))
+           .toEqual(parent);
+
+       expect(walker.currentNode).toEqual(parent);
+
+       expect(finishedNodes.has(parent)).toBeTrue();
+     });
+
+  it('Given walker with finished current node\n' +
+         'and current node has visible previous sibling\n' +
+         'When backwardTraverse is called\n' +
+         'Then the previous visible sibling of current node is returned',
+     function() {
+       document.body.innerHTML = __html__['traversal_tests.html'];
+
+       const parent = document.getElementById('2');
+       const currentNode = document.getElementById('4');
+       const previousSibling = document.getElementById('3');
+
+       const walker = document.createTreeWalker(parent);
+       walker.currentNode = currentNode;
+       const finishedNodes = new Set([currentNode]);
+
+       expect(
+           generationUtils.forTesting.backwardTraverse(walker, finishedNodes))
+           .toEqual(previousSibling);
+
+       expect(walker.currentNode).toEqual(previousSibling);
+     });
 });

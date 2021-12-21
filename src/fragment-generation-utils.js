@@ -271,8 +271,8 @@ const getSearchSpaceForStart = (range) => {
   const isFinished = new Set();
   // if the range starts after the last child of an element node
   // don't visit its subtree because it's not included in the range
-  if(range.startContainer.nodeType === Node.ELEMENT_NODE 
-    && range.startOffset === range.startContainer.childNodes.length) {
+  if (range.startContainer.nodeType === Node.ELEMENT_NODE &&
+      range.startOffset === range.startContainer.childNodes.length) {
     isFinished.add(range.startContainer);
   }
   const origin = node;
@@ -288,13 +288,15 @@ const getSearchSpaceForStart = (range) => {
     } else {
       tempRange.setStartBefore(node);
     }
-    // Add node to accumulator to keep track of text inside the current block boundaries
+    // Add node to accumulator to keep track of text inside the current block
+    // boundaries
     textAccumulator.appendNode(node);
 
-    // if the accumulator found a non empty block boundary we've got our search space
+    // if the accumulator found a non empty block boundary we've got our search
+    // space
     if (textAccumulator.textInBlock !== null) {
       return textAccumulator.textInBlock;
-      }
+    }
     node = forwardTraverse(walker, isFinished);
   }
   return undefined;
@@ -319,8 +321,8 @@ const getSearchSpaceForEnd = (range) => {
   const isFinished = new Set();
   // if the range ends before the first child of an element node
   // don't visit its subtree because it's not included in the range
-  if(range.endContainer.nodeType === Node.ELEMENT_NODE 
-    && range.endOffset === 0) {
+  if (range.endContainer.nodeType === Node.ELEMENT_NODE &&
+      range.endOffset === 0) {
     isFinished.add(range.endContainer);
   }
 
@@ -339,13 +341,15 @@ const getSearchSpaceForEnd = (range) => {
       tempRange.setEndAfter(node);
     }
 
-    // Add node to accumulator to keep track of text inside the current block boundaries
+    // Add node to accumulator to keep track of text inside the current block
+    // boundaries
     textAccumulator.appendNode(node);
 
-    // if the accumulator found a non empty block boundary we've got our search space
+    // if the accumulator found a non empty block boundary we've got our search
+    // space
     if (textAccumulator.textInBlock !== null) {
       return textAccumulator.textInBlock;
-      }
+    }
 
     node = backwardTraverse(walker, isFinished);
   }
@@ -965,39 +969,51 @@ const FragmentFactory = class {
 };
 
 /**
- * Helper class to calculate the text in the first or last non empty block boundary in a given range
+ * Helper class to calculate the text in the first or last non empty block
+ * boundary in a given range
  */
 const BlockTextAccumulator = class {
   /**
-   * @param {Range} searchRange - the range for which the text in the last or first non emty block boundary will be calculated 
-   * @param {boolean} isForwardTraversal - true if searchRange if nodes in searchRange will be forward traversed  
+   * @param {Range} searchRange - the range for which the text in the last or
+   *     first non emty block boundary will be calculated
+   * @param {boolean} isForwardTraversal - true if searchRange if nodes in
+   *     searchRange will be forward traversed
    */
   constructor(searchRange, isForwardTraversal) {
     this.searchRange = searchRange;
-    this.insertFunc = isForwardTraversal ? Array.prototype.push : Array.prototype.unshift;
+    this.insertFunc =
+        isForwardTraversal ? Array.prototype.push : Array.prototype.unshift;
     this.textFound = false;
     this.textNodes = [];
     this.textInBlock = null;
   }
   /**
    * Adds the next node in the search space range traversal to the accumulator.
-   * The accumulator then will keep track of the text nodes in the range until a block boundary is found.
-   * Once a block boundary is found and the content of the text nodes in the boundary is non emtpy, the property
-   * textInBlock will be set with the content of the text nodes, trimmed of leading and trailing whitespaces.
-   * @param {Node} node - next node in the traversal of the searchRange  
+   * The accumulator then will keep track of the text nodes in the range until a
+   * block boundary is found. Once a block boundary is found and the content of
+   * the text nodes in the boundary is non emtpy, the property textInBlock will
+   * be set with the content of the text nodes, trimmed of leading and trailing
+   * whitespaces.
+   * @param {Node} node - next node in the traversal of the searchRange
    */
   appendNode(node) {
-    // if we already calculated the text in the block boundary just ignore any calls to append nodes
+    // if we already calculated the text in the block boundary just ignore any
+    // calls to append nodes
     if (this.textInBlock !== null) {
       return;
     }
-    // we found a block boundary, check if there's text inside and set it to textInBlock or keep going to the next block boundary
+    // we found a block boundary, check if there's text inside and set it to
+    // textInBlock or keep going to the next block boundary
     if (isBlock(node)) {
       if (this.textFound) {
-        // concatenate all the text nodes in the block boundary and trim any trailing and leading whitespaces
-        this.textInBlock = this.textNodes.map(textNode => textNode.textContent).join("").trim();
+        // concatenate all the text nodes in the block boundary and trim any
+        // trailing and leading whitespaces
+        this.textInBlock = this.textNodes.map(textNode => textNode.textContent)
+                               .join('')
+                               .trim();
       } else {
-        // discard the text nodes visited so far since they are empty and we'll continue searching in the next block boundary
+        // discard the text nodes visited so far since they are empty and we'll
+        // continue searching in the next block boundary
         this.textNodes = [];
       }
       return;
@@ -1006,33 +1022,39 @@ const BlockTextAccumulator = class {
     // ignore non text nodes
     if (!isText(node)) return;
 
-    // get the part of node inside the search range. this is to avoid accumulating text that's not inside the range
+    // get the part of node inside the search range. this is to avoid
+    // accumulating text that's not inside the range
     const nodeToInsert = this.getNodeInterceptionWithRange(node);
 
     // keep track of any text found in the block boundary.
-    this.textFound = this.textFound || nodeToInsert.textContent.trim() !== "";
+    this.textFound = this.textFound || nodeToInsert.textContent.trim() !== '';
 
     this.insertFunc.call(this.textNodes, nodeToInsert);
   }
 
   /**
-   * Calculates the interception of a node with searchRange and returns a Text Node with the interception
+   * Calculates the interception of a node with searchRange and returns a Text
+   * Node with the interception
    * @param {Node} node - the node to intercept with searchRange
-   * @returns {Node} - node if node is fully within searchRange or a Text Node with the substring of the content of node inside the search range
+   * @returns {Node} - node if node is fully within searchRange or a Text Node
+   *     with the substring of the content of node inside the search range
    */
   getNodeInterceptionWithRange(node) {
     let startOffset = null;
     let endOffset = null;
 
-    if (node === this.searchRange.startContainer && this.searchRange.startOffset !== 0) {
+    if (node === this.searchRange.startContainer &&
+        this.searchRange.startOffset !== 0) {
       startOffset = this.searchRange.startOffset;
     }
 
-    if (node === this.searchRange.endContainer && this.searchRange.endOffset !== node.textContent.length) {
+    if (node === this.searchRange.endContainer &&
+        this.searchRange.endOffset !== node.textContent.length) {
       endOffset = this.searchRange.endOffset;
     }
     if (startOffset !== null || endOffset !== null) {
-      return document.createTextNode(node.textContent.substring(startOffset ?? 0, endOffset ?? node.textContent.length));
+      return document.createTextNode(node.textContent.substring(
+          startOffset ?? 0, endOffset ?? node.textContent.length));
     }
 
     return node;
@@ -1483,7 +1505,7 @@ const getTextNodesInSameBlock = (node) => {
     forwardNode = forwardTraverse(forwardWalker, isForwardFinished);
   }
 
-  return { preNodes: preNodes, innerNodes: innerNodes, postNodes: postNodes };
+  return {preNodes: preNodes, innerNodes: innerNodes, postNodes: postNodes};
 };
 
 /**
@@ -1538,13 +1560,13 @@ const createForwardOverrideMap = (walker) => {
 };
 
 /**
- * Performs traversal on a TreeWalker, visiting each subtree in document order. 
+ * Performs traversal on a TreeWalker, visiting each subtree in document order.
  * When visiting a subtree not already visited (its root not in finishedNodes ),
- * first the root is emited then the subtree is traversed, then the root is emited again
- * and then the next subtree in document order is visited. 
- * 
- * Subtree's roots are emited twice to signal the begining and ending of element nodes.
- * This is useful for ensuring the ends of block boundaries are found. 
+ * first the root is emited then the subtree is traversed, then the root is
+ * emited again and then the next subtree in document order is visited.
+ *
+ * Subtree's roots are emited twice to signal the begining and ending of element
+ * nodes. This is useful for ensuring the ends of block boundaries are found.
  * @param {TreeWalker} walker - the TreeWalker to be traversed
  * @param {Set} finishedNodes - set of subtree roots already visited
  * @return {Node} - next node in the traversal
@@ -1576,13 +1598,14 @@ const forwardTraverse = (walker, finishedNodes) => {
 };
 
 /**
- * Performs backwards traversal on a TreeWalker, visiting each subtree in backwards document order. 
- * When visiting a subtree not already visited (its root not in finishedNodes ),
- * first the root is emited then the subtree is backward traversed, then the root is emited again
- * and then the previous subtree in document order is visited. 
- * 
- * Subtree's roots are emited twice to signal the begining and ending of element nodes.
- * This is useful for ensuring  block boundaries are found. 
+ * Performs backwards traversal on a TreeWalker, visiting each subtree in
+ * backwards document order. When visiting a subtree not already visited (its
+ * root not in finishedNodes ), first the root is emited then the subtree is
+ * backward traversed, then the root is emited again and then the previous
+ * subtree in document order is visited.
+ *
+ * Subtree's roots are emited twice to signal the begining and ending of element
+ * nodes. This is useful for ensuring  block boundaries are found.
  * @param {TreeWalker} walker - the TreeWalker to be traversed
  * @param {Set} finishedNodes - set of subtree roots already visited
  * @return {Node} - next node in the backwards traversal
@@ -1594,14 +1617,14 @@ const backwardTraverse = (walker, finishedNodes) => {
     const lastChild = walker.lastChild();
     if (lastChild !== null) {
       return lastChild;
-      }
     }
+  }
 
   // if no subtree go to previous sibling if any
   const previousSibling = walker.previousSibling();
   if (previousSibling !== null) {
     return previousSibling;
-    }
+  }
 
   // if no sibling go back to parent and mark it as finished
   const parent = walker.parentNode();
@@ -1644,7 +1667,7 @@ const expandRangeEndToWordBound = (range) => {
     if (!walker) {
       return;
     }
-    // we'll traverse the dom after node's subtree to try to find 
+    // we'll traverse the dom after node's subtree to try to find
     // either a word or block boundary
     const isFinished = new Set([node]);
 
