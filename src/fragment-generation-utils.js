@@ -981,8 +981,7 @@ const BlockTextAccumulator = class {
    */
   constructor(searchRange, isForwardTraversal) {
     this.searchRange = searchRange;
-    this.insertFunc =
-        isForwardTraversal ? Array.prototype.push : Array.prototype.unshift;
+    this.isForwardTraversal = isForwardTraversal;
     this.textFound = false;
     this.textNodes = [];
     this.textInBlock = null;
@@ -1006,6 +1005,11 @@ const BlockTextAccumulator = class {
     // textInBlock or keep going to the next block boundary.
     if (isBlock(node)) {
       if (this.textFound) {
+        // When traversing backwards the nodes are pushed in reverse order.
+        // Reversing them to get them in the right order.
+        if(!this.isForwardTraversal) {
+          this.textNodes.reverse();
+        }
         // Concatenate all the text nodes in the block boundary and trim any
         // trailing and leading whitespaces.
         this.textInBlock = this.textNodes.map(textNode => textNode.textContent)
@@ -1029,7 +1033,7 @@ const BlockTextAccumulator = class {
     // Keep track of any text found in the block boundary.
     this.textFound = this.textFound || nodeToInsert.textContent.trim() !== '';
 
-    this.insertFunc.call(this.textNodes, nodeToInsert);
+    this.textNodes.push(nodeToInsert);
   }
 
   /**
