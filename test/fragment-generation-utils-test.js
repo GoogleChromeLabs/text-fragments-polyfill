@@ -1069,7 +1069,7 @@ describe('FragmentGenerationUtils', function() {
          'When forwardTraverse is called\n' +
          'Then the first visible child of current node is returned',
      function() {
-       document.body.innerHTML = __html__['traversal_tests.html'];
+       document.body.innerHTML = __html__['traversal-tests.html'];
 
        const root = document.getElementById('1');
        const firstChild = root.firstChild;
@@ -1090,7 +1090,7 @@ describe('FragmentGenerationUtils', function() {
          'When forwardTraverse is called\n' +
          'Then the next visible sibling of current node is returned',
      function() {
-       document.body.innerHTML = __html__['traversal_tests.html'];
+       document.body.innerHTML = __html__['traversal-tests.html'];
 
        const root = document.getElementById('1');
        const currentNode = document.getElementById('2').firstChild;
@@ -1113,7 +1113,7 @@ describe('FragmentGenerationUtils', function() {
          'Then the parent of current node is returned\n' +
          'and the parent of current node is marked as finished',
      function() {
-       document.body.innerHTML = __html__['traversal_tests.html'];
+       document.body.innerHTML = __html__['traversal-tests.html'];
 
        const root = document.getElementById('1');
        const parent = document.getElementById('3');
@@ -1138,7 +1138,7 @@ describe('FragmentGenerationUtils', function() {
          'Then the parent of current node is returned\n' +
          'and the parent of current node is marked as finished',
      function() {
-       document.body.innerHTML = __html__['traversal_tests.html'];
+       document.body.innerHTML = __html__['traversal-tests.html'];
 
        const root = document.getElementById('1');
        const currentNode = root.lastChild;
@@ -1161,7 +1161,7 @@ describe('FragmentGenerationUtils', function() {
          'When forwardTraverse is called\n' +
          'Then the next visible sibling of current node is returned',
      function() {
-       document.body.innerHTML = __html__['traversal_tests.html'];
+       document.body.innerHTML = __html__['traversal-tests.html'];
 
        const parent = document.getElementById('2');
        const currentNode = document.getElementById('3');
@@ -1183,7 +1183,7 @@ describe('FragmentGenerationUtils', function() {
          'When backwardTraverse is called\n' +
          'Then the last visible child of current node is returned',
      function() {
-       document.body.innerHTML = __html__['traversal_tests.html'];
+       document.body.innerHTML = __html__['traversal-tests.html'];
 
        const root = document.getElementById('2');
        const lastChild = root.lastChild;
@@ -1205,7 +1205,7 @@ describe('FragmentGenerationUtils', function() {
          'When backwardTraverse is called\n' +
          'Then the previous visible sibling of current node is returned',
      function() {
-       document.body.innerHTML = __html__['traversal_tests.html'];
+       document.body.innerHTML = __html__['traversal-tests.html'];
 
        const root = document.getElementById('1');
        const currentNode = document.getElementById('2').lastChild;
@@ -1229,7 +1229,7 @@ describe('FragmentGenerationUtils', function() {
          'Then the parent of current node is returned\n' +
          'and the parent of current node is marked as finished',
      function() {
-       document.body.innerHTML = __html__['traversal_tests.html'];
+       document.body.innerHTML = __html__['traversal-tests.html'];
 
        const root = document.getElementById('1');
        const parent = document.getElementById('3');
@@ -1255,7 +1255,7 @@ describe('FragmentGenerationUtils', function() {
          'Then the parent of current node is returned\n' +
          'and the parent of current node is marked as finished',
      function() {
-       document.body.innerHTML = __html__['traversal_tests.html'];
+       document.body.innerHTML = __html__['traversal-tests.html'];
 
        const parent = document.getElementById('5');
        const currentNode = document.getElementById('6');
@@ -1279,7 +1279,7 @@ describe('FragmentGenerationUtils', function() {
          'When backwardTraverse is called\n' +
          'Then the previous visible sibling of current node is returned',
      function() {
-       document.body.innerHTML = __html__['traversal_tests.html'];
+       document.body.innerHTML = __html__['traversal-tests.html'];
 
        const parent = document.getElementById('2');
        const currentNode = document.getElementById('4');
