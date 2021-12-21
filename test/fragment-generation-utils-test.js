@@ -483,7 +483,6 @@ describe('FragmentGenerationUtils', function() {
   });
 
   it('excludes invisible text nodes when getting search space', function() {
-    pending('This is a known issue. This test should be reenabled when fixed.');
     document.body.innerHTML = __html__['invisible-text-node.html'];
 
     const range = document.createRange();
