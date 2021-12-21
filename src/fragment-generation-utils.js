@@ -1007,7 +1007,7 @@ const BlockTextAccumulator = class {
       if (this.textFound) {
         // When traversing backwards the nodes are pushed in reverse order.
         // Reversing them to get them in the right order.
-        if(!this.isForwardTraversal) {
+        if (!this.isForwardTraversal) {
           this.textNodes.reverse();
         }
         // Concatenate all the text nodes in the block boundary and trim any
@@ -1057,8 +1057,10 @@ const BlockTextAccumulator = class {
       endOffset = this.searchRange.endOffset;
     }
     if (startOffset !== null || endOffset !== null) {
-      return {textContent: node.textContent.substring(startOffset ?? 0,
-        endOffset ?? node.textContent.length)};
+      return {
+        textContent: node.textContent.substring(
+            startOffset ?? 0, endOffset ?? node.textContent.length)
+      };
     }
 
     return node;
@@ -1513,12 +1515,13 @@ const getTextNodesInSameBlock = (node) => {
 
 /**
  * Performs traversal on a TreeWalker, visiting each subtree in document order.
- * When visiting a subtree not already visited (its root not in finishedSubtrees ),
- * first the root is emitted then the subtree is traversed, then the root is
+ * When visiting a subtree not already visited (its root not in finishedSubtrees
+ * ), first the root is emitted then the subtree is traversed, then the root is
  * emitted again and then the next subtree in document order is visited.
  *
- * Subtree's roots are emitted twice to signal the beginning and ending of element
- * nodes. This is useful for ensuring the ends of block boundaries are found.
+ * Subtree's roots are emitted twice to signal the beginning and ending of
+ * element nodes. This is useful for ensuring the ends of block boundaries are
+ * found.
  * @param {TreeWalker} walker - the TreeWalker to be traversed
  * @param {Set} finishedSubtrees - set of subtree roots already visited
  * @return {Node} - next node in the traversal
@@ -1556,8 +1559,8 @@ const forwardTraverse = (walker, finishedSubtrees) => {
  * backward traversed, then the root is emitted again and then the previous
  * subtree in document order is visited.
  *
- * Subtree's roots are emitted twice to signal the beginning and ending of element
- * nodes. This is useful for ensuring  block boundaries are found.
+ * Subtree's roots are emitted twice to signal the beginning and ending of
+ * element nodes. This is useful for ensuring  block boundaries are found.
  * @param {TreeWalker} walker - the TreeWalker to be traversed
  * @param {Set} finishedSubtrees - set of subtree roots already visited
  * @return {Node} - next node in the backwards traversal
