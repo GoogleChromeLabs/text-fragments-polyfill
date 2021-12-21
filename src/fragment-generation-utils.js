@@ -969,13 +969,13 @@ const FragmentFactory = class {
 };
 
 /**
- * Helper class to calculate the text in the first or last non empty block
- * boundary in a given range
+ * Helper class to calculate visible text from the start or end of a range
+ * until a block boundary is reached or the range is exhausted.
  */
 const BlockTextAccumulator = class {
   /**
    * @param {Range} searchRange - the range for which the text in the last or
-   *     first non emty block boundary will be calculated
+   *     first non empty block boundary will be calculated
    * @param {boolean} isForwardTraversal - true if nodes in
    *     searchRange will be forward traversed
    */
@@ -1448,7 +1448,7 @@ const expandToNearestWordBoundaryPointUsingSegments =
  */
 
 /**
- * Traverses the DOM to extact all TextNodes appearing in the same block level
+ * Traverses the DOM to extract all TextNodes appearing in the same block level
  * as |node| (i.e., those that are descendents of a common ancestor of |node|
  * with no other block elements in between.)
  * @param {TextNode} node
@@ -1514,10 +1514,10 @@ const getTextNodesInSameBlock = (node) => {
 /**
  * Performs traversal on a TreeWalker, visiting each subtree in document order.
  * When visiting a subtree not already visited (its root not in finishedSubtrees ),
- * first the root is emited then the subtree is traversed, then the root is
- * emited again and then the next subtree in document order is visited.
+ * first the root is emitted then the subtree is traversed, then the root is
+ * emitted again and then the next subtree in document order is visited.
  *
- * Subtree's roots are emited twice to signal the begining and ending of element
+ * Subtree's roots are emitted twice to signal the beginning and ending of element
  * nodes. This is useful for ensuring the ends of block boundaries are found.
  * @param {TreeWalker} walker - the TreeWalker to be traversed
  * @param {Set} finishedSubtrees - set of subtree roots already visited
@@ -1552,11 +1552,11 @@ const forwardTraverse = (walker, finishedSubtrees) => {
 /**
  * Performs backwards traversal on a TreeWalker, visiting each subtree in
  * backwards document order. When visiting a subtree not already visited (its
- * root not in finishedSubtrees ), first the root is emited then the subtree is
- * backward traversed, then the root is emited again and then the previous
+ * root not in finishedSubtrees ), first the root is emitted then the subtree is
+ * backward traversed, then the root is emitted again and then the previous
  * subtree in document order is visited.
  *
- * Subtree's roots are emited twice to signal the begining and ending of element
+ * Subtree's roots are emitted twice to signal the beginning and ending of element
  * nodes. This is useful for ensuring  block boundaries are found.
  * @param {TreeWalker} walker - the TreeWalker to be traversed
  * @param {Set} finishedSubtrees - set of subtree roots already visited
