@@ -1053,8 +1053,8 @@ const BlockTextAccumulator = class {
       endOffset = this.searchRange.endOffset;
     }
     if (startOffset !== null || endOffset !== null) {
-      return document.createTextNode(node.textContent.substring(
-          startOffset ?? 0, endOffset ?? node.textContent.length));
+      return {textContent: node.textContent.substring(startOffset ?? 0,
+        endOffset ?? node.textContent.length)};
     }
 
     return node;
