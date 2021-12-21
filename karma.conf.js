@@ -56,6 +56,16 @@ module.exports = function (config) {
       ChromiumHeadlessNoSandbox: {
           base: 'ChromiumHeadless',
           flags: ['--no-sandbox']
+      },
+      Chrome_with_debugging: {
+        base: 'Chrome',
+        flags: ['--remote-debugging-port=9222'],
+        debug: true
+      },
+      Firefox_with_debugging: {
+        base: 'Firefox',
+        flags: ['--remote-debugging-port=9222'],
+        debug: true
       }
     },
 
@@ -63,6 +73,7 @@ module.exports = function (config) {
       // We can't run in an iframe because some of the code under test is
       // checking if it's inside an iframe.
       useIframe: false,
+      debug: config.debug
     },
 
     // Continuous Integration mode

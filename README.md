@@ -91,6 +91,12 @@ does not support Text Fragments.
    [`/demo/index.html`](https://github.com/GoogleChromeLabs/text-fragments-polyfill/blob/main/demo/index.html)
    (look for `location.hash`).
 
+## Debugging tests
+1. Run `npm run debug <debug browser>` with `debug browser = Firefox_with_debugging | Chrome_with_debugging`
+2. Go to the browser window and click on "Debug" to run the tests
+3. Add breakpoints in the browser's developer tool debugger
+4. Refresh the page so the tests run again and your breakpoints are hit
+
 ## License
 
 Apache 2.0. This is not an official Google product.
