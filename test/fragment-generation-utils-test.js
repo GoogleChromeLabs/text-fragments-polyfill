@@ -482,6 +482,26 @@ describe('FragmentGenerationUtils', function() {
         .toEqual('...');
   });
 
+  it('excludes invisible text nodes when getting search space', function() {
+    pending('This is a known issue. This test should be reenabled when fixed.');
+    document.body.innerHTML = __html__['invisible-text-node.html'];
+
+    const range = document.createRange();
+    range.setStartBefore(document.getElementById('prefix'));
+    range.setEndAfter(document.getElementById('prefix'));
+
+    const prefixSearchSpace =
+        generationUtils.forTesting.getSearchSpaceForEnd(range);
+    expect(prefixSearchSpace).toEqual('visible1');
+
+    range.setStartBefore(document.getElementById('suffix'));
+    range.setEndAfter(document.getElementById('suffix'));
+
+    const suffixSearchSpace =
+        generationUtils.forTesting.getSearchSpaceForEnd(range);
+    expect(suffixSearchSpace).toEqual('visible2');
+  });
+
   it('can generate progressively larger fragments across blocks', function() {
     document.body.innerHTML = __html__['range-fragment-test.html'];
     const range = document.createRange();
