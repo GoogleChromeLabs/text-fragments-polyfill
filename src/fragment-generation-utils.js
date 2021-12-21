@@ -1498,8 +1498,8 @@ const getTextNodesInSameBlock = (node) => {
   if (!forwardWalker) {
     return;
   }
-  // forward traverse from node after having finished its subtree
-  // to get text nodes after it until we find a block boundary
+  // Forward traverse from node after having finished its subtree
+  // to get text nodes after it until we find a block boundary.
   const finishedSubtreesForward = new Set([node]);
   let forwardNode = forwardTraverse(forwardWalker, finishedSubtreesForward);
   while (forwardNode != null && !isBlock(forwardNode)) {
@@ -1622,8 +1622,8 @@ const expandRangeEndToWordBound = (range) => {
     if (!walker) {
       return;
     }
-    // we'll traverse the dom after node's subtree to try to find
-    // either a word or block boundary
+    // We'll traverse the dom after node's subtree to try to find
+    // either a word or block boundary.
     const finishedSubtrees = new Set([node]);
 
     while (node != null) {
