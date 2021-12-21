@@ -1508,57 +1508,6 @@ const getTextNodesInSameBlock = (node) => {
 };
 
 /**
- * Helper method to create an override map which will "inject" the ancestors of
- * the walker's starting node into traversal order, when using forwardTraverse.
- * By traversing these ancestor nodes after their children (postorder), we can
- * ensure that, if the walker's origin node is inside of a block element, the
- * end of that element is properly treated as a boundary.
- * @param {TreeWalker} walker - the TreeWalker that will be traversed
- * @return {Map<Node, Node>} - the Map to be passed to forwardTraverse
- */
-const createForwardOverrideMap = (walker) => {
-  // Store the current state so it can be restored at the end.
-  const walkerOrigin = walker.currentNode;
-
-  const ancestors = new Set();
-  const overrideMap = new Map();
-
-  do {
-    // Hold on to the current node so we can reset the walker later.
-    const node = walker.currentNode;
-    ancestors.add(node);
-
-    // The override map needs to point from the last (grand*)child of |node|
-    // back to |node|, so that we traverse |node| only after all of its
-    // children. If we hit another ancestor of the origin, use that instead
-    // (since it's already part of a postorder chain in our map).
-    while (walker.lastChild() != null) {
-      if (ancestors.has(walker.currentNode)) {
-        break;
-      }
-    }
-
-    // Remember the current override, if any, for the found child.
-    const previousOverride = overrideMap.get(walker.currentNode);
-
-    // Set a mapping from the found child to its ancestor.
-    if (walker.currentNode !== node) overrideMap.set(walker.currentNode, node);
-
-    // Also set a mapping from the ancestor to the child's next node, which is
-    // |TreeWalker.nextNode()| unless it had already been overridden in the map.
-    // This override might change in a later iteration if another ancestor needs
-    // to get inserted in the ordering too.
-    overrideMap.set(node, previousOverride || walker.nextNode());
-
-    // Reset the walker to where it was before we traversed downwards.
-    walker.currentNode = node;
-  } while (walker.parentNode() != null);
-
-  walker.currentNode = walkerOrigin;
-  return overrideMap;
-};
-
-/**
  * Performs traversal on a TreeWalker, visiting each subtree in document order.
  * When visiting a subtree not already visited (its root not in finishedSubtrees ),
  * first the root is emited then the subtree is traversed, then the root is
@@ -1730,7 +1679,6 @@ const isText = (node) => {
 export const forTesting = {
   backwardTraverse: backwardTraverse,
   containsBlockBoundary: containsBlockBoundary,
-  createForwardOverrideMap: createForwardOverrideMap,
   doGenerateFragment: doGenerateFragment,
   expandRangeEndToWordBound: expandRangeEndToWordBound,
   expandRangeStartToWordBound: expandRangeStartToWordBound,
