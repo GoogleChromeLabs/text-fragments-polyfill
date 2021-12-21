@@ -233,6 +233,10 @@ const doGenerateFragment = (selection, startTime) => {
  *     be thrown so that execution can be halted.
  */
 const checkTimeout = () => {
+  // disable check when no timeout duration specified
+  if(timeoutDurationMs === null) {
+    return;
+  }
   const delta = Date.now() - t0;
   if (delta > timeoutDurationMs) {
     const timeoutError =

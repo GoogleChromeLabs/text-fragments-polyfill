@@ -13,9 +13,17 @@ function requireIntlSegmenterSupport() {
   }
 };
 
+/**
+ * Helper function to determine if tests are running for debugging
+ * @return {Boolean} - true if the --debug flag was passed to karma start
+ */
+function isDebug() {
+  return __karma__.config.debug;
+};
+
 describe('FragmentGenerationUtils', function() {
   beforeEach(function() {
-    generationUtils.setTimeout(500);
+    generationUtils.setTimeout(isDebug() ? null : 500);
     generationUtils.forTesting.recordStartTime(Date.now());
   });
 
@@ -831,6 +839,10 @@ describe('FragmentGenerationUtils', function() {
   });
 
   it('will halt generation after a certain time period', function() {
+    if(isDebug()) {
+      pending('Disabled for debugging');
+    }
+
     document.body.innerHTML = __html__['basic_test.html'];
     const range = document.createRange();
     range.selectNodeContents(document.body.firstChild.firstChild);
@@ -857,6 +869,10 @@ describe('FragmentGenerationUtils', function() {
 
 
   it('will halt search space creation after a certain time period', function() {
+    if(isDebug()) {
+      pending('Disabled for debugging');
+    }
+
     document.body.innerHTML = __html__['complicated-layout.html'];
     const range = document.createRange();
     range.selectNodeContents(document.getElementById('root'));
