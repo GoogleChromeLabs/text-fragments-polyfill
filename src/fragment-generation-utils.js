@@ -234,7 +234,7 @@ const doGenerateFragment = (selection, startTime) => {
  */
 const checkTimeout = () => {
   // disable check when no timeout duration specified
-  if(timeoutDurationMs === null) {
+  if (timeoutDurationMs === null) {
     return;
   }
   const delta = Date.now() - t0;

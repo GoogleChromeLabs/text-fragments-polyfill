@@ -839,7 +839,7 @@ describe('FragmentGenerationUtils', function() {
   });
 
   it('will halt generation after a certain time period', function() {
-    if(isDebug()) {
+    if (isDebug()) {
       pending('Disabled for debugging');
     }
 
@@ -869,7 +869,7 @@ describe('FragmentGenerationUtils', function() {
 
 
   it('will halt search space creation after a certain time period', function() {
-    if(isDebug()) {
+    if (isDebug()) {
       pending('Disabled for debugging');
     }
 
