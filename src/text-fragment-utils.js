@@ -583,9 +583,9 @@ function* getElementsIn(root, filter) {
       {acceptNode: filter},
   );
 
-  let currentNode;
-  while ((currentNode = treeWalker.nextNode())) {
-    yield currentNode;
+  const finishedSubtrees = new Set();
+  while (forwardTraverse(treeWalker, finishedSubtrees) !== null) {
+    yield treeWalker.currentNode;
   }
 }
 
