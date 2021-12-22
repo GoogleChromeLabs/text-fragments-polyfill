@@ -947,7 +947,8 @@ export const forTesting = {
   normalizeString: normalizeString,
   parseTextFragmentDirective: parseTextFragmentDirective,
   forwardTraverse: forwardTraverse,
-  backwardTraverse: backwardTraverse
+  backwardTraverse: backwardTraverse,
+  getAllTextNodes: getAllTextNodes
 };
 
 /**

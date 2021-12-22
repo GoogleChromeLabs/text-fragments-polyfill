@@ -254,7 +254,7 @@ describe('TextFragmentUtils', function() {
       '『パープル・レイン』': '『ハ\u309Aーフ\u309Aル・レイン』',
       // Chinese doesn't use diacritics and is unchanged.
       紫雨: '紫雨',
-      // Cyrilic has lower case
+      // Cyrillic has lower case
       'Кирилл Капризов': 'кирилл капризов',
       // Turkish has separate letters I/İ; since we don't have a
       // high-confidence locale, we normalize both of these to 'i'.
@@ -977,4 +977,31 @@ describe('TextFragmentUtils', function() {
       'k', 'j', 'h', 'i', 'h', 'g', 'f', 'c', 'e', 'd', 'c', 'b', 'b', 'f', 'l'
     ]);
   });
+
+  // getAllTextNodes tests
+  it('Given range that starts within a block element\n' +
+          'and ends in a text node right after the end of the block element\n' +
+          'When getAllTextNodes is called\n' +
+          'the text inside the block is returned in one block\n' +
+          'and the text after the block is returned in another block',
+      function() {
+        pending(
+            'This is a known issue. This test should be reenabled when fixed.');
+        document.body.innerHTML = __html__['marks_test.html'];
+
+        const root = document.getElementById('a');
+
+        const initialParagraph = document.getElementById('e');
+        const textAfterParagraph = initialParagraph.nextSibling;
+
+        const range = document.createRange();
+        range.setStart(initialParagraph, 0);
+        range.setEndAfter(textAfterParagraph);
+
+        const allTextNodes =
+            utils.forTesting.getAllTextNodes(root, range)
+                .map(nodeList => nodeList.map(node => node.textContent.trim()));
+
+        expect(allTextNodes).toEqual([['fancy'], ['div with']]);
+      });
 });
