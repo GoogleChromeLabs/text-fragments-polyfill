@@ -301,7 +301,7 @@ const getSearchSpaceForStart = (range) => {
     if (textAccumulator.textInBlock !== null) {
       return textAccumulator.textInBlock;
     }
-    node = forwardTraverse(walker, finishedSubtrees);
+    node = fragments.internal.forwardTraverse(walker, finishedSubtrees);
   }
   return undefined;
 };
@@ -355,7 +355,7 @@ const getSearchSpaceForEnd = (range) => {
       return textAccumulator.textInBlock;
     }
 
-    node = backwardTraverse(walker, finishedSubtrees);
+    node = fragments.internal.backwardTraverse(walker, finishedSubtrees);
   }
   return undefined;
 };
@@ -1156,7 +1156,7 @@ const containsBlockBoundary = (range) => {
   while (!tempRange.collapsed && node != null) {
     if (isBlock(node)) return true;
     if (node != null) tempRange.setStartAfter(node);
-    node = forwardTraverse(walker, finishedSubtrees);
+    node = fragments.internal.forwardTraverse(walker, finishedSubtrees);
     checkTimeout();
   }
   return false;
@@ -1304,7 +1304,7 @@ const expandRangeStartToWordBound = (range) => {
     }
     const finishedSubtrees = new Set();
 
-    let node = backwardTraverse(walker, finishedSubtrees);
+    let node = fragments.internal.backwardTraverse(walker, finishedSubtrees);
     while (node != null) {
       const newOffset = findWordStartBoundInTextNode(node);
       if (newOffset !== -1) {
@@ -1327,7 +1327,7 @@ const expandRangeStartToWordBound = (range) => {
         return;
       }
 
-      node = backwardTraverse(walker, finishedSubtrees);
+      node = fragments.internal.backwardTraverse(walker, finishedSubtrees);
       // We should never get here; the walker should eventually hit a block node
       // or the root of the document. Collapse range so the caller can handle
       // this as an error.
@@ -1468,13 +1468,15 @@ const getTextNodesInSameBlock = (node) => {
     return;
   }
   const finishedSubtrees = new Set();
-  let backNode = backwardTraverse(backWalker, finishedSubtrees);
+  let backNode =
+      fragments.internal.backwardTraverse(backWalker, finishedSubtrees);
   while (backNode != null && !isBlock(backNode)) {
     checkTimeout();
     if (backNode.nodeType === Node.TEXT_NODE) {
       preNodes.push(backNode);
     }
-    backNode = backwardTraverse(backWalker, finishedSubtrees);
+    backNode =
+        fragments.internal.backwardTraverse(backWalker, finishedSubtrees);
   };
   preNodes.reverse();
 
@@ -1505,94 +1507,18 @@ const getTextNodesInSameBlock = (node) => {
   // Forward traverse from node after having finished its subtree
   // to get text nodes after it until we find a block boundary.
   const finishedSubtreesForward = new Set([node]);
-  let forwardNode = forwardTraverse(forwardWalker, finishedSubtreesForward);
+  let forwardNode = fragments.internal.forwardTraverse(
+      forwardWalker, finishedSubtreesForward);
   while (forwardNode != null && !isBlock(forwardNode)) {
     checkTimeout();
     if (forwardNode.nodeType === Node.TEXT_NODE) {
       postNodes.push(forwardNode);
     }
-    forwardNode = forwardTraverse(forwardWalker, finishedSubtreesForward);
+    forwardNode = fragments.internal.forwardTraverse(
+        forwardWalker, finishedSubtreesForward);
   }
 
   return {preNodes: preNodes, innerNodes: innerNodes, postNodes: postNodes};
-};
-
-/**
- * Performs traversal on a TreeWalker, visiting each subtree in document order.
- * When visiting a subtree not already visited (its root not in finishedSubtrees
- * ), first the root is emitted then the subtree is traversed, then the root is
- * emitted again and then the next subtree in document order is visited.
- *
- * Subtree's roots are emitted twice to signal the beginning and ending of
- * element nodes. This is useful for ensuring the ends of block boundaries are
- * found.
- * @param {TreeWalker} walker - the TreeWalker to be traversed
- * @param {Set} finishedSubtrees - set of subtree roots already visited
- * @return {Node} - next node in the traversal
- */
-const forwardTraverse = (walker, finishedSubtrees) => {
-  // If current node's subtree is not already finished
-  // try to go first down the subtree.
-  if (!finishedSubtrees.has(walker.currentNode)) {
-    const firstChild = walker.firstChild();
-    if (firstChild !== null) {
-      return firstChild;
-    }
-  }
-
-  // If no subtree go to next sibling if any.
-  const nextSibling = walker.nextSibling();
-  if (nextSibling !== null) {
-    return nextSibling;
-  }
-
-  // If no sibling go back to parent and mark it as finished.
-  const parent = walker.parentNode();
-
-  if (parent !== null) {
-    finishedSubtrees.add(parent);
-  }
-
-  return parent;
-};
-
-/**
- * Performs backwards traversal on a TreeWalker, visiting each subtree in
- * backwards document order. When visiting a subtree not already visited (its
- * root not in finishedSubtrees ), first the root is emitted then the subtree is
- * backward traversed, then the root is emitted again and then the previous
- * subtree in document order is visited.
- *
- * Subtree's roots are emitted twice to signal the beginning and ending of
- * element nodes. This is useful for ensuring  block boundaries are found.
- * @param {TreeWalker} walker - the TreeWalker to be traversed
- * @param {Set} finishedSubtrees - set of subtree roots already visited
- * @return {Node} - next node in the backwards traversal
- */
-const backwardTraverse = (walker, finishedSubtrees) => {
-  // If current node's subtree is not already finished
-  // try to go first down the subtree.
-  if (!finishedSubtrees.has(walker.currentNode)) {
-    const lastChild = walker.lastChild();
-    if (lastChild !== null) {
-      return lastChild;
-    }
-  }
-
-  // If no subtree go to previous sibling if any.
-  const previousSibling = walker.previousSibling();
-  if (previousSibling !== null) {
-    return previousSibling;
-  }
-
-  // If no sibling go back to parent and mark it as finished.
-  const parent = walker.parentNode();
-
-  if (parent !== null) {
-    finishedSubtrees.add(parent);
-  }
-
-  return parent;
 };
 
 /**
@@ -1658,7 +1584,7 @@ const expandRangeEndToWordBound = (range) => {
         return;
       }
 
-      node = forwardTraverse(walker, finishedSubtrees);
+      node = fragments.internal.forwardTraverse(walker, finishedSubtrees);
     }
     // We should never get here; the walker should eventually hit a block node
     // or the root of the document. Collapse range so the caller can handle this
@@ -1688,14 +1614,12 @@ const isText = (node) => {
 };
 
 export const forTesting = {
-  backwardTraverse: backwardTraverse,
   containsBlockBoundary: containsBlockBoundary,
   doGenerateFragment: doGenerateFragment,
   expandRangeEndToWordBound: expandRangeEndToWordBound,
   expandRangeStartToWordBound: expandRangeStartToWordBound,
   findWordEndBoundInTextNode: findWordEndBoundInTextNode,
   findWordStartBoundInTextNode: findWordStartBoundInTextNode,
-  forwardTraverse: forwardTraverse,
   FragmentFactory: FragmentFactory,
   getSearchSpaceForEnd: getSearchSpaceForEnd,
   getSearchSpaceForStart: getSearchSpaceForStart,

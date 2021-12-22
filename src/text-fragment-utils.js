@@ -855,6 +855,84 @@ const makeNewSegmenter = () => {
 };
 
 /**
+ * Performs traversal on a TreeWalker, visiting each subtree in document order.
+ * When visiting a subtree not already visited (its root not in finishedSubtrees
+ * ), first the root is emitted then the subtree is traversed, then the root is
+ * emitted again and then the next subtree in document order is visited.
+ *
+ * Subtree's roots are emitted twice to signal the beginning and ending of
+ * element nodes. This is useful for ensuring the ends of block boundaries are
+ * found.
+ * @param {TreeWalker} walker - the TreeWalker to be traversed
+ * @param {Set} finishedSubtrees - set of subtree roots already visited
+ * @return {Node} - next node in the traversal
+ */
+const forwardTraverse = (walker, finishedSubtrees) => {
+  // If current node's subtree is not already finished
+  // try to go first down the subtree.
+  if (!finishedSubtrees.has(walker.currentNode)) {
+    const firstChild = walker.firstChild();
+    if (firstChild !== null) {
+      return firstChild;
+    }
+  }
+
+  // If no subtree go to next sibling if any.
+  const nextSibling = walker.nextSibling();
+  if (nextSibling !== null) {
+    return nextSibling;
+  }
+
+  // If no sibling go back to parent and mark it as finished.
+  const parent = walker.parentNode();
+
+  if (parent !== null) {
+    finishedSubtrees.add(parent);
+  }
+
+  return parent;
+};
+
+/**
+ * Performs backwards traversal on a TreeWalker, visiting each subtree in
+ * backwards document order. When visiting a subtree not already visited (its
+ * root not in finishedSubtrees ), first the root is emitted then the subtree is
+ * backward traversed, then the root is emitted again and then the previous
+ * subtree in document order is visited.
+ *
+ * Subtree's roots are emitted twice to signal the beginning and ending of
+ * element nodes. This is useful for ensuring  block boundaries are found.
+ * @param {TreeWalker} walker - the TreeWalker to be traversed
+ * @param {Set} finishedSubtrees - set of subtree roots already visited
+ * @return {Node} - next node in the backwards traversal
+ */
+const backwardTraverse = (walker, finishedSubtrees) => {
+  // If current node's subtree is not already finished
+  // try to go first down the subtree.
+  if (!finishedSubtrees.has(walker.currentNode)) {
+    const lastChild = walker.lastChild();
+    if (lastChild !== null) {
+      return lastChild;
+    }
+  }
+
+  // If no subtree go to previous sibling if any.
+  const previousSibling = walker.previousSibling();
+  if (previousSibling !== null) {
+    return previousSibling;
+  }
+
+  // If no sibling go back to parent and mark it as finished.
+  const parent = walker.parentNode();
+
+  if (parent !== null) {
+    finishedSubtrees.add(parent);
+  }
+
+  return parent;
+};
+
+/**
  * Should not be referenced except in the /test directory.
  */
 export const forTesting = {
@@ -868,6 +946,8 @@ export const forTesting = {
   markRange: markRange,
   normalizeString: normalizeString,
   parseTextFragmentDirective: parseTextFragmentDirective,
+  forwardTraverse: forwardTraverse,
+  backwardTraverse: backwardTraverse
 };
 
 /**
@@ -880,6 +960,8 @@ export const internal = {
   filterFunction: filterFunction,
   normalizeString: normalizeString,
   makeNewSegmenter: makeNewSegmenter,
+  forwardTraverse: forwardTraverse,
+  backwardTraverse: backwardTraverse
 }
 
 // Allow importing module from closure-compiler projects that haven't migrated
