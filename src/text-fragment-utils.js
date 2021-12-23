@@ -583,9 +583,9 @@ function* getElementsIn(root, filter) {
       {acceptNode: filter},
   );
 
-  let currentNode;
-  while ((currentNode = treeWalker.nextNode())) {
-    yield currentNode;
+  const finishedSubtrees = new Set();
+  while (forwardTraverse(treeWalker, finishedSubtrees) !== null) {
+    yield treeWalker.currentNode;
   }
 }
 
@@ -947,7 +947,8 @@ export const forTesting = {
   normalizeString: normalizeString,
   parseTextFragmentDirective: parseTextFragmentDirective,
   forwardTraverse: forwardTraverse,
-  backwardTraverse: backwardTraverse
+  backwardTraverse: backwardTraverse,
+  getAllTextNodes: getAllTextNodes
 };
 
 /**
