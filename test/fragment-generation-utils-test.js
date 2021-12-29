@@ -28,7 +28,7 @@ describe('FragmentGenerationUtils', function() {
   });
 
   it('can generate a fragment for an exact match', function() {
-    document.body.innerHTML = __html__['basic_test.html'];
+    document.body.innerHTML = __html__['basic-test.html'];
     const range = document.createRange();
     // firstChild of body is a <p>; firstChild of <p> is a text node.
     range.selectNodeContents(document.body.firstChild.firstChild);
@@ -49,7 +49,7 @@ describe('FragmentGenerationUtils', function() {
   });
 
   it('can generate a fragment for a match across block boundaries', function() {
-    document.body.innerHTML = __html__['marks_test.html'];
+    document.body.innerHTML = __html__['marks-test.html'];
     const range = document.createRange();
 
     range.setStart(document.getElementById('c'), 0);
@@ -160,7 +160,7 @@ describe('FragmentGenerationUtils', function() {
   });
 
   it('can detect if a range contains a block boundary', function() {
-    document.body.innerHTML = __html__['marks_test.html'];
+    document.body.innerHTML = __html__['marks-test.html'];
     const range = document.createRange();
     const root = document.getElementById('a');
 
@@ -197,7 +197,7 @@ describe('FragmentGenerationUtils', function() {
   });
 
   it('can find a word start inside a text node', function() {
-    document.body.innerHTML = __html__['word_bounds_test.html'];
+    document.body.innerHTML = __html__['word-bounds-test.html'];
     const elt = document.getElementById('block');
 
     // elt is an HTML element, not a text node, so we should find -1
@@ -223,7 +223,7 @@ describe('FragmentGenerationUtils', function() {
   });
 
   it('can find a word end inside a text node', function() {
-    document.body.innerHTML = __html__['word_bounds_test.html'];
+    document.body.innerHTML = __html__['word-bounds-test.html'];
     const elt = document.getElementById('block');
 
     // elt is an HTML element, not a text node, so we should find -1
@@ -249,7 +249,7 @@ describe('FragmentGenerationUtils', function() {
   });
 
   it('can expand a range start to a word bound within a node', function() {
-    document.body.innerHTML = __html__['word_bounds_test.html'];
+    document.body.innerHTML = __html__['word-bounds-test.html'];
     const range = document.createRange();
     const textNodeInBlock = document.getElementById('block').firstChild;
 
@@ -291,7 +291,7 @@ describe('FragmentGenerationUtils', function() {
      });
 
   it('can expand a range end to a word bound within a node', function() {
-    document.body.innerHTML = __html__['word_bounds_test.html'];
+    document.body.innerHTML = __html__['word-bounds-test.html'];
     const range = document.createRange();
     const textNodeInBlock = document.getElementById('block').firstChild;
 
@@ -308,7 +308,7 @@ describe('FragmentGenerationUtils', function() {
   });
 
   it('can expand a range start to an inner block boundary', function() {
-    document.body.innerHTML = __html__['word_bounds_test.html'];
+    document.body.innerHTML = __html__['word-bounds-test.html'];
     const range = document.createRange();
     const textNodeInBlock = document.getElementById('block').firstChild;
 
@@ -324,7 +324,7 @@ describe('FragmentGenerationUtils', function() {
   });
 
   it('can expand a range end to an inner block boundary', function() {
-    document.body.innerHTML = __html__['word_bounds_test.html'];
+    document.body.innerHTML = __html__['word-bounds-test.html'];
     const range = document.createRange();
     const textNodeInBlock = document.getElementById('block').firstChild;
 
@@ -340,7 +340,7 @@ describe('FragmentGenerationUtils', function() {
   });
 
   it('can expand a range end across inline elements', function() {
-    document.body.innerHTML = __html__['word_bounds_test.html'];
+    document.body.innerHTML = __html__['word-bounds-test.html'];
     const range = document.createRange();
     const inlineTextNode = document.getElementById('inline').firstChild;
     // Get the text node between the <p> and <i> nodes:
@@ -362,7 +362,7 @@ describe('FragmentGenerationUtils', function() {
   });
 
   it('can find the search space for range-based fragments', function() {
-    document.body.innerHTML = __html__['marks_test.html'];
+    document.body.innerHTML = __html__['marks-test.html'];
     const range = document.createRange();
 
     // Simplest case: a whole element with a bunch of block boundaries inside.
@@ -782,7 +782,7 @@ describe('FragmentGenerationUtils', function() {
       pending('Disabled for debugging');
     }
 
-    document.body.innerHTML = __html__['basic_test.html'];
+    document.body.innerHTML = __html__['basic-test.html'];
     const range = document.createRange();
     range.selectNodeContents(document.body.firstChild.firstChild);
 
