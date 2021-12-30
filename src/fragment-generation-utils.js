@@ -1625,6 +1625,7 @@ export const forTesting = {
   getSearchSpaceForStart: getSearchSpaceForStart,
   getTextNodesInSameBlock: getTextNodesInSameBlock,
   recordStartTime: recordStartTime,
+  BlockTextAccumulator: BlockTextAccumulator
 };
 
 // Allow importing module from closure-compiler projects that haven't migrated
