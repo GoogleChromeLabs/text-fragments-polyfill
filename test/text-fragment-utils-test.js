@@ -40,14 +40,14 @@ describe('TextFragmentUtils', function() {
   });
 
   it('marks simple matching text', function() {
-    document.body.innerHTML = __html__['basic_test.html'];
+    document.body.innerHTML = __html__['basic-test.html'];
 
     const directive = {text: [{textStart: 'trivial test of'}]};
     utils.processFragmentDirectives(directive);
 
     expect(document.body.innerHTML.replace(/\s/g, ''))
         .toEqual(
-            __html__['basic_test.expected.html'].replace(/\s/g, ''),
+            __html__['basic-test.expected.html'].replace(/\s/g, ''),
         );
   });
 
@@ -199,7 +199,7 @@ describe('TextFragmentUtils', function() {
   });
 
   it('can wrap a complex structure in <mark>s', function() {
-    document.body.innerHTML = __html__['marks_test.html'];
+    document.body.innerHTML = __html__['marks-test.html'];
     const range = document.createRange();
     range.setStart(document.getElementById('a').firstChild, 0);
     const lastChild = document.getElementById('a').lastChild;
@@ -213,11 +213,11 @@ describe('TextFragmentUtils', function() {
         );
 
     utils.removeMarks(marks);
-    expect(document.body.innerHTML).toEqual(__html__['marks_test.html']);
+    expect(document.body.innerHTML).toEqual(__html__['marks-test.html']);
   });
 
   it('can wrap a portion of a single text node in <mark>s', function() {
-    document.body.innerHTML = __html__['marks_test.html'];
+    document.body.innerHTML = __html__['marks-test.html'];
     const range = document.createRange();
     range.setStart(document.getElementById('f').firstChild, 5);
     range.setEnd(document.getElementById('f').firstChild, 17);
@@ -225,11 +225,11 @@ describe('TextFragmentUtils', function() {
     expect(marksArrayToString(marks)).toEqual('of different');
 
     utils.removeMarks(marks);
-    expect(document.body.innerHTML).toEqual(__html__['marks_test.html']);
+    expect(document.body.innerHTML).toEqual(__html__['marks-test.html']);
   });
 
   it('can <mark> a range covering many tree depths', function() {
-    document.body.innerHTML = __html__['marks_test.html'];
+    document.body.innerHTML = __html__['marks-test.html'];
     const range = document.createRange();
     range.setStart(document.getElementById('c').firstChild, 0);
     range.setEnd(document.getElementById('e').nextSibling, 6);
@@ -237,7 +237,7 @@ describe('TextFragmentUtils', function() {
     expect(marksArrayToString(marks)).toEqual('elaborate fancy div');
 
     utils.removeMarks(marks);
-    expect(document.body.innerHTML).toEqual(__html__['marks_test.html']);
+    expect(document.body.innerHTML).toEqual(__html__['marks-test.html']);
   });
 
   it('can normalize text', function() {
@@ -267,7 +267,7 @@ describe('TextFragmentUtils', function() {
   });
 
   it('can advance a range start past an offset', function() {
-    document.body.innerHTML = __html__['marks_test.html'];
+    document.body.innerHTML = __html__['marks-test.html'];
     const range = document.createRange();
     const elt = document.getElementById('a').firstChild;
     range.setStart(elt, 0);
@@ -294,7 +294,7 @@ describe('TextFragmentUtils', function() {
   });
 
   it('can advance a range start past whitespace chars', function() {
-    document.body.innerHTML = __html__['marks_test.html'];
+    document.body.innerHTML = __html__['marks-test.html'];
     const range = document.createRange();
     const elt = document.getElementById('a').firstChild;
     range.setStart(elt, 0);
@@ -624,13 +624,13 @@ describe('TextFragmentUtils', function() {
     expect(targetTextStyle.color).toBeUndefined;
 
     // no ::target-text
-    document.body.innerHTML = __html__['marks_test.html'];
+    document.body.innerHTML = __html__['marks-test.html'];
     utils.applyTargetTextStyle();
     expect(getColors()).toBeUndefined;
   });
 
   it('adds default text fragment css class to empty style element', function() {
-    document.body.innerHTML = __html__['marks_test.html'];
+    document.body.innerHTML = __html__['marks-test.html'];
     const style = {backgroundColor: 'purple', color: 'orange'};
 
     // has no style element
@@ -642,7 +642,7 @@ describe('TextFragmentUtils', function() {
 
   it('adds default text fragment css class to non empty style element',
      function() {
-       document.body.innerHTML = __html__['default_style.html'];
+       document.body.innerHTML = __html__['default-style.html'];
        document.head.insertAdjacentHTML(
            'beforeend', '<style type="text/css"></style>');
        const style = {
@@ -985,7 +985,7 @@ describe('TextFragmentUtils', function() {
          'the text inside the block is returned in one block\n' +
          'and the text after the block is returned in another block',
      function() {
-       document.body.innerHTML = __html__['marks_test.html'];
+       document.body.innerHTML = __html__['marks-test.html'];
 
        const root = document.getElementById('a');
 
