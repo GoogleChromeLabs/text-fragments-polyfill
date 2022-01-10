@@ -51,7 +51,7 @@ npm install text-fragments-polyfill
 From unpkg:
 
 ```html
-<script type="module>
+<script type="module">
   if (!('fragmentDirective' in Location.prototype) &&
       !('fragmentDirective' in document)) {
     import('https://unpkg.com/text-fragments-polyfill');
