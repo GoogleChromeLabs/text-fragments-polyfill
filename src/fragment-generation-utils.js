@@ -1257,7 +1257,7 @@ const makeWalkerForNode = (node, endNode) => {
 
   const walker = document.createTreeWalker(
       blockAncestor, NodeFilter.SHOW_ELEMENT | NodeFilter.SHOW_TEXT, (node) => {
-        return fragments.internal.filterFunction(node);
+        return fragments.internal.visibleNodesInRangeFilterFunction(node);
       });
 
   walker.currentNode = node;
@@ -1486,7 +1486,7 @@ const getTextNodesInSameBlock = (node) => {
   } else {
     const walker = document.createTreeWalker(
         node, NodeFilter.SHOW_ELEMENT | NodeFilter.SHOW_TEXT, (node) => {
-          return fragments.internal.filterFunction(node);
+          return fragments.internal.visibleNodesInRangeFilterFunction(node);
         });
     walker.currentNode = node;
     let child = walker.nextNode();

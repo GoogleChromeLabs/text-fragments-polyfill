@@ -361,7 +361,7 @@ const advanceRangeStartToNonWhitespace = (range) => {
       range.commonAncestorContainer,
       NodeFilter.SHOW_TEXT,
       (node) => {
-        return filterFunction(node, range);
+        return visibleNodesInRangeFilterFunction(node, range);
       },
   );
   let node = walker.nextNode();
@@ -476,6 +476,36 @@ export const scrollElementIntoView = (element) => {
 };
 
 /**
+ * Helper function to calculate the visibility of a Node based on its CSS
+ * computed style. This function does not take into account the visibility of
+ * the node's ancestors so even if the node is visible according to its style
+ * it might not be visible on the page if one of its ancestors is not visible.
+ * @param {Node} node - the Node to evaluate
+ * @returns {Boolean} - true if the node is visible. A node will be visible if
+ * its computed style meets all of the following criteria:
+ *  - non zero height, width, height and opacity
+ *  - visibility not hidden
+ *  - display not none
+ */
+const isNodeVisible =
+    (node) => {
+      // Find an HTMLElement (this node or an ancestor) so we can check
+      // visibility.
+      let elt = node;
+      while (elt != null && !(elt instanceof HTMLElement)) elt = elt.parentNode;
+      if (elt != null) {
+        const nodeStyle = window.getComputedStyle(elt);
+        // If the node is not rendered, just skip it.
+        if (nodeStyle.visibility === 'hidden' || nodeStyle.display === 'none' ||
+            nodeStyle.height === 0 || nodeStyle.width === 0 ||
+            nodeStyle.opacity === 0) {
+          return false;
+        }
+      }
+      return true;
+    }
+
+/**
  * Filter function for use with TreeWalkers. Rejects nodes that aren't in the
  * given range or aren't visible.
  * @param {Node} node - the Node to evaluate
@@ -484,23 +514,12 @@ export const scrollElementIntoView = (element) => {
  * @return {NodeFilter} - FILTER_ACCEPT or FILTER_REJECT, to be passed along to
  *     a TreeWalker.
  */
-const filterFunction = (node, range) => {
+const visibleNodesInRangeFilterFunction = (node, range) => {
   if (range != null && !range.intersectsNode(node))
     return NodeFilter.FILTER_REJECT;
 
-  // Find an HTMLElement (this node or an ancestor) so we can check visibility.
-  let elt = node;
-  while (elt != null && !(elt instanceof HTMLElement)) elt = elt.parentNode;
-  if (elt != null) {
-    const nodeStyle = window.getComputedStyle(elt);
-    // If the node is not rendered, just skip it.
-    if (nodeStyle.visibility === 'hidden' || nodeStyle.display === 'none' ||
-        nodeStyle.height === 0 || nodeStyle.width === 0 ||
-        nodeStyle.opacity === 0) {
-      return NodeFilter.FILTER_REJECT;
-    }
-  }
-  return NodeFilter.FILTER_ACCEPT;
+  return isNodeVisible(node) ? NodeFilter.FILTER_ACCEPT :
+                               NodeFilter.FILTER_REJECT;
 };
 
 /**
@@ -519,7 +538,7 @@ const getAllTextNodes = (root, range) => {
       getElementsIn(
           root,
           (node) => {
-            return filterFunction(node, range);
+            return visibleNodesInRangeFilterFunction(node, range);
           }),
   );
 
@@ -958,7 +977,7 @@ export const internal = {
   BLOCK_ELEMENTS: BLOCK_ELEMENTS,
   BOUNDARY_CHARS: BOUNDARY_CHARS,
   NON_BOUNDARY_CHARS: NON_BOUNDARY_CHARS,
-  filterFunction: filterFunction,
+  visibleNodesInRangeFilterFunction: visibleNodesInRangeFilterFunction,
   normalizeString: normalizeString,
   makeNewSegmenter: makeNewSegmenter,
   forwardTraverse: forwardTraverse,
