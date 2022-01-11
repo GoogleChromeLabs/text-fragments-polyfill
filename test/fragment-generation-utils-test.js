@@ -1019,4 +1019,209 @@ describe('FragmentGenerationUtils', function() {
            .toEqual(generationUtils.GenerateFragmentStatus.SUCCESS);
        expect(output.fragment.textStart).toEqual('てこの崇高');
      });
+
+  // BlockTextAccumulator tests
+  it('Given non empty text has been appended\n' +
+         'and block node has been appended\n' +
+         'and another text node is appended\n' +
+         'and another block node is appended\n' +
+         'When textInBlock is queried\n' +
+         'Then text after first block node is ignored',
+     function() {
+       document.body.innerHTML = __html__['block-accumulator-test.html'];
+
+       // Create range containing the whole body to pass to the accumulator.
+       const root = document.getElementById('a');
+       const range = document.createRange();
+       range.setStartBefore(root);
+       range.setEndAfter(root);
+
+       const accumulator =
+           new generationUtils.forTesting.BlockTextAccumulator(range, true);
+
+       // Feed non empty text node to the accumulator and then a block node to
+       // indicate we reached a block boundary.
+       const firstBlockNode = document.getElementById('e');
+       const initialText = firstBlockNode.firstChild;
+       accumulator.appendNode(initialText);
+       accumulator.appendNode(firstBlockNode);
+
+       // Feed more text and another block node to validate that text after the
+       // first block node is ignored.
+       const secondBlockNode = document.getElementById('f');
+       accumulator.appendNode(firstBlockNode.nextSibling);
+       accumulator.appendNode(secondBlockNode);
+
+       // Verify the next sibling of the block node is a text node to make sure
+       // the test fails in case we change the html test file.
+       expect(firstBlockNode.nextSibling.nodeType).toEqual(Node.TEXT_NODE);
+
+       // Check that the accumulator ignored the text after the block boundary.
+       expect(accumulator.textInBlock).toEqual(initialText.textContent.trim());
+     });
+
+  it('Given non empty text has been appended\n' +
+         'and block node has not been appended\n' +
+         'When textInBlock is queried\n' +
+         'Then textInBlock is null',
+     function() {
+       document.body.innerHTML = __html__['block-accumulator-test.html'];
+
+       // Create range containing the whole body to pass to the accumulator.
+       const root = document.getElementById('a');
+       const range = document.createRange();
+       range.setStartBefore(root);
+       range.setEndAfter(root);
+
+       const accumulator =
+           new generationUtils.forTesting.BlockTextAccumulator(range, true);
+
+       const initialText = root.firstChild;
+       // Verify the first child of root is a text node to make sure the test
+       // fails in case we change the html test file.
+       expect(initialText.TEXT_NODE).toEqual(Node.TEXT_NODE);
+       accumulator.appendNode(initialText);
+
+       expect(accumulator.textInBlock).toBeNull();
+     });
+
+  it('Given empty text has been appended\n' +
+         'and block node has been appended\n' +
+         'When textInBlock is queried\n' +
+         'Then textInBlock is null',
+     function() {
+       document.body.innerHTML = __html__['block-accumulator-test.html'];
+
+       // Create range containing the whole body to pass to the accumulator.
+       const root = document.getElementById('a');
+       const range = document.createRange();
+       range.setStartBefore(root);
+       range.setEndAfter(root);
+
+       const accumulator =
+           new generationUtils.forTesting.BlockTextAccumulator(range, true);
+
+       const blockNode = document.getElementById('e');
+       const initialText = blockNode.previousSibling;
+       // Verify initialText is a text node to make sure the test
+       // fails in case we change the html test file.
+       expect(initialText.TEXT_NODE).toEqual(Node.TEXT_NODE);
+       // Verify initialText is empty after trimmed.
+       expect(initialText.textContent.trim()).toEqual('');
+
+       accumulator.appendNode(initialText);
+       accumulator.appendNode(blockNode);
+
+       expect(accumulator.textInBlock).toBeNull();
+     });
+
+  it('Given non empty text has been appended\n' +
+         'and block node has been appended\n' +
+         'When textInBlock is queried\n' +
+         'Then textInBlock is the appended text after trimming',
+     function() {
+       document.body.innerHTML = __html__['block-accumulator-test.html'];
+
+       // Create range containing the whole body to pass to the accumulator.
+       const root = document.getElementById('a');
+       const range = document.createRange();
+       range.setStartBefore(root);
+       range.setEndAfter(root);
+
+       const accumulator =
+           new generationUtils.forTesting.BlockTextAccumulator(range, true);
+
+       const blockNode = document.getElementById('b');
+       const initialText = blockNode.previousSibling;
+       // Verify initialText is a text node to make sure the test
+       // fails in case we change the html test file.
+       expect(initialText.TEXT_NODE).toEqual(Node.TEXT_NODE);
+       // Verify initialText is not empty after trimmed.
+       expect(initialText.textContent.trim().length).toBeGreaterThan(0);
+
+       accumulator.appendNode(initialText);
+       accumulator.appendNode(blockNode);
+
+       expect(accumulator.textInBlock).toEqual(initialText.textContent.trim());
+     });
+
+  it('Given non empty text has been appended\n' +
+         'and block node has been appended\n' +
+         'and range contains only a suffix of the appended text\n' +
+         'When textInBlock is queried\n' +
+         'Then textInBlock is the trimmed suffix of appended text that is ' +
+         'contained by the range\n',
+     function() {
+       document.body.innerHTML = __html__['block-accumulator-test.html'];
+
+       // Create range containing a suffix of the text passed to the
+       // accumulator.
+       const root = document.getElementById('e');
+       const initialText = root.firstChild;
+       const range = document.createRange();
+       range.setStart(initialText, 2);
+       range.setEndAfter(root);
+
+       const accumulator =
+           new generationUtils.forTesting.BlockTextAccumulator(range, true);
+
+       accumulator.appendNode(initialText);
+       accumulator.appendNode(root);
+
+       expect(accumulator.textInBlock).toEqual('ancy');
+     });
+
+  it('Given non empty text has been appended\n' +
+         'and block node has been appended\n' +
+         'and range contains only a prefix of the appended text\n' +
+         'When textInBlock is queried\n' +
+         'Then textInBlock is the trimmed prefix of appended text that is ' +
+         'contained by the range\n',
+     function() {
+       document.body.innerHTML = __html__['block-accumulator-test.html'];
+
+       // Create range containing a suffix of the text passed to the
+       // accumulator.
+       const root = document.getElementById('e');
+       const initialText = root.firstChild;
+       const range = document.createRange();
+       range.setStartBefore(initialText);
+       range.setEnd(initialText, 2);
+
+       const accumulator =
+           new generationUtils.forTesting.BlockTextAccumulator(range, true);
+
+       accumulator.appendNode(initialText);
+       accumulator.appendNode(root);
+
+       expect(accumulator.textInBlock).toEqual('f');
+     });
+
+  it('Given only non text nodes have been appended\n' +
+         'and block node has been appended\n' +
+         'When textInBlock is queried\n' +
+         'Then textInBlock is null',
+     function() {
+       document.body.innerHTML = __html__['block-accumulator-test.html'];
+
+       // Create range containing the whole body to pass to the accumulator.
+       const root = document.getElementById('a');
+       const range = document.createRange();
+       range.setStartBefore(root);
+       range.setEndAfter(root);
+
+       const accumulator =
+           new generationUtils.forTesting.BlockTextAccumulator(range, true);
+
+       const italicNode = document.getElementById('c');
+       const spanNode = document.getElementById('d');
+       const blockNode = document.getElementById('b');
+
+       // Appending non text nodes should not affect the calculated text.
+       accumulator.appendNode(italicNode);
+       accumulator.appendNode(spanNode);
+       accumulator.appendNode(blockNode);
+
+       expect(accumulator.textInBlock).toEqual(null);
+     });
 });
