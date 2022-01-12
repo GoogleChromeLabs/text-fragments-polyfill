@@ -18,15 +18,16 @@ import * as utils from './text-fragment-utils.js';
 
 (async () => {
   // Return early if Text Fragments are supported by the browser.
-  if ('fragmentDirective' in document || 'fragmentDirective' in Location.prototype) {
+  if ('fragmentDirective' in document ||
+      'fragmentDirective' in Location.prototype) {
     return;
   }
   const hash = document.location.hash;
-  
+
   // Pass feature detection (https://web.dev/text-fragments/#feature-detection)
   document.fragmentDirective = {};
-  
-  // Return early when there is no hash. 
+
+  // Return early when there is no hash.
   // This is fine, since later added hashes are not relevant for
   // Text Fragments.
   if (!hash) {
