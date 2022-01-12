@@ -342,6 +342,24 @@ describe('TextFragmentUtils', function() {
         );
   });
 
+  it('Given a range starting with an invisible node\n' +
+         'When advanceRangeStartToNonWhitespace is called\n' +
+         'Then the invisible node is ignored \n' +
+         'and the range is advanced past the invisible node',
+     function() {
+       document.body.innerHTML = __html__['invisible-text-node.html'];
+       const startNode = document.getElementById('prefix').firstChild;
+       const targetNode = document.getElementById('target').firstChild;
+       const range = document.createRange();
+       range.selectNodeContents(document.body);
+
+       range.setStartAfter(startNode);
+
+       utils.forTesting.advanceRangeStartToNonWhitespace(range);
+       expect(range.startContainer.textContent).toEqual(targetNode.textContent);
+       expect(range.startOffset).toEqual(0);
+     });
+
   // Internally, this also tests the boundary point finding logic.
   it('can find a range from a node list', function() {
     document.body.innerHTML = __html__['boundary-points.html'];
@@ -1001,5 +1019,113 @@ describe('TextFragmentUtils', function() {
                .map(nodeList => nodeList.map(node => node.textContent.trim()));
 
        expect(allTextNodes).toEqual([['fancy'], ['div with']]);
+     });
+
+  // acceptTextNodeIfVisibleInRange tests
+  it('Given a null range\n' +
+         'and a visible Text Node\n' +
+         'When acceptTextNodeIfVisibleInRange is called\n' +
+         'Then Accept is returned',
+     function() {
+       document.body.innerHTML = __html__['invisible-text-node.html'];
+
+       const divNode = document.getElementById('prefix');
+       // Get a visible Text Node.
+       const textNode = divNode.firstChild;
+       expect(textNode.nodeType).toEqual(Node.TEXT_NODE);
+
+       const filterOutput =
+           utils.forTesting.acceptTextNodeIfVisibleInRange(textNode, null);
+       expect(filterOutput).toEqual(NodeFilter.FILTER_ACCEPT);
+     });
+
+  it('Given a null range\n' +
+         'and a visible non Text Node\n' +
+         'When acceptTextNodeIfVisibleInRange is called\n' +
+         'Then Skip is returned',
+     function() {
+       document.body.innerHTML = __html__['invisible-text-node.html'];
+
+       // Get a visible non Text Node.
+       const divNode = document.getElementById('prefix');
+
+       const filterOutput =
+           utils.forTesting.acceptTextNodeIfVisibleInRange(divNode, null);
+       expect(filterOutput).toEqual(NodeFilter.FILTER_SKIP);
+     });
+
+  it('Given a null range\n' +
+         'and a non visible Node\n' +
+         'When acceptTextNodeIfVisibleInRange is called\n' +
+         'Then Reject is returned',
+     function() {
+       document.body.innerHTML = __html__['invisible-text-node.html'];
+
+       // Get an invisible Node inside the range.
+       const divNode = document.getElementById('invisibleDiv1');
+
+       const filterOutput =
+           utils.forTesting.acceptTextNodeIfVisibleInRange(divNode, null);
+       expect(filterOutput).toEqual(NodeFilter.FILTER_REJECT);
+     });
+
+  it('Given a non null range\n' +
+         'and visible text Node inside the range\n' +
+         'When acceptTextNodeIfVisibleInRange is called\n' +
+         'Then Accept is returned',
+     function() {
+       document.body.innerHTML = __html__['invisible-text-node.html'];
+
+       // Create a range that spans across the whole body.
+       const range = document.createRange();
+       range.selectNodeContents(document.body);
+
+       const divNode = document.getElementById('prefix');
+       // Get a visible Text Node inside the range.
+       const textNode = divNode.firstChild;
+       expect(textNode.nodeType).toEqual(Node.TEXT_NODE);
+
+       const filterOutput =
+           utils.forTesting.acceptTextNodeIfVisibleInRange(textNode, range);
+       expect(filterOutput).toEqual(NodeFilter.FILTER_ACCEPT);
+     });
+
+  it('Given a non null range\n' +
+         'and visible non text Node inside the range\n' +
+         'When acceptTextNodeIfVisibleInRange is called\n' +
+         'Then Skip is returned',
+     function() {
+       document.body.innerHTML = __html__['invisible-text-node.html'];
+
+       // Create a range that spans across the whole body.
+       const range = document.createRange();
+       range.selectNodeContents(document.body);
+
+       // Get a visible non Text Node inside the range.
+       const divNode = document.getElementById('prefix');
+
+       const filterOutput =
+           utils.forTesting.acceptTextNodeIfVisibleInRange(divNode, range);
+       expect(filterOutput).toEqual(NodeFilter.FILTER_SKIP);
+     });
+
+  it('Given a non null range\n' +
+         'and visible Node outside the range\n' +
+         'When acceptTextNodeIfVisibleInRange is called\n' +
+         'Then Reject is returned',
+     function() {
+       document.body.innerHTML = __html__['invisible-text-node.html'];
+
+       // Get a visible Node.
+       const divNode = document.getElementById('prefix');
+
+       // Create a range that starts after the node .
+       const range = document.createRange();
+       range.selectNodeContents(document.body);
+       range.setStartAfter(divNode);
+
+       const filterOutput =
+           utils.forTesting.acceptTextNodeIfVisibleInRange(divNode, range);
+       expect(filterOutput).toEqual(NodeFilter.FILTER_REJECT);
      });
 });
