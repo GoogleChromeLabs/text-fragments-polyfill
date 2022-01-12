@@ -361,7 +361,7 @@ const advanceRangeStartToNonWhitespace = (range) => {
       range.commonAncestorContainer,
       NodeFilter.SHOW_TEXT,
       (node) => {
-        return visibleNodesInRangeFilterFunction(node, range);
+        return acceptNodeIfVisibleInRange(node, range);
       },
   );
   let node = walker.nextNode();
@@ -514,7 +514,7 @@ const isNodeVisible =
  * @return {NodeFilter} - FILTER_ACCEPT or FILTER_REJECT, to be passed along to
  *     a TreeWalker.
  */
-const visibleNodesInRangeFilterFunction = (node, range) => {
+const acceptNodeIfVisibleInRange = (node, range) => {
   if (range != null && !range.intersectsNode(node))
     return NodeFilter.FILTER_REJECT;
 
@@ -538,7 +538,7 @@ const getAllTextNodes = (root, range) => {
       getElementsIn(
           root,
           (node) => {
-            return visibleNodesInRangeFilterFunction(node, range);
+            return acceptNodeIfVisibleInRange(node, range);
           }),
   );
 
@@ -977,7 +977,7 @@ export const internal = {
   BLOCK_ELEMENTS: BLOCK_ELEMENTS,
   BOUNDARY_CHARS: BOUNDARY_CHARS,
   NON_BOUNDARY_CHARS: NON_BOUNDARY_CHARS,
-  visibleNodesInRangeFilterFunction: visibleNodesInRangeFilterFunction,
+  acceptNodeIfVisibleInRange: acceptNodeIfVisibleInRange,
   normalizeString: normalizeString,
   makeNewSegmenter: makeNewSegmenter,
   forwardTraverse: forwardTraverse,
