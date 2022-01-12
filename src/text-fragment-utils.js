@@ -359,9 +359,9 @@ const advanceRangeStartPastOffset = (range, node, offset) => {
 const advanceRangeStartToNonWhitespace = (range) => {
   const walker = document.createTreeWalker(
       range.commonAncestorContainer,
-      NodeFilter.SHOW_TEXT,
+      NodeFilter.SHOW_TEXT | NodeFilter.SHOW_ELEMENT,
       (node) => {
-        return acceptNodeIfVisibleInRange(node, range);
+        return acceptTextNodeIfVisibleInRange(node, range);
       },
   );
   let node = walker.nextNode();
@@ -520,6 +520,32 @@ const acceptNodeIfVisibleInRange = (node, range) => {
 
   return isNodeVisible(node) ? NodeFilter.FILTER_ACCEPT :
                                NodeFilter.FILTER_REJECT;
+};
+
+/**
+ * Filter function for use with TreeWalkers. Accepts only visible text nodes
+ * that are in the given range. Other types of nodes visible in the given range
+ * are skipped so a TreeWalker using this filter function still visits text
+ * nodes in the node's subtree.
+ * @param {Node} node - the Node to evaluate
+ * @param {Range} range - the range in which node must fall. Optional;
+ *     if null, the range check is skipped/
+ * @returns {NodeFilter} - NodeFilter value to be passed along to a TreeWalker.
+ * Values returned:
+ *  - FILTER_REJECT: Node not in range or not visible.
+ *  - FILTER_SKIP: Non Text Node visible and in range
+ *  - FILTER_ACCEPT: Text Node visible and in range
+ */
+const acceptTextNodeIfVisibleInRange = (node, range) => {
+  if (range != null && !range.intersectsNode(node))
+    return NodeFilter.FILTER_REJECT;
+
+  if (!isNodeVisible(node)) {
+    return NodeFilter.FILTER_REJECT;
+  }
+
+  return node.nodeType === Node.TEXT_NODE ? NodeFilter.FILTER_ACCEPT :
+                                            NodeFilter.FILTER_SKIP;
 };
 
 /**
@@ -967,7 +993,8 @@ export const forTesting = {
   parseTextFragmentDirective: parseTextFragmentDirective,
   forwardTraverse: forwardTraverse,
   backwardTraverse: backwardTraverse,
-  getAllTextNodes: getAllTextNodes
+  getAllTextNodes: getAllTextNodes,
+  acceptTextNodeIfVisibleInRange: acceptTextNodeIfVisibleInRange
 };
 
 /**
