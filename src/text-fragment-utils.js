@@ -481,7 +481,7 @@ export const scrollElementIntoView = (element) => {
  * the node's ancestors so even if the node is visible according to its style
  * it might not be visible on the page if one of its ancestors is not visible.
  * @param {Node} node - the Node to evaluate
- * @returns {Boolean} - true if the node is visible. A node will be visible if
+ * @return {Boolean} - true if the node is visible. A node will be visible if
  * its computed style meets all of the following criteria:
  *  - non zero height, width, height and opacity
  *  - visibility not hidden

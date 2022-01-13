@@ -1020,6 +1020,27 @@ describe('FragmentGenerationUtils', function() {
        expect(output.fragment.textStart).toEqual('てこの崇高');
      });
 
+  it('returns true if the first iteration is unique, even if no more' +
+         'iterations are possible',
+     function() {
+       // It's possible that our first round of embiggening fails but the
+       // initial state is nonetheless uniquely identifying. This happens if
+       // the target text is very short but no context is available.
+       document.body.innerHTML = __html__['first-iteration-works.html'];
+
+       // Pick out 3 words from the sentence.
+       const target = document.createRange();
+       const selection = window.getSelection();
+       const root = document.body.firstChild;
+       target.selectNodeContents(root);
+       selection.removeAllRanges();
+       selection.addRange(target);
+
+       const output = generationUtils.generateFragment(selection);
+       expect(output.status)
+           .toEqual(generationUtils.GenerateFragmentStatus.SUCCESS);
+     });
+
   // BlockTextAccumulator tests
   it('Given non empty text has been appended\n' +
          'and block node has been appended\n' +

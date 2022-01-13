@@ -215,7 +215,10 @@ const doGenerateFragment = (selection, startTime) => {
 
   factory.useSegmenter(fragments.internal.makeNewSegmenter());
 
-  while (factory.embiggen()) {
+  let didEmbiggen = false;
+  do {
+    checkTimeout();
+    didEmbiggen = factory.embiggen();
     const fragment = factory.tryToMakeUniqueFragment();
     if (fragment != null) {
       return {
@@ -223,8 +226,8 @@ const doGenerateFragment = (selection, startTime) => {
         fragment: fragment,
       };
     }
-    checkTimeout();
-  }
+  } while (didEmbiggen);
+
   return {status: GenerateFragmentStatus.AMBIGUOUS};
 };
 
