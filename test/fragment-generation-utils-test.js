@@ -1245,4 +1245,46 @@ describe('FragmentGenerationUtils', function() {
 
        expect(accumulator.textInBlock).toEqual(null);
      });
+
+  // Test expanding ranges to word bounds when there's no text nodes in the
+  // block.
+  it('Given range with no text nodes in the same block as startContainer\n' +
+         'When expandRangeStartToWordBound is called\n' +
+         'Then range is returned without changes',
+     function() {
+       document.body.innerHTML = __html__['no-text-nodes-in-range.html'];
+
+       const startNode = document.getElementById('1');
+       const endNode = document.getElementById('2');
+
+       const range = document.createRange();
+       range.setStartBefore(startNode);
+       range.setEndAfter(endNode);
+
+       const expectedRange = range.cloneRange();
+
+       generationUtils.forTesting.expandRangeStartToWordBound(range);
+
+       expect(range).toEqual(expectedRange);
+     });
+
+  it('Given range with no text nodes in the same block as endContainer\n' +
+         'When expandRangeEndToWordBound is called\n' +
+         'Then range is returned without changes',
+     function() {
+       document.body.innerHTML = __html__['no-text-nodes-in-range.html'];
+
+       const startNode = document.getElementById('1');
+       const endNode = document.getElementById('2');
+
+       const range = document.createRange();
+       range.setStartBefore(startNode);
+       range.setEndAfter(endNode);
+
+       const expectedRange = range.cloneRange();
+
+       generationUtils.forTesting.expandRangeEndToWordBound(range);
+
+       expect(range).toEqual(expectedRange);
+     });
 });

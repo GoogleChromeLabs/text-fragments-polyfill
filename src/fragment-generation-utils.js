@@ -1378,6 +1378,14 @@ const expandToNearestWordBoundaryPointUsingSegments =
 
       const allNodes =
           [...nodes.preNodes, ...nodes.innerNodes, ...nodes.postNodes];
+
+      // Edge case: There's no text nodes in the block.
+      // In that case there's nothing to do because there is no word boundary
+      // to find.
+      if (allNodes.length == 0) {
+        return;
+      }
+
       const text = preNodeText.concat(innerNodeText, postNodeText);
 
       const segments = segmenter.segment(text);
