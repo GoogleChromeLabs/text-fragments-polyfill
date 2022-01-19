@@ -216,12 +216,16 @@ export const processTextFragmentDirective = (textFragment) => {
           potentialMatch.endContainer, potentialMatch.endOffset);
       textEndRange.setEnd(searchRange.endContainer, searchRange.endOffset);
 
+      let missingSuffix = false;
+      let missingTextEnd = false;
+
       // Search through the rest of the document to find a textEnd match. This
       // may take multiple iterations if a suffix needs to be found.
       while (!textEndRange.collapsed && results.length < 2) {
         const textEndMatch =
             findTextInRange(textFragment.textEnd, textEndRange);
         if (textEndMatch == null) {
+          missingTextEnd = true;
           break;
         }
         advanceRangeStartPastOffset(
@@ -237,6 +241,7 @@ export const processTextFragmentDirective = (textFragment) => {
           const suffixResult =
               checkSuffix(textFragment.suffix, potentialMatch, searchRange);
           if (suffixResult === CheckSuffixResult.NO_SUFFIX_MATCH) {
+            missingSuffix = true;
             break;
           } else if (suffixResult === CheckSuffixResult.SUFFIX_MATCH) {
             results.push(potentialMatch.cloneRange());
@@ -249,6 +254,12 @@ export const processTextFragmentDirective = (textFragment) => {
           results.push(potentialMatch.cloneRange());
         }
       }
+      // Stopping match search because suffix or textEnd are missing from the
+      // rest of the search space.
+      if (missingSuffix || missingTextEnd) {
+        break;
+      }
+
     } else if (textFragment.suffix) {
       // If there's no textEnd but there is a suffix, search for the suffix
       // after potentialMatch
