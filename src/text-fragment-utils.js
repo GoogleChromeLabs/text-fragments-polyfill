@@ -541,7 +541,7 @@ const acceptNodeIfVisibleInRange = (node, range) => {
  * @param {Node} node - the Node to evaluate
  * @param {Range} range - the range in which node must fall. Optional;
  *     if null, the range check is skipped/
- * @returns {NodeFilter} - NodeFilter value to be passed along to a TreeWalker.
+ * @return {NodeFilter} - NodeFilter value to be passed along to a TreeWalker.
  * Values returned:
  *  - FILTER_REJECT: Node not in range or not visible.
  *  - FILTER_SKIP: Non Text Node visible and in range
