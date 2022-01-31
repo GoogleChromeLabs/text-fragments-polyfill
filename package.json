@@ -5,9 +5,11 @@
   "main": "./dist/text-fragments.js",
   "browser": "./dist/text-fragments.js",
   "module": "./dist/text-fragments.js",
+  "type": "module",
   "exports": {
     ".": "./dist/text-fragments.js",
     "./dist/fragment-generation-utils.js": "./dist/fragment-generation-utils.js",
+    "./text-fragment-utils": "./src/text-fragment-utils.js",
     "./package.json": "./package.json"
   },
   "unpkg": "./dist/text-fragments.js",
@@ -43,7 +45,7 @@
     "fix": "npx clang-format --style=Google -i ./src/*.js ./tools/*.js ./test/*.js && npx prettier --write **/*.json **/*.html",
     "prepare": "npm run clean && npm run fix && npm run lint && npx rollup src/text-fragments.js --dir dist -p 'terser' && npx rollup src/fragment-generation-utils.js --dir dist -p 'terser'",
     "lint": "npx eslint . --ext .js,.mjs --fix --ignore-pattern dist/",
-    "test": "./node_modules/karma/bin/karma start --single-run",
+    "test": "./node_modules/karma/bin/karma start karma.conf.cjs --single-run",
     "debug": "./node_modules/karma/bin/karma start --debug --browsers"
   },
   "repository": {
