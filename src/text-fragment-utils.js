@@ -368,13 +368,8 @@ const advanceRangeStartPastOffset = (range, node, offset) => {
  * @param {Range} range - the range to mutate
  */
 const advanceRangeStartToNonWhitespace = (range) => {
-  const walker = document.createTreeWalker(
-      range.commonAncestorContainer,
-      NodeFilter.SHOW_TEXT | NodeFilter.SHOW_ELEMENT,
-      (node) => {
-        return acceptTextNodeIfVisibleInRange(node, range);
-      },
-  );
+  const walker = makeTextNodeWalker(range);
+
   let node = walker.nextNode();
   while (!range.collapsed && node != null) {
     if (node !== range.startContainer) {
@@ -400,6 +395,25 @@ const advanceRangeStartToNonWhitespace = (range) => {
     }
   }
 };
+
+/**
+ * Creates a TreeWalker that traverses a range and emits visible text nodes in
+ * the range.
+ * @param {Range} range - Range to be traversed by the walker
+ * @return {TreeWalker}
+ */
+const makeTextNodeWalker =
+    (range) => {
+      const walker = document.createTreeWalker(
+          range.commonAncestorContainer,
+          NodeFilter.SHOW_TEXT | NodeFilter.SHOW_ELEMENT,
+          (node) => {
+            return acceptTextNodeIfVisibleInRange(node, range);
+          },
+      );
+
+      return walker;
+    }
 
 /**
  * Given a Range, wraps its text contents in one or more <mark> elements.
@@ -1019,7 +1033,9 @@ export const internal = {
   normalizeString: normalizeString,
   makeNewSegmenter: makeNewSegmenter,
   forwardTraverse: forwardTraverse,
-  backwardTraverse: backwardTraverse
+  backwardTraverse: backwardTraverse,
+  makeTextNodeWalker: makeTextNodeWalker,
+  isNodeVisible: isNodeVisible
 }
 
 // Allow importing module from closure-compiler projects that haven't migrated
