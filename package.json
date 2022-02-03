@@ -46,7 +46,7 @@
     "prepare": "npm run clean && npm run fix && npm run lint && npx rollup src/text-fragments.js --dir dist -p 'terser' && npx rollup src/fragment-generation-utils.js --dir dist -p 'terser'",
     "lint": "npx eslint . --ext .js,.mjs --fix --ignore-pattern dist/",
     "test": "./node_modules/karma/bin/karma start karma.conf.cjs --single-run",
-    "debug": "./node_modules/karma/bin/karma start --debug --browsers"
+    "debug": "./node_modules/karma/bin/karma start karma.conf.cjs --debug --browsers"
   },
   "repository": {
     "type": "git",
