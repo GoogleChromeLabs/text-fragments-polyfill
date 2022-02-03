@@ -1041,6 +1041,55 @@ describe('FragmentGenerationUtils', function() {
            .toEqual(generationUtils.GenerateFragmentStatus.SUCCESS);
      });
 
+  it('Given selection that starts and ends in non text nodes\n' +
+         'When generateFragment is called\n' +
+         'Then the returned fragment targets the text within the selection',
+     function() {
+       document.body.innerHTML = __html__['no-text-after-block-boundary.html'];
+
+       const start = document.getElementById('1');
+       const end = document.getElementById('2');
+       const range = document.createRange();
+       range.setStartBefore(start);
+       range.setEndAfter(end);
+
+       const selection = window.getSelection();
+       selection.removeAllRanges();
+       selection.addRange(range);
+
+       const generatedFragment = generationUtils.generateFragment(selection);
+       const expectedFragment = {
+         status: generationUtils.GenerateFragmentStatus.SUCCESS,
+         fragment: {textStart: 'text'},
+       };
+
+       expect(generatedFragment).toEqual(expectedFragment);
+     });
+
+  it('Given selection does not include visible text\n' +
+         'When generateFragment is called\n' +
+         'Then INVALID_SELECTION is returned',
+     function() {
+       document.body.innerHTML = __html__['no-text-nodes-in-range.html'];
+
+       const start = document.getElementById('1');
+       const end = document.getElementById('2');
+       const range = document.createRange();
+       range.setStartBefore(start);
+       range.setEndAfter(end);
+
+       const selection = window.getSelection();
+       selection.removeAllRanges();
+       selection.addRange(range);
+
+       const generatedFragment = generationUtils.generateFragment(selection);
+       const expectedFragment = {
+         status: generationUtils.GenerateFragmentStatus.INVALID_SELECTION
+       };
+
+       expect(generatedFragment).toEqual(expectedFragment);
+     });
+
   // BlockTextAccumulator tests
   it('Given non empty text has been appended\n' +
          'and block node has been appended\n' +
@@ -1286,5 +1335,234 @@ describe('FragmentGenerationUtils', function() {
        generationUtils.forTesting.expandRangeEndToWordBound(range);
 
        expect(range).toEqual(expectedRange);
+     });
+
+  // getFirstTextNode tests.
+  it('Given range with no visible text nodes\n' +
+         'When getFirstNode is called\n' +
+         'Then null is returned',
+     function() {
+       document.body.innerHTML = __html__['get-first-text-node-tests.html'];
+
+       const startNode = document.getElementById('1');
+       const endNode = document.getElementById('2');
+
+       const range = document.createRange();
+       range.setStartBefore(startNode);
+       range.setEndAfter(endNode);
+
+       const firstTextNode = generationUtils.forTesting.getFirstTextNode(range);
+
+       expect(firstTextNode).toBeNull();
+     });
+
+  it('Given range composed of only one visible text node\n' +
+         'When getFirstNode is called\n' +
+         'Then the text node is returned',
+     function() {
+       document.body.innerHTML = __html__['get-first-text-node-tests.html'];
+
+       const textNode = document.getElementById('3').firstChild;
+
+       const range = document.createRange();
+       range.selectNodeContents(textNode)
+
+       const firstTextNode = generationUtils.forTesting.getFirstTextNode(range);
+
+       expect(firstTextNode).toBe(textNode);
+     });
+
+  it('Given range with first visible text node after first node\n' +
+         'When getFirstNode is called\n' +
+         'Then the first visible text node is returned',
+     function() {
+       document.body.innerHTML = __html__['get-first-text-node-tests.html'];
+
+       const spanNode = document.getElementById('4');
+
+       const range = document.createRange();
+       range.selectNode(spanNode)
+
+       const firstTextNode = generationUtils.forTesting.getFirstTextNode(range);
+
+       expect(firstTextNode).toBe(spanNode.firstChild);
+     });
+
+  it('Given range multiple visible text nodes \n' +
+         'When getFirstNode is called\n' +
+         'Then the first visible text node is returned',
+     function() {
+       document.body.innerHTML = __html__['get-first-text-node-tests.html'];
+
+       const spanNode = document.getElementById('5');
+
+       const range = document.createRange();
+       range.selectNode(spanNode)
+
+       const firstTextNode = generationUtils.forTesting.getFirstTextNode(range);
+
+       expect(firstTextNode).toBe(spanNode.firstChild);
+     });
+
+  it('Given range first visible text node at its end \n' +
+         'When getFirstNode is called\n' +
+         'Then the first visible text node is returned',
+     function() {
+       document.body.innerHTML = __html__['get-first-text-node-tests.html'];
+
+       const spanNode = document.getElementById('6');
+
+       const range = document.createRange();
+       range.selectNode(spanNode);
+       range.setEnd(
+           spanNode.firstChild, spanNode.firstChild.textContent.length);
+
+       const firstTextNode = generationUtils.forTesting.getFirstTextNode(range);
+
+       expect(firstTextNode).toBe(spanNode.firstChild);
+     });
+
+  // getLastTextNode tests.
+  it('Given range with no visible text nodes\n' +
+         'When getLastNode is called\n' +
+         'Then null is returned',
+     function() {
+       document.body.innerHTML = __html__['get-last-text-node-tests.html'];
+
+       const startNode = document.getElementById('1');
+       const endNode = document.getElementById('2');
+
+       const range = document.createRange();
+       range.setStartBefore(startNode);
+       range.setEndAfter(endNode);
+
+       const lastTextNode = generationUtils.forTesting.getLastTextNode(range);
+
+       expect(lastTextNode).toBeNull();
+     });
+
+  it('Given range composed of only one visible text node\n' +
+         'When getLastNode is called\n' +
+         'Then the text node is returned',
+     function() {
+       document.body.innerHTML = __html__['get-last-text-node-tests.html'];
+
+       const textNode = document.getElementById('3').firstChild;
+
+       const range = document.createRange();
+       range.selectNodeContents(textNode)
+
+       const lastTextNode = generationUtils.forTesting.getLastTextNode(range);
+
+       expect(lastTextNode).toBe(textNode);
+     });
+
+  it('Given range with last visible text node before last node\n' +
+         'When getLastNode is called\n' +
+         'Then the last visible text node is returned',
+     function() {
+       document.body.innerHTML = __html__['get-last-text-node-tests.html'];
+
+       const spanNode = document.getElementById('4');
+
+       const range = document.createRange();
+       range.selectNode(spanNode)
+
+       const lastTextNode = generationUtils.forTesting.getLastTextNode(range);
+
+       expect(lastTextNode).toBe(spanNode.firstChild);
+     });
+
+  it('Given range multiple visible text nodes \n' +
+         'When getLastNode is called\n' +
+         'Then the last visible text node is returned',
+     function() {
+       document.body.innerHTML = __html__['get-last-text-node-tests.html'];
+
+       const spanNode = document.getElementById('5');
+
+       const range = document.createRange();
+       range.selectNode(spanNode)
+
+       const lastTextNode = generationUtils.forTesting.getLastTextNode(range);
+
+       const expectedTextNode = document.getElementById('6').firstChild;
+       expect(lastTextNode).toBe(expectedTextNode);
+     });
+
+  it('Given range last visible text node at its start \n' +
+         'When getLastNode is called\n' +
+         'Then the last visible text node is returned',
+     function() {
+       document.body.innerHTML = __html__['get-last-text-node-tests.html'];
+
+       const spanNode = document.getElementById('6');
+
+       const range = document.createRange();
+       range.selectNode(spanNode);
+       range.setStart(spanNode.firstChild, 0);
+
+       const lastTextNode = generationUtils.forTesting.getLastTextNode(range);
+
+       expect(lastTextNode).toBe(spanNode.firstChild);
+     });
+
+  // moveRangeEdgesToTextNodes tests.
+  it('Given a range that does not include visible text\n' +
+         'When moveRangeEdgesToTextNodes is called\n' +
+         'Then the range is collapsed',
+     function() {
+       document.body.innerHTML = __html__['no-text-nodes-in-range.html'];
+
+       const start = document.getElementById('1');
+       const end = document.getElementById('2');
+       const range = document.createRange();
+       range.setStartBefore(start);
+       range.setEndAfter(end);
+
+       generationUtils.forTesting.moveRangeEdgesToTextNodes(range);
+
+       expect(range.collapsed).toBeTrue();
+     });
+
+  it('Given a range that includes visible text but not on the edges\n' +
+         'When moveRangeEdgesToTextNodes is called\n' +
+         'Then the range edges are at the start and end of the visible text',
+     function() {
+       document.body.innerHTML =
+           __html__['move-range-edges-to-text-tests.html'];
+
+       const div = document.getElementById('1');
+       const range = document.createRange();
+       range.selectNodeContents(div);
+
+       generationUtils.forTesting.moveRangeEdgesToTextNodes(range);
+
+       const textNode = document.getElementById('2').firstChild;
+       expect(range.startContainer).toBe(textNode);
+       expect(range.startOffset).toBe(0);
+       expect(range.endContainer).toBe(textNode);
+       expect(range.endOffset).toBe(textNode.textContent.length);
+     });
+
+  it('Given a range that includes visible text on the edges\n' +
+         'When moveRangeEdgesToTextNodes is called\n' +
+         'Then the range edges are not changed',
+     function() {
+       document.body.innerHTML =
+           __html__['move-range-edges-to-text-tests.html'];
+
+       const span = document.getElementById('3');
+       const range = document.createRange();
+       range.selectNodeContents(span);
+
+       const originalRange = range.cloneRange();
+
+       generationUtils.forTesting.moveRangeEdgesToTextNodes(range);
+
+       expect(range.startContainer).toBe(originalRange.startContainer);
+       expect(range.startOffset).toBe(originalRange.startOffset);
+       expect(range.endContainer).toBe(originalRange.endContainer);
+       expect(range.endOffset).toBe(originalRange.endOffset);
      });
 });
