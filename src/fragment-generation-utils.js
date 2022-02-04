@@ -154,6 +154,15 @@ const doGenerateFragment = (selection, startTime) => {
 
   expandRangeStartToWordBound(range);
   expandRangeEndToWordBound(range);
+  // Keep a copy of the range before we try to shrink it to make it start and
+  // end in text nodes. We need to use the range edges as starting points
+  // for context term building, so it makes sense to start from the original
+  // edges instead of the edges after shrinking. This way we don't have to
+  // traverse all the non-text nodes that are between the edges after shrinking
+  // and the original ones.
+  const rangeBeforeShrinking = range.cloneRange();
+
+  moveRangeEdgesToTextNodes(range);
 
   if (range.collapsed) {
     return {status: GenerateFragmentStatus.INVALID_SELECTION};
@@ -203,8 +212,10 @@ const doGenerateFragment = (selection, startTime) => {
   prefixRange.selectNodeContents(document.body);
   const suffixRange = prefixRange.cloneRange();
 
-  prefixRange.setEnd(range.startContainer, range.startOffset);
-  suffixRange.setStart(range.endContainer, range.endOffset);
+  prefixRange.setEnd(
+      rangeBeforeShrinking.startContainer, rangeBeforeShrinking.startOffset);
+  suffixRange.setStart(
+      rangeBeforeShrinking.endContainer, rangeBeforeShrinking.endOffset);
 
   const prefixSearchSpace = getSearchSpaceForEnd(prefixRange);
   const suffixSearchSpace = getSearchSpaceForStart(suffixRange);
@@ -1142,6 +1153,48 @@ const getLastNodeForBlockSearch = (range) => {
 };
 
 /**
+ * Finds the first visible text node within a given range.
+ * @param {Range} range - range in which to find the first visible text node
+ * @returns {Node} - first visible text node within |range| or null if there are
+ * no visible text nodes within |range|
+ */
+const getFirstTextNode = (range) => {
+  // Check if first node in the range is a visible text node.
+  const firstNode = getFirstNodeForBlockSearch(range);
+  if (isText(firstNode) && fragments.internal.isNodeVisible(firstNode)) {
+    return firstNode;
+  }
+
+  // First node is not visible text, use a tree walker to find the first visible
+  // text node.
+  const walker = fragments.internal.makeTextNodeWalker(range);
+  walker.currentNode = firstNode;
+
+  return walker.nextNode();
+};
+
+/**
+ * Finds the last visible text node within a given range.
+ * @param {Range} range - range in which to find the last visible text node
+ * @returns {Node} - last visible text node within |range| or null if there are
+ * no visible text nodes within |range|
+ */
+const getLastTextNode = (range) => {
+  // Check if last node in the range is a visible text node.
+  const lastNode = getLastNodeForBlockSearch(range);
+  if (isText(lastNode) && fragments.internal.isNodeVisible(lastNode)) {
+    return lastNode;
+  }
+
+  // Last node is not visible text, traverse the range backwards to find the
+  // last visible text node.
+  const walker = fragments.internal.makeTextNodeWalker(range);
+  walker.currentNode = lastNode;
+
+  return fragments.internal.backwardTraverse(walker, new Set());
+};
+
+/**
  * Determines whether or not a range crosses a block boundary.
  * @param {Range} range - the range to investigate
  * @return {boolean} - true if a block boundary was found,
@@ -1336,6 +1389,37 @@ const expandRangeStartToWordBound = (range) => {
       // this as an error.
       range.collapse();
     }
+  }
+};
+
+/**
+ * Moves the range edges to the first and last visible text nodes inside of it.
+ * If there are no visible text nodes in the range then it is collapsed.
+ * @param {Range} range - the range to be modified
+ */
+const moveRangeEdgesToTextNodes = (range) => {
+  const firstTextNode = getFirstTextNode(range);
+  // No text nodes in range. Collapsing the range and early return.
+  if (firstTextNode == null) {
+    range.collapse();
+    return;
+  }
+
+  const firstNode = getFirstNodeForBlockSearch(range);
+
+  // Making sure the range starts with visible text. 
+  if (firstNode !== firstTextNode) {
+    range.setStart(firstTextNode, 0);
+  }
+
+  const lastNode = getLastNodeForBlockSearch(range);
+  const lastTextNode = getLastTextNode(range);
+  // No need for no text node checks here because we know at there's at least
+  // firstTextNode in the range.
+
+  // Making sure the range ends with visible text.
+  if (lastNode !== lastTextNode) {
+    range.setEnd(lastTextNode, lastTextNode.textContent.length);
   }
 };
 
@@ -1636,7 +1720,10 @@ export const forTesting = {
   getSearchSpaceForStart: getSearchSpaceForStart,
   getTextNodesInSameBlock: getTextNodesInSameBlock,
   recordStartTime: recordStartTime,
-  BlockTextAccumulator: BlockTextAccumulator
+  BlockTextAccumulator: BlockTextAccumulator,
+  getFirstTextNode: getFirstTextNode,
+  getLastTextNode: getLastTextNode,
+  moveRangeEdgesToTextNodes: moveRangeEdgesToTextNodes
 };
 
 // Allow importing module from closure-compiler projects that haven't migrated
