@@ -1394,26 +1394,31 @@ const expandRangeStartToWordBound = (range) => {
 
 /**
  * Moves the range edges to the first and last visible text nodes inside of it.
+ * If there are no visible text nodes in the range then it is collapsed.
  * @param {Range} range - the range to be modified
  */
 const moveRangeEdgesToTextNodes = (range) => {
+  const firstTextNode = getFirstTextNode(range);
+  // No text nodes in range. Collapsing the range and early return.
+  if (firstTextNode == null) {
+    range.collapse();
+    return;
+  }
+
   const firstNode = getFirstNodeForBlockSearch(range);
-  if (!isText(firstNode)) {
-    const firstTextNode = getFirstTextNode(range);
-    if (firstTextNode == null) {
-      range.collapse();
-      return;
-    }
+
+  // Making sure the range starts with visible text. 
+  if (firstNode !== firstTextNode) {
     range.setStart(firstTextNode, 0);
   }
 
   const lastNode = getLastNodeForBlockSearch(range);
-  if (!isText(lastNode)) {
-    const lastTextNode = getLastTextNode(range);
-    if (lastTextNode == null) {
-      range.collapse();
-      return;
-    }
+  const lastTextNode = getLastTextNode(range);
+  // No need for no text node checks here because we know at there's at least
+  // firstTextNode in the range.
+
+  // Making sure the range ends with visible text.
+  if (lastNode !== lastTextNode) {
     range.setEnd(lastTextNode, lastTextNode.textContent.length);
   }
 };
