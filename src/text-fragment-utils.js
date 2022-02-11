@@ -1025,7 +1025,12 @@ export const setDefaultTextFragmentsStyle = ({backgroundColor, color}) => {
   const defaultStyle = `.${TEXT_FRAGMENT_CSS_CLASS_NAME} {
     background-color: ${backgroundColor};
     color: ${color};
-  }`
+  }
+  
+  .${TEXT_FRAGMENT_CSS_CLASS_NAME} a, a .${TEXT_FRAGMENT_CSS_CLASS_NAME} {
+    text-decoration: underline;
+  }
+  `
   if (styles.length === 0) {
     document.head.insertAdjacentHTML(
         'beforeend', `<style type="text/css">${defaultStyle}</style>`);
