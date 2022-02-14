@@ -588,6 +588,9 @@ describe('TextFragmentUtils', function() {
     result = utils.processTextFragmentDirective(fragment);
     expect(result.length).toEqual(2);
 
+    fragment = utils.forTesting.parseTextFragmentDirective('start,end');
+    result = utils.processTextFragmentDirective(fragment);
+    expect(result.length).toEqual(2);
 
     // prefix, textStart, + textEnd
     fragment =
@@ -598,6 +601,10 @@ describe('TextFragmentUtils', function() {
     // textStart, textEnd, + suffix
     fragment =
         utils.forTesting.parseTextFragmentDirective('target,target,-suffix2');
+    result = utils.processTextFragmentDirective(fragment);
+    expect(result.length).toEqual(2);
+
+    fragment = utils.forTesting.parseTextFragmentDirective('start,end,-suffix');
     result = utils.processTextFragmentDirective(fragment);
     expect(result.length).toEqual(2);
 

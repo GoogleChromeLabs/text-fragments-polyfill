@@ -216,8 +216,11 @@ export const processTextFragmentDirective = (textFragment) => {
           potentialMatch.endContainer, potentialMatch.endOffset);
       textEndRange.setEnd(searchRange.endContainer, searchRange.endOffset);
 
-      let missingSuffix = false;
-      let missingTextEnd = false;
+      // Keep track of matches of the end term followed by suffix term
+      // (if needed).
+      // If no matches are found then there's no point in keeping looking for
+      // matches of the start term after the current start term occurrence.
+      let matchFound = false;
 
       // Search through the rest of the document to find a textEnd match. This
       // may take multiple iterations if a suffix needs to be found.
@@ -225,9 +228,9 @@ export const processTextFragmentDirective = (textFragment) => {
         const textEndMatch =
             findTextInRange(textFragment.textEnd, textEndRange);
         if (textEndMatch == null) {
-          missingTextEnd = true;
           break;
         }
+
         advanceRangeStartPastOffset(
             textEndRange, textEndMatch.startContainer,
             textEndMatch.startOffset);
@@ -241,9 +244,9 @@ export const processTextFragmentDirective = (textFragment) => {
           const suffixResult =
               checkSuffix(textFragment.suffix, potentialMatch, searchRange);
           if (suffixResult === CheckSuffixResult.NO_SUFFIX_MATCH) {
-            missingSuffix = true;
             break;
           } else if (suffixResult === CheckSuffixResult.SUFFIX_MATCH) {
+            matchFound = true;
             results.push(potentialMatch.cloneRange());
             continue;
           } else if (suffixResult === CheckSuffixResult.MISPLACED_SUFFIX) {
@@ -251,12 +254,13 @@ export const processTextFragmentDirective = (textFragment) => {
           }
         } else {
           // If we've found textEnd and there's no suffix, then it's a match!
+          matchFound = true;
           results.push(potentialMatch.cloneRange());
         }
       }
       // Stopping match search because suffix or textEnd are missing from the
       // rest of the search space.
-      if (missingSuffix || missingTextEnd) {
+      if (!matchFound) {
         break;
       }
 
