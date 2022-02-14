@@ -1407,7 +1407,7 @@ const moveRangeEdgesToTextNodes = (range) => {
 
   const firstNode = getFirstNodeForBlockSearch(range);
 
-  // Making sure the range starts with visible text. 
+  // Making sure the range starts with visible text.
   if (firstNode !== firstTextNode) {
     range.setStart(firstTextNode, 0);
   }
