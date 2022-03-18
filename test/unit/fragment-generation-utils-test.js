@@ -1,5 +1,5 @@
-import * as generationUtils from '../src/fragment-generation-utils.js';
-import * as fragmentUtils from '../src/text-fragment-utils.js';
+import * as generationUtils from '../../src/fragment-generation-utils.js';
+import * as fragmentUtils from '../../src/text-fragment-utils.js';
 
 /**
  * Tests should call this method immediately if they rely on Intl.Segmenter

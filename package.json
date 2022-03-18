@@ -42,7 +42,7 @@
   "scripts": {
     "start": "npx http-server",
     "clean": "shx rm -rf dist",
-    "fix": "npx clang-format --style=Google -i ./src/*.js ./tools/*.js ./test/*.js && npx prettier --write **/*.json **/*.html",
+    "fix": "npx clang-format --style=Google -i ./src/*.js ./tools/*.js ./test/**/*.js && npx prettier --write **/*.json **/*.html",
     "prepare": "npm run clean && npm run fix && npm run lint && npx rollup src/text-fragments.js --dir dist -p 'terser' && npx rollup src/fragment-generation-utils.js --dir dist -p 'terser'",
     "lint": "npx eslint . --ext .js,.mjs --fix --ignore-pattern dist/",
     "test": "./node_modules/karma/bin/karma start karma.conf.cjs --single-run",

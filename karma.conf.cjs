@@ -16,8 +16,10 @@ module.exports = function (config) {
     // list of files / patterns to load in the browser
     files: [
       { pattern: 'src/*.js', type: 'module' },
-      { pattern: 'test/*.js', type: 'module' },
-      'test/*.html',
+      { pattern: 'test/**/*.js', type: 'module' },
+      'test/**/*.html',
+      { pattern: 'test/**/*.json', included: false },
+      { pattern: 'test/**/*.out', included: false }
     ],
 
     // list of files / patterns to exclude
@@ -86,7 +88,7 @@ module.exports = function (config) {
 
     html2JsPreprocessor: {
       // strip this from the file path
-      stripPrefix: 'test/',
+      stripPrefix: 'test/unit/',
     },
   });
 };

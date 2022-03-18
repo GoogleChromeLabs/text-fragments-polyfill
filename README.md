@@ -37,7 +37,7 @@ The `src` directory contains three files:
 The `tools` directory contains a util script used for generating a regex used in the utils
 module.
 
-The `test` directory contains unit tests, based on Karma and Jasmine, as well as HTML files
+The `test` directory contains unit and data-driven tests, based on Karma and Jasmine, as well as HTML files
 which can be loaded during those tests.
 
 ## Installation
