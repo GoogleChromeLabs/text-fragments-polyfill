@@ -38,7 +38,8 @@ The `tools` directory contains a util script used for generating a regex used in
 module.
 
 The `test` directory contains unit and data-driven tests, based on Karma and Jasmine, as well as HTML files
-which can be loaded during those tests.
+which can be loaded during those tests. Unit tests go in the `unit` subfolder and data-driven tests go in
+the `data-driven` subfolder.
 
 ## Installation
 
@@ -90,6 +91,22 @@ does not support Text Fragments.
 1. You can modify the Text Fragments URLs directly in
    [`/demo/index.html`](https://github.com/GoogleChromeLabs/text-fragments-polyfill/blob/main/demo/index.html)
    (look for `location.hash`).
+
+## Data-Driven Tests
+Data-Driven tests are round trip tests checking both fragment generation and highlighting.
+Each test case is defined by an html document and a selection range inside the document.
+The tests try to generate a text fragment targeting the selection range in the document
+and use it for highlighting, comparing the highlighted text against the expected highlighted text.
+
+To add more data-driven tests, put your files in the following subfolders of `test/data-driven`:
+  - `input/test-params`: Json file with test case definition. See `TextFragmentDataDrivenTestInput` in `text-fragments-data-driven-test.js` for a detailed schema description.
+  - `input/html`: Html file referenced in the test case's input file.
+  - `output`: Plain text file with the test case's expected results. Must have extension `.out` and the same file name
+  as the test case's input file.
+  See the documentation of `TextFragmentsDataDrivenTest` in `text-fragments-data-driven-test.js` for more details.
+
+The example test case `basic-test` can be used for reference. Files: `input/test-params/basic-test.json`,
+`input/html/basic-test.html` and `output/basic-test.out`.
 
 ## Debugging tests
 1. Run `npm run debug <debug browser>` with `debug browser = Firefox_with_debugging | Chrome_with_debugging`
