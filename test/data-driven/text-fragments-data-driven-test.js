@@ -24,19 +24,25 @@ const OUTPUT_FAILURE = 'Failure';
  *
  * Adding Test Cases:
  *
- * To add more test cases, include one input file per test case in |inputDirectory|,
- * the corresponding output file in |outputDirectory| and in |htmlDirectory| put
- * the html document referenced in the test case's input file. Each input file
+ * To add more test cases, include one input file per test case in
+ * |inputDirectory|, the corresponding output file in |outputDirectory| and in
+ * |htmlDirectory| put the html document referenced in the test case's input
+ * file.
+ *
+ * Each input file
  * should be a {@see TextFragmentDataDrivenTestInput} json serialized. Each
  * output file should be a plain text file with the following format:
  *
  * GENERATION: [Success | Failure]
  * HIGHLIGHTING: [Success | Failure]
  *
- * The GENERATION line states if fragment generation should succeed for the test case.
- * The HIGHLIGHTING line states if the test case's highlighted text should match the expected highlighted text.
+ * The GENERATION line states if fragment generation should succeed for the test
+ * case. The HIGHLIGHTING line states if the test case's highlighted text should
+ * match the expected highlighted text.
  *
- * If at some point the expectations for a test case change due to a bug fix or change in the requirements, update the corresponding output file with the new expectations.
+ * If at some point the expectations for a test case change due to a bug fix or
+ * change in the requirements, update the corresponding output file with the new
+ * expectations.
  */
 class TextFragmentsDataDrivenTest extends DataDrivenTest {
   /**
@@ -79,14 +85,16 @@ class TextFragmentsDataDrivenTest extends DataDrivenTest {
    * This method takes a test case definition in |inputText|, tries to generate
    * and highlight a text fragment, checking if the highlighted text matches the
    * test case's expected highlighted text.
-   * @param {String} inputText - Test case input. Expected to be a {@see TextFragmentDataDrivenTestInput} json serialized.
+   * @param {String} inputText - Test case input. Expected to be a
+   * {@see TextFragmentDataDrivenTestInput} json serialized.
    * @return {String} - The test results, having the following format:
    *
    * GENERATION: [Success | Failure]
    * HIGHLIGHTING: [Success | Failure]
    *
-   * The GENERATION line indicates if a fragment was successfully generated for the test case input.
-   * The HIGHLIGHTING line indicates if the highlighted text matched the test case's expected highlighted text.
+   * The GENERATION line indicates if a fragment was successfully generated for
+   * the test case input. The HIGHLIGHTING line indicates if the highlighted
+   * text matched the test case's expected highlighted text.
    */
   generateResults(inputText) {
     const input = this.parseInput(inputText);
@@ -110,8 +118,6 @@ class TextFragmentsDataDrivenTest extends DataDrivenTest {
    *     failed.
    */
   generateFragment(input) {
-    const range = document.createRange();
-
     const startParent = input.startParentId ?
         document.getElementById(input.startParentId) :
         document.body;
@@ -124,6 +130,7 @@ class TextFragmentsDataDrivenTest extends DataDrivenTest {
     const end = endParent.childNodes[input.endOffsetInParent];
     const endOffset = input.endTextOffset ?? 0;
 
+    const range = document.createRange();
     range.setStart(start, startOffset);
     range.setEnd(end, endOffset);
 
@@ -187,7 +194,8 @@ class TextFragmentsDataDrivenTest extends DataDrivenTest {
   /**
    * Text Fragments Data Driven Test input object.
    * @typedef {Object} TextFragmentDataDrivenTestInput
-   * @property {String} htmlFileName - Html file name for the test case. This file should be in |htmlDirectory|.
+   * @property {String} htmlFileName - Html file name for the test case. This
+   * file should be in |htmlDirectory|.
    * @property {String} [startParentId] - Id of the parent of the node where the
    * test case’s selection starts. Optional: when null then the parent node is
    * the document's body.
@@ -216,7 +224,13 @@ class TextFragmentsDataDrivenTest extends DataDrivenTest {
    * @return {TextFragmentDataDrivenTestInput} Test Case input object.
    */
   parseInput(input) {
-    return JSON.parse(input);
+    try {
+      return JSON.parse(input);
+    } catch (error) {
+      throw new Error(
+          'Invalid input file. Content must be a valid json object.\n' +
+          `${error}.`);
+    }
   }
 
   /**
