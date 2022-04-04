@@ -115,10 +115,11 @@ const parseTextFragmentDirective = (textFragment) => {
  * Mark the text fragments with `<mark>` tags.
  * @param {{text: TextFragment[]}} parsedFragmentDirectives - Text fragments to
  *     process.
+ * @param {Document} documentToProcess - document where to extract and mark fragments in.
  * @return {{text: (Element[])[]}} `<mark>` elements created to highlight the
  *     text fragments.
  */
-export const processFragmentDirectives = (parsedFragmentDirectives) => {
+export const processFragmentDirectives = (parsedFragmentDirectives, documentToProcess = document) => {
   const processedFragmentDirectives = {};
   for (const
            [fragmentDirectiveType,
@@ -128,8 +129,8 @@ export const processFragmentDirectives = (parsedFragmentDirectives) => {
       processedFragmentDirectives[fragmentDirectiveType] =
           fragmentDirectivesOfType.map((fragmentDirectiveOfType) => {
             const result =
-                processTextFragmentDirective(fragmentDirectiveOfType);
-            if (result.length === 1) return markRange(result[0]);
+                processTextFragmentDirective(fragmentDirectiveOfType, documentToProcess);
+            if (result.length === 1) return markRange(result[0], documentToProcess);
             return [];
           });
     }
@@ -141,17 +142,19 @@ export const processFragmentDirectives = (parsedFragmentDirectives) => {
  * Searches the document for a given text fragment.
  *
  * @param {TextFragment} textFragment - Text Fragment to highlight.
+ * @param {Document} documentToProcess - document where to extract and mark fragments in.
  * @return {Ranges[]} - Zero or more ranges within the document corresponding
  *     to the fragment. If the fragment corresponds to more than one location
  *     in the document (i.e., is ambiguous) then the first two matches will be
  *     returned (regardless of how many more matches there may be in the
  *     document).
  */
-export const processTextFragmentDirective = (textFragment) => {
+
+export const processTextFragmentDirective = (textFragment, documentToProcess = document) => {
   const results = [];
 
-  const searchRange = document.createRange();
-  searchRange.selectNodeContents(document.body);
+  const searchRange = documentToProcess.createRange();
+  searchRange.selectNodeContents(documentToProcess.body);
 
   while (!searchRange.collapsed && results.length < 2) {
     let potentialMatch;
@@ -171,7 +174,7 @@ export const processTextFragmentDirective = (textFragment) => {
       // The search space for textStart is everything after the prefix and
       // before the end of the top-level search range, starting at the next non-
       // whitespace position.
-      const matchRange = document.createRange();
+      const matchRange = documentToProcess.createRange();
       matchRange.setStart(prefixMatch.endContainer, prefixMatch.endOffset);
       matchRange.setEnd(searchRange.endContainer, searchRange.endOffset);
 
@@ -211,7 +214,7 @@ export const processTextFragmentDirective = (textFragment) => {
     }
 
     if (textFragment.textEnd) {
-      const textEndRange = document.createRange();
+      const textEndRange = documentToProcess.createRange();
       textEndRange.setStart(
           potentialMatch.endContainer, potentialMatch.endOffset);
       textEndRange.setEnd(searchRange.endContainer, searchRange.endOffset);
@@ -242,7 +245,7 @@ export const processTextFragmentDirective = (textFragment) => {
           // If there's supposed to be a suffix, check if it appears after the
           // textEnd we just found.
           const suffixResult =
-              checkSuffix(textFragment.suffix, potentialMatch, searchRange);
+              checkSuffix(textFragment.suffix, potentialMatch, searchRange, documentToProcess);
           if (suffixResult === CheckSuffixResult.NO_SUFFIX_MATCH) {
             break;
           } else if (suffixResult === CheckSuffixResult.SUFFIX_MATCH) {
@@ -268,7 +271,7 @@ export const processTextFragmentDirective = (textFragment) => {
       // If there's no textEnd but there is a suffix, search for the suffix
       // after potentialMatch
       const suffixResult =
-          checkSuffix(textFragment.suffix, potentialMatch, searchRange);
+          checkSuffix(textFragment.suffix, potentialMatch, searchRange, documentToProcess);
       if (suffixResult === CheckSuffixResult.NO_SUFFIX_MATCH) {
         break;
       } else if (suffixResult === CheckSuffixResult.SUFFIX_MATCH) {
@@ -291,10 +294,11 @@ export const processTextFragmentDirective = (textFragment) => {
  * @param {Node[]} marks - a list of <mark> elements to be removed, with their
  *     contents extracted and returned to the parent node (from which they were
  *     originally pulled).
+ * @param {Document} documentToProcess - document where to remove the marks.
  */
-export const removeMarks = (marks) => {
+export const removeMarks = (marks, documentToProcess = document) => {
   for (const mark of marks) {
-    const range = document.createRange();
+    const range = documentToProcess.createRange();
     range.selectNodeContents(mark);
     const fragment = range.extractContents();
     const parent = mark.parentNode;
@@ -320,12 +324,13 @@ const CheckSuffixResult = {
  * @param {Range} searchRange - the Range in which to search for |suffix|.
  *     Regardless of the start boundary of this Range, nothing appearing before
  *     |potentialMatch| will be considered.
+ * @param {Document} documentToProcess - document where to extract and mark fragments in.
  * @return {CheckSuffixResult} - enum value indicating that potentialMatch
  *     should be accepted, that the search should continue, or that the search
  *     should halt.
  */
-const checkSuffix = (suffix, potentialMatch, searchRange) => {
-  const suffixRange = document.createRange();
+const checkSuffix = (suffix, potentialMatch, searchRange, documentToProcess ) => {
+  const suffixRange = documentToProcess.createRange();
   suffixRange.setStart(
       potentialMatch.endContainer,
       potentialMatch.endOffset,
@@ -425,16 +430,17 @@ const makeTextNodeWalker =
  * tree to find all the relevant text nodes and wraps them.
  * @param {Range} range - the range to mark. Must start and end inside of
  *     text nodes.
+ * @param {Document} documentToProcess - document where to highlight the range.
  * @return {Element[]} The <mark> nodes that were created.
  */
-export const markRange = (range) => {
+export const markRange = (range, documentToProcess = document) => {
   if (range.startContainer.nodeType != Node.TEXT_NODE ||
       range.endContainer.nodeType != Node.TEXT_NODE)
     return [];
 
   // If the range is entirely within a single node, just surround it.
   if (range.startContainer === range.endContainer) {
-    const trivialMark = document.createElement('mark');
+    const trivialMark = documentToProcess.createElement('mark');
     trivialMark.setAttribute('class', TEXT_FRAGMENT_CSS_CLASS_NAME);
     range.surroundContents(trivialMark);
     return [trivialMark];
@@ -454,7 +460,7 @@ export const markRange = (range) => {
   const marks = [];
   range.setStartAfter(startNode);
   range.setEndBefore(endNode);
-  const walker = document.createTreeWalker(
+  const walker = documentToProcess.createTreeWalker(
       range.commonAncestorContainer,
       NodeFilter.SHOW_ELEMENT | NodeFilter.SHOW_TEXT,
       {
@@ -471,7 +477,7 @@ export const markRange = (range) => {
   let node = walker.nextNode();
   while (node) {
     if (node.nodeType === Node.TEXT_NODE) {
-      const mark = document.createElement('mark');
+      const mark = documentToProcess.createElement('mark');
       mark.setAttribute('class', TEXT_FRAGMENT_CSS_CLASS_NAME);
       node.parentNode.insertBefore(mark, node);
       mark.appendChild(node);
@@ -480,10 +486,10 @@ export const markRange = (range) => {
     node = walker.nextNode();
   }
 
-  const startMark = document.createElement('mark');
+  const startMark = documentToProcess.createElement('mark');
   startMark.setAttribute('class', TEXT_FRAGMENT_CSS_CLASS_NAME);
   startNodeSubrange.surroundContents(startMark);
-  const endMark = document.createElement('mark');
+  const endMark = documentToProcess.createElement('mark');
   endMark.setAttribute('class', TEXT_FRAGMENT_CSS_CLASS_NAME);
   endNodeSubrange.surroundContents(endMark);
 
@@ -712,7 +718,7 @@ const findRangeFromNodeList = (query, range, textNodes, segmenter) => {
     }
 
     if (start != null && end != null) {
-      const foundRange = document.createRange();
+      const foundRange = new Range();
       foundRange.setStart(start.node, start.offset);
       foundRange.setEnd(end.node, end.offset);
 
