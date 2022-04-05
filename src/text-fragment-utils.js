@@ -115,34 +115,38 @@ const parseTextFragmentDirective = (textFragment) => {
  * Mark the text fragments with `<mark>` tags.
  * @param {{text: TextFragment[]}} parsedFragmentDirectives - Text fragments to
  *     process.
- * @param {Document} documentToProcess - document where to extract and mark fragments in.
+ * @param {Document} documentToProcess - document where to extract and mark
+ *     fragments in.
  * @return {{text: (Element[])[]}} `<mark>` elements created to highlight the
  *     text fragments.
  */
-export const processFragmentDirectives = (parsedFragmentDirectives, documentToProcess = document) => {
-  const processedFragmentDirectives = {};
-  for (const
-           [fragmentDirectiveType,
-            fragmentDirectivesOfType,
-  ] of Object.entries(parsedFragmentDirectives)) {
-    if (FRAGMENT_DIRECTIVES.includes(fragmentDirectiveType)) {
-      processedFragmentDirectives[fragmentDirectiveType] =
-          fragmentDirectivesOfType.map((fragmentDirectiveOfType) => {
-            const result =
-                processTextFragmentDirective(fragmentDirectiveOfType, documentToProcess);
-            if (result.length === 1) return markRange(result[0], documentToProcess);
-            return [];
-          });
-    }
-  }
-  return processedFragmentDirectives;
-};
+export const processFragmentDirectives =
+    (parsedFragmentDirectives, documentToProcess = document) => {
+      const processedFragmentDirectives = {};
+      for (const
+               [fragmentDirectiveType,
+                fragmentDirectivesOfType,
+      ] of Object.entries(parsedFragmentDirectives)) {
+        if (FRAGMENT_DIRECTIVES.includes(fragmentDirectiveType)) {
+          processedFragmentDirectives[fragmentDirectiveType] =
+              fragmentDirectivesOfType.map((fragmentDirectiveOfType) => {
+                const result = processTextFragmentDirective(
+                    fragmentDirectiveOfType, documentToProcess);
+                if (result.length === 1)
+                  return markRange(result[0], documentToProcess);
+                return [];
+              });
+        }
+      }
+      return processedFragmentDirectives;
+    };
 
 /**
  * Searches the document for a given text fragment.
  *
  * @param {TextFragment} textFragment - Text Fragment to highlight.
- * @param {Document} documentToProcess - document where to extract and mark fragments in.
+ * @param {Document} documentToProcess - document where to extract and mark
+ *     fragments in.
  * @return {Ranges[]} - Zero or more ranges within the document corresponding
  *     to the fragment. If the fragment corresponds to more than one location
  *     in the document (i.e., is ambiguous) then the first two matches will be
@@ -150,144 +154,150 @@ export const processFragmentDirectives = (parsedFragmentDirectives, documentToPr
  *     document).
  */
 
-export const processTextFragmentDirective = (textFragment, documentToProcess = document) => {
-  const results = [];
+export const processTextFragmentDirective =
+    (textFragment, documentToProcess = document) => {
+      const results = [];
 
-  const searchRange = documentToProcess.createRange();
-  searchRange.selectNodeContents(documentToProcess.body);
+      const searchRange = documentToProcess.createRange();
+      searchRange.selectNodeContents(documentToProcess.body);
 
-  while (!searchRange.collapsed && results.length < 2) {
-    let potentialMatch;
-    if (textFragment.prefix) {
-      const prefixMatch = findTextInRange(textFragment.prefix, searchRange);
-      if (prefixMatch == null) {
-        break;
-      }
-      // Future iterations, if necessary, should start after the first character
-      // of the prefix match.
-      advanceRangeStartPastOffset(
-          searchRange,
-          prefixMatch.startContainer,
-          prefixMatch.startOffset,
-      );
+      while (!searchRange.collapsed && results.length < 2) {
+        let potentialMatch;
+        if (textFragment.prefix) {
+          const prefixMatch = findTextInRange(textFragment.prefix, searchRange);
+          if (prefixMatch == null) {
+            break;
+          }
+          // Future iterations, if necessary, should start after the first
+          // character of the prefix match.
+          advanceRangeStartPastOffset(
+              searchRange,
+              prefixMatch.startContainer,
+              prefixMatch.startOffset,
+          );
 
-      // The search space for textStart is everything after the prefix and
-      // before the end of the top-level search range, starting at the next non-
-      // whitespace position.
-      const matchRange = documentToProcess.createRange();
-      matchRange.setStart(prefixMatch.endContainer, prefixMatch.endOffset);
-      matchRange.setEnd(searchRange.endContainer, searchRange.endOffset);
+          // The search space for textStart is everything after the prefix and
+          // before the end of the top-level search range, starting at the next
+          // non- whitespace position.
+          const matchRange = documentToProcess.createRange();
+          matchRange.setStart(prefixMatch.endContainer, prefixMatch.endOffset);
+          matchRange.setEnd(searchRange.endContainer, searchRange.endOffset);
 
-      advanceRangeStartToNonWhitespace(matchRange);
-      if (matchRange.collapsed) {
-        break;
-      }
+          advanceRangeStartToNonWhitespace(matchRange);
+          if (matchRange.collapsed) {
+            break;
+          }
 
-      potentialMatch = findTextInRange(textFragment.textStart, matchRange);
-      // If textStart wasn't found anywhere in the matchRange, then there's no
-      // possible match and we can stop early.
-      if (potentialMatch == null) {
-        break;
-      }
+          potentialMatch = findTextInRange(textFragment.textStart, matchRange);
+          // If textStart wasn't found anywhere in the matchRange, then there's
+          // no possible match and we can stop early.
+          if (potentialMatch == null) {
+            break;
+          }
 
-      // If potentialMatch is immediately after the prefix (i.e., its start
-      // equals matchRange's start), this is a candidate and we should keep
-      // going with this iteration. Otherwise, we'll need to find the next
-      // instance (if any) of the prefix.
-      if (potentialMatch.compareBoundaryPoints(
-              Range.START_TO_START,
-              matchRange,
-              ) !== 0) {
-        continue;
-      }
-    } else {
-      // With no prefix, just look directly for textStart.
-      potentialMatch = findTextInRange(textFragment.textStart, searchRange);
-      if (potentialMatch == null) {
-        break;
-      }
-      advanceRangeStartPastOffset(
-          searchRange,
-          potentialMatch.startContainer,
-          potentialMatch.startOffset,
-      );
-    }
-
-    if (textFragment.textEnd) {
-      const textEndRange = documentToProcess.createRange();
-      textEndRange.setStart(
-          potentialMatch.endContainer, potentialMatch.endOffset);
-      textEndRange.setEnd(searchRange.endContainer, searchRange.endOffset);
-
-      // Keep track of matches of the end term followed by suffix term
-      // (if needed).
-      // If no matches are found then there's no point in keeping looking for
-      // matches of the start term after the current start term occurrence.
-      let matchFound = false;
-
-      // Search through the rest of the document to find a textEnd match. This
-      // may take multiple iterations if a suffix needs to be found.
-      while (!textEndRange.collapsed && results.length < 2) {
-        const textEndMatch =
-            findTextInRange(textFragment.textEnd, textEndRange);
-        if (textEndMatch == null) {
-          break;
+          // If potentialMatch is immediately after the prefix (i.e., its start
+          // equals matchRange's start), this is a candidate and we should keep
+          // going with this iteration. Otherwise, we'll need to find the next
+          // instance (if any) of the prefix.
+          if (potentialMatch.compareBoundaryPoints(
+                  Range.START_TO_START,
+                  matchRange,
+                  ) !== 0) {
+            continue;
+          }
+        } else {
+          // With no prefix, just look directly for textStart.
+          potentialMatch = findTextInRange(textFragment.textStart, searchRange);
+          if (potentialMatch == null) {
+            break;
+          }
+          advanceRangeStartPastOffset(
+              searchRange,
+              potentialMatch.startContainer,
+              potentialMatch.startOffset,
+          );
         }
 
-        advanceRangeStartPastOffset(
-            textEndRange, textEndMatch.startContainer,
-            textEndMatch.startOffset);
+        if (textFragment.textEnd) {
+          const textEndRange = documentToProcess.createRange();
+          textEndRange.setStart(
+              potentialMatch.endContainer, potentialMatch.endOffset);
+          textEndRange.setEnd(searchRange.endContainer, searchRange.endOffset);
 
-        potentialMatch.setEnd(
-            textEndMatch.endContainer, textEndMatch.endOffset);
+          // Keep track of matches of the end term followed by suffix term
+          // (if needed).
+          // If no matches are found then there's no point in keeping looking
+          // for matches of the start term after the current start term
+          // occurrence.
+          let matchFound = false;
 
-        if (textFragment.suffix) {
-          // If there's supposed to be a suffix, check if it appears after the
-          // textEnd we just found.
-          const suffixResult =
-              checkSuffix(textFragment.suffix, potentialMatch, searchRange, documentToProcess);
+          // Search through the rest of the document to find a textEnd match.
+          // This may take multiple iterations if a suffix needs to be found.
+          while (!textEndRange.collapsed && results.length < 2) {
+            const textEndMatch =
+                findTextInRange(textFragment.textEnd, textEndRange);
+            if (textEndMatch == null) {
+              break;
+            }
+
+            advanceRangeStartPastOffset(
+                textEndRange, textEndMatch.startContainer,
+                textEndMatch.startOffset);
+
+            potentialMatch.setEnd(
+                textEndMatch.endContainer, textEndMatch.endOffset);
+
+            if (textFragment.suffix) {
+              // If there's supposed to be a suffix, check if it appears after
+              // the textEnd we just found.
+              const suffixResult = checkSuffix(
+                  textFragment.suffix, potentialMatch, searchRange,
+                  documentToProcess);
+              if (suffixResult === CheckSuffixResult.NO_SUFFIX_MATCH) {
+                break;
+              } else if (suffixResult === CheckSuffixResult.SUFFIX_MATCH) {
+                matchFound = true;
+                results.push(potentialMatch.cloneRange());
+                continue;
+              } else if (suffixResult === CheckSuffixResult.MISPLACED_SUFFIX) {
+                continue;
+              }
+            } else {
+              // If we've found textEnd and there's no suffix, then it's a
+              // match!
+              matchFound = true;
+              results.push(potentialMatch.cloneRange());
+            }
+          }
+          // Stopping match search because suffix or textEnd are missing from
+          // the rest of the search space.
+          if (!matchFound) {
+            break;
+          }
+
+        } else if (textFragment.suffix) {
+          // If there's no textEnd but there is a suffix, search for the suffix
+          // after potentialMatch
+          const suffixResult = checkSuffix(
+              textFragment.suffix, potentialMatch, searchRange,
+              documentToProcess);
           if (suffixResult === CheckSuffixResult.NO_SUFFIX_MATCH) {
             break;
           } else if (suffixResult === CheckSuffixResult.SUFFIX_MATCH) {
-            matchFound = true;
             results.push(potentialMatch.cloneRange());
+            advanceRangeStartPastOffset(
+                searchRange, searchRange.startContainer,
+                searchRange.startOffset);
             continue;
           } else if (suffixResult === CheckSuffixResult.MISPLACED_SUFFIX) {
             continue;
           }
         } else {
-          // If we've found textEnd and there's no suffix, then it's a match!
-          matchFound = true;
           results.push(potentialMatch.cloneRange());
         }
       }
-      // Stopping match search because suffix or textEnd are missing from the
-      // rest of the search space.
-      if (!matchFound) {
-        break;
-      }
-
-    } else if (textFragment.suffix) {
-      // If there's no textEnd but there is a suffix, search for the suffix
-      // after potentialMatch
-      const suffixResult =
-          checkSuffix(textFragment.suffix, potentialMatch, searchRange, documentToProcess);
-      if (suffixResult === CheckSuffixResult.NO_SUFFIX_MATCH) {
-        break;
-      } else if (suffixResult === CheckSuffixResult.SUFFIX_MATCH) {
-        results.push(potentialMatch.cloneRange());
-        advanceRangeStartPastOffset(
-            searchRange, searchRange.startContainer, searchRange.startOffset);
-        continue;
-      } else if (suffixResult === CheckSuffixResult.MISPLACED_SUFFIX) {
-        continue;
-      }
-    } else {
-      results.push(potentialMatch.cloneRange());
-    }
-  }
-  return results;
-};
+      return results;
+    };
 
 /**
  * Removes the given highlights.
@@ -324,37 +334,39 @@ const CheckSuffixResult = {
  * @param {Range} searchRange - the Range in which to search for |suffix|.
  *     Regardless of the start boundary of this Range, nothing appearing before
  *     |potentialMatch| will be considered.
- * @param {Document} documentToProcess - document where to extract and mark fragments in.
+ * @param {Document} documentToProcess - document where to extract and mark
+ *     fragments in.
  * @return {CheckSuffixResult} - enum value indicating that potentialMatch
  *     should be accepted, that the search should continue, or that the search
  *     should halt.
  */
-const checkSuffix = (suffix, potentialMatch, searchRange, documentToProcess ) => {
-  const suffixRange = documentToProcess.createRange();
-  suffixRange.setStart(
-      potentialMatch.endContainer,
-      potentialMatch.endOffset,
-  );
-  suffixRange.setEnd(searchRange.endContainer, searchRange.endOffset);
-  advanceRangeStartToNonWhitespace(suffixRange);
+const checkSuffix =
+    (suffix, potentialMatch, searchRange, documentToProcess) => {
+      const suffixRange = documentToProcess.createRange();
+      suffixRange.setStart(
+          potentialMatch.endContainer,
+          potentialMatch.endOffset,
+      );
+      suffixRange.setEnd(searchRange.endContainer, searchRange.endOffset);
+      advanceRangeStartToNonWhitespace(suffixRange);
 
-  const suffixMatch = findTextInRange(suffix, suffixRange);
-  // If suffix wasn't found anywhere in the suffixRange, then there's no
-  // possible match and we can stop early.
-  if (suffixMatch == null) {
-    return CheckSuffixResult.NO_SUFFIX_MATCH;
-  }
+      const suffixMatch = findTextInRange(suffix, suffixRange);
+      // If suffix wasn't found anywhere in the suffixRange, then there's no
+      // possible match and we can stop early.
+      if (suffixMatch == null) {
+        return CheckSuffixResult.NO_SUFFIX_MATCH;
+      }
 
-  // If suffixMatch is immediately after potentialMatch (i.e., its start
-  // equals suffixRange's start), this is a match. If not, we have to
-  // start over from the beginning.
-  if (suffixMatch.compareBoundaryPoints(Range.START_TO_START, suffixRange) !==
-      0) {
-    return CheckSuffixResult.MISPLACED_SUFFIX;
-  }
+      // If suffixMatch is immediately after potentialMatch (i.e., its start
+      // equals suffixRange's start), this is a match. If not, we have to
+      // start over from the beginning.
+      if (suffixMatch.compareBoundaryPoints(
+              Range.START_TO_START, suffixRange) !== 0) {
+        return CheckSuffixResult.MISPLACED_SUFFIX;
+      }
 
-  return CheckSuffixResult.SUFFIX_MATCH;
-};
+      return CheckSuffixResult.SUFFIX_MATCH;
+    };
 
 /**
  * Sets the start of |range| to be the first boundary point after |offset| in
