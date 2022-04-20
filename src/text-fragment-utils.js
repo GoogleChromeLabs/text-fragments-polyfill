@@ -132,8 +132,11 @@ export const processFragmentDirectives =
               fragmentDirectivesOfType.map((fragmentDirectiveOfType) => {
                 const result = processTextFragmentDirective(
                     fragmentDirectiveOfType, documentToProcess);
-                if (result.length === 1)
+                if (result.length >= 1) {
+                  // Per spec, the first matching text on the page should be
+                  // highlighted when multiple segments match.
                   return markRange(result[0], documentToProcess);
+                }
                 return [];
               });
         }
