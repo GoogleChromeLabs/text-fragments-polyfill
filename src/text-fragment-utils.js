@@ -117,7 +117,7 @@ const parseTextFragmentDirective = (textFragment) => {
  *     process.
  * @param {Document} documentToProcess - document where to extract and mark
  *     fragments in.
- * @return {{text: (Element[])[]}} `<mark>` elements created to highlight the
+ * @return {{text: Element[]}} `<mark>` elements created to highlight the
  *     text fragments.
  */
 export const processFragmentDirectives =
