@@ -16,9 +16,7 @@
     <script type="module">
       location.hash =
         ':~:text=This%20domain,examples&text=in%20literature&text=More%20information...';
-      if (
-        !('fragmentDirective' in document)
-      ) {
+      if (!('fragmentDirective' in document)) {
         import('../src/text-fragments.js');
       }
     </script>
