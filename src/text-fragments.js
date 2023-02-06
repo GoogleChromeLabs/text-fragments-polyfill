@@ -22,19 +22,18 @@ import * as utils from './text-fragment-utils.js';
       'fragmentDirective' in Location.prototype) {
     return;
   }
-  const hash = document.location.hash;
 
   // Pass feature detection (https://web.dev/text-fragments/#feature-detection)
   document.fragmentDirective = {};
 
-  // Return early when there is no hash.
-  // This is fine, since later added hashes are not relevant for
-  // Text Fragments.
-  if (!hash) {
-    return;
-  }
-
   const init = () => {
+    const hash = document.location.hash;
+
+    // Return early when there is no hash.
+    if (!hash) {
+      return;
+    }
+
     const fragmentDirectives = utils.getFragmentDirectives(hash);
     const parsedFragmentDirectives = utils.parseFragmentDirectives(
         fragmentDirectives,
@@ -49,6 +48,7 @@ import * as utils from './text-fragment-utils.js';
       window.setTimeout(() => utils.scrollElementIntoView(firstFoundMatch));
     }
   };
+
   if (document.readyState !== 'complete') {
     document.addEventListener('readystatechange', event => {
       if (event.target.readyState === 'complete') {
@@ -58,4 +58,6 @@ import * as utils from './text-fragment-utils.js';
   } else {
     init();
   }
+
+  window.addEventListener('hashchange', init);
 })();
