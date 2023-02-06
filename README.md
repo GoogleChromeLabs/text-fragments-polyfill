@@ -53,8 +53,7 @@ From unpkg:
 
 ```html
 <script type="module">
-  if (!('fragmentDirective' in Location.prototype) &&
-      !('fragmentDirective' in document)) {
+  if (!('fragmentDirective' in document)) {
     import('https://unpkg.com/text-fragments-polyfill');
   }
 </script>
@@ -67,7 +66,6 @@ For simple usage as a polyfill, it is sufficient to import the `text-fragments.j
 ```js
 // Only load the polyfill in browsers that need it.
 if (
-  !('fragmentDirective' in Location.prototype) &&
   !('fragmentDirective' in document)
 ) {
   import('text-fragments.js');

@@ -18,8 +18,7 @@ import * as utils from './text-fragment-utils.js';
 
 (async () => {
   // Return early if Text Fragments are supported by the browser.
-  if ('fragmentDirective' in document ||
-      'fragmentDirective' in Location.prototype) {
+  if ('fragmentDirective' in document) {
     return;
   }
 
