@@ -173,7 +173,7 @@ const doGenerateFragment = (selection, startTime) => {
   if (canUseExactMatch(range)) {
     const exactText = fragments.internal.normalizeString(range.toString());
     const fragment = {
-      textStart: exactText,
+      start: exactText,
     };
     // If the exact text is long enough to be used on its own, try this and skip
     // the longer process below.
@@ -187,8 +187,8 @@ const doGenerateFragment = (selection, startTime) => {
 
     factory = new FragmentFactory().setExactTextMatch(exactText);
   } else {
-    // We have to use textStart and textEnd to identify a range. First, break
-    // the range up based on block boundaries, as textStart/textEnd can't cross
+    // We have to use start and end to identify a range. First, break
+    // the range up based on block boundaries, as start/end can't cross
     // these.
     const startSearchSpace = getSearchSpaceForStart(range);
     const endSearchSpace = getSearchSpaceForEnd(range);
@@ -200,7 +200,7 @@ const doGenerateFragment = (selection, startTime) => {
           startSearchSpace, endSearchSpace);
     } else {
       // If the search space was empty/undefined, it's because no block boundary
-      // was found. That means textStart and textEnd *share* a search space, so
+      // was found. That means start and end *share* a search space, so
       // our approach must ensure the substrings chosen as candidates don't
       // overlap.
       factory =
@@ -275,7 +275,7 @@ const recordStartTime = (newStartTime) => {
  * trimmed to remove any leading/trailing whitespace characters.
  * @param {Range} range - the range which will be highlighted.
  * @return {String|Undefined} - the text which may be used for constructing a
- *     textStart parameter identifying this range. Will return undefined if no
+ *     start parameter identifying this range. Will return undefined if no
  *     block boundaries are found inside this range, or if all the candidate
  *     ranges were empty (or included only whitespace characters).
  */
@@ -326,7 +326,7 @@ const getSearchSpaceForStart = (range) => {
  * trimmed to remove any leading/trailing whitespace characters.
  * @param {Range} range - the range which will be highlighted.
  * @return {String|Undefined} - the text which may be used for constructing a
- *     textEnd parameter identifying this range. Will return undefined if no
+ *     end parameter identifying this range. Will return undefined if no
  *     block boundaries are found inside this range, or if all the candidate
  *     ranges were empty (or included only whitespace characters).
  */
@@ -412,12 +412,11 @@ const FragmentFactory = class {
   tryToMakeUniqueFragment() {
     let fragment;
     if (this.mode === this.Mode.CONTEXT_ONLY) {
-      fragment = {textStart: this.exactTextMatch};
+      fragment = {start: this.exactTextMatch};
     } else {
       fragment = {
-        textStart:
-            this.getStartSearchSpace().substring(0, this.startOffset).trim(),
-        textEnd: this.getEndSearchSpace().substring(this.endOffset).trim(),
+        start: this.getStartSearchSpace().substring(0, this.startOffset).trim(),
+        end: this.getEndSearchSpace().substring(this.endOffset).trim(),
       };
     }
     if (this.prefixOffset != null) {
@@ -438,7 +437,7 @@ const FragmentFactory = class {
   }
 
   /**
-   * Shifts the current state such that the candidates for textStart and textEnd
+   * Shifts the current state such that the candidates for start and end
    * represent more of the possible search spaces.
    * @return {boolean} - true if the desired expansion occurred; false if the
    *     entire search space has been consumed and no further attempts can be
@@ -449,8 +448,8 @@ const FragmentFactory = class {
 
     if (this.mode === this.Mode.SHARED_START_AND_END) {
       if (this.startOffset >= this.endOffset) {
-        // If the search space is shared between textStart and textEnd, then
-        // stop expanding when textStart overlaps textEnd.
+        // If the search space is shared between start and end, then
+        // stop expanding when start overlaps end.
         canExpandRange = false;
       }
     } else if (this.mode === this.Mode.ALL_PARTS) {
@@ -784,9 +783,9 @@ const FragmentFactory = class {
   }
 
   /**
-   * @returns {number} - how many words should be added to textStart and textEnd
+   * @returns {number} - how many words should be added to start and end
    *     when embiggening. This changes depending on the current state of
-   *     textStart/textEnd, so it should be invoked once per embiggen, before
+   *     start/end, so it should be invoked once per embiggen, before
    *     either is modified.
    */
   getNumberOfRangeWordsToAdd() {
@@ -859,7 +858,7 @@ const FragmentFactory = class {
   }
 
   /**
-   * @return {String} - the string to be used as the search space for textStart
+   * @return {String} - the string to be used as the search space for start
    */
   getStartSearchSpace() {
     return this.mode === this.Mode.SHARED_START_AND_END ?
@@ -878,7 +877,7 @@ const FragmentFactory = class {
   }
 
   /**
-   * @return {String} - the string to be used as the search space for textEnd
+   * @return {String} - the string to be used as the search space for end
    */
   getEndSearchSpace() {
     return this.mode === this.Mode.SHARED_START_AND_END ?
@@ -897,7 +896,7 @@ const FragmentFactory = class {
   }
 
   /**
-   * @return {String} - the string to be used as the search space for textEnd,
+   * @return {String} - the string to be used as the search space for end,
    *     backwards.
    */
   getBackwardsEndSearchSpace() {
@@ -1109,8 +1108,8 @@ const reverseString = (string) => {
  * Determines whether the conditions for an exact match are met.
  * @param {Range} range - the range for which a fragment is being generated.
  * @return {boolean} - true if exact matching (i.e., only
- *     textStart) can be used; false if range matching (i.e., both textStart and
- *     textEnd) must be used.
+ *     start) can be used; false if range matching (i.e., both start and
+ *     end) must be used.
  */
 const canUseExactMatch = (range) => {
   if (range.toString().length > MAX_EXACT_MATCH_LENGTH) return false;

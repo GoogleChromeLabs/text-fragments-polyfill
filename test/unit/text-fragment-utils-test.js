@@ -31,7 +31,7 @@ describe('TextFragmentUtils', function() {
   it('marks simple matching text', function() {
     document.body.innerHTML = __html__['basic-test.html'];
 
-    const directive = {text: [{textStart: 'trivial test of'}]};
+    const directive = {text: [{start: 'trivial test of'}]};
     utils.processFragmentDirectives(directive);
 
     expect(document.body.innerHTML.replace(/\s/g, ''))
@@ -571,22 +571,22 @@ describe('TextFragmentUtils', function() {
   it('finds multiple instances of ambiguous fragments', function() {
     document.body.innerHTML = __html__['ambiguous-match.html'];
 
-    // Simplest case: textStart which appears multiple times
+    // Simplest case: start which appears multiple times
     let fragment = utils.forTesting.parseTextFragmentDirective('target');
     let result = utils.processTextFragmentDirective(fragment);
     expect(result.length).toEqual(2);
 
-    // prefix + textStart
+    // prefix + start
     fragment = utils.forTesting.parseTextFragmentDirective('prefix1-,target');
     result = utils.processTextFragmentDirective(fragment);
     expect(result.length).toEqual(2);
 
-    // textStart + suffix
+    // start + suffix
     fragment = utils.forTesting.parseTextFragmentDirective('target,-suffix1');
     result = utils.processTextFragmentDirective(fragment);
     expect(result.length).toEqual(2);
 
-    // textStart + textEnd
+    // start + end
     fragment = utils.forTesting.parseTextFragmentDirective('target,target');
     result = utils.processTextFragmentDirective(fragment);
     expect(result.length).toEqual(2);
@@ -595,13 +595,13 @@ describe('TextFragmentUtils', function() {
     result = utils.processTextFragmentDirective(fragment);
     expect(result.length).toEqual(2);
 
-    // prefix, textStart, + textEnd
+    // prefix, start, + end
     fragment =
         utils.forTesting.parseTextFragmentDirective('prefix1-,target,target');
     result = utils.processTextFragmentDirective(fragment);
     expect(result.length).toEqual(2);
 
-    // textStart, textEnd, + suffix
+    // start, end, + suffix
     fragment =
         utils.forTesting.parseTextFragmentDirective('target,target,-suffix2');
     result = utils.processTextFragmentDirective(fragment);

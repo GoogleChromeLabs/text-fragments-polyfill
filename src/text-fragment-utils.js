@@ -16,8 +16,8 @@
 
 /**
  * @typedef {Object} TextFragment
- * @property {string} textStart
- * @property {string} [textEnd]
+ * @property {string} start
+ * @property {string} [end]
  * @property {string} [prefix]
  * @property {string} [suffix]
  */
@@ -75,8 +75,8 @@ export const getFragmentDirectives = (hash) => {
  * text fragment.
  * @param {{text: string[]}} fragmentDirectives - Text fragment to decompose
  *     into separate elements.
- * @return {{text: TextFragment[]}} Text Fragments, each containing textStart,
- *     textEnd, prefix and suffix.
+ * @return {{text: TextFragment[]}} Text Fragments, each containing start,
+ *     end, prefix and suffix.
  */
 export const parseFragmentDirectives = (fragmentDirectives) => {
   const parsedFragmentDirectives = {};
@@ -98,15 +98,15 @@ export const parseFragmentDirectives = (fragmentDirectives) => {
  * Decompose a string into an object containing all the parts of a text
  * fragment.
  * @param {string} textFragment - String to decompose.
- * @return {TextFragment} Object containing textStart, textEnd, prefix and
+ * @return {TextFragment} Object containing start, end, prefix and
  *     suffix of the text fragment.
  */
 const parseTextFragmentDirective = (textFragment) => {
   const TEXT_FRAGMENT = /^(?:(.+?)-,)?(?:(.+?))(?:,([^-]+?))?(?:,-(.+?))?$/;
   return {
     prefix: decodeURIComponent(textFragment.replace(TEXT_FRAGMENT, '$1')),
-    textStart: decodeURIComponent(textFragment.replace(TEXT_FRAGMENT, '$2')),
-    textEnd: decodeURIComponent(textFragment.replace(TEXT_FRAGMENT, '$3')),
+    start: decodeURIComponent(textFragment.replace(TEXT_FRAGMENT, '$2')),
+    end: decodeURIComponent(textFragment.replace(TEXT_FRAGMENT, '$3')),
     suffix: decodeURIComponent(textFragment.replace(TEXT_FRAGMENT, '$4')),
   };
 };
@@ -179,7 +179,7 @@ export const processTextFragmentDirective =
               prefixMatch.startOffset,
           );
 
-          // The search space for textStart is everything after the prefix and
+          // The search space for start is everything after the prefix and
           // before the end of the top-level search range, starting at the next
           // non- whitespace position.
           const matchRange = documentToProcess.createRange();
@@ -191,8 +191,8 @@ export const processTextFragmentDirective =
             break;
           }
 
-          potentialMatch = findTextInRange(textFragment.textStart, matchRange);
-          // If textStart wasn't found anywhere in the matchRange, then there's
+          potentialMatch = findTextInRange(textFragment.start, matchRange);
+          // If start wasn't found anywhere in the matchRange, then there's
           // no possible match and we can stop early.
           if (potentialMatch == null) {
             break;
@@ -209,8 +209,8 @@ export const processTextFragmentDirective =
             continue;
           }
         } else {
-          // With no prefix, just look directly for textStart.
-          potentialMatch = findTextInRange(textFragment.textStart, searchRange);
+          // With no prefix, just look directly for start.
+          potentialMatch = findTextInRange(textFragment.start, searchRange);
           if (potentialMatch == null) {
             break;
           }
@@ -221,7 +221,7 @@ export const processTextFragmentDirective =
           );
         }
 
-        if (textFragment.textEnd) {
+        if (textFragment.end) {
           const textEndRange = documentToProcess.createRange();
           textEndRange.setStart(
               potentialMatch.endContainer, potentialMatch.endOffset);
@@ -234,11 +234,11 @@ export const processTextFragmentDirective =
           // occurrence.
           let matchFound = false;
 
-          // Search through the rest of the document to find a textEnd match.
+          // Search through the rest of the document to find a end match.
           // This may take multiple iterations if a suffix needs to be found.
           while (!textEndRange.collapsed && results.length < 2) {
             const textEndMatch =
-                findTextInRange(textFragment.textEnd, textEndRange);
+                findTextInRange(textFragment.end, textEndRange);
             if (textEndMatch == null) {
               break;
             }
@@ -252,7 +252,7 @@ export const processTextFragmentDirective =
 
             if (textFragment.suffix) {
               // If there's supposed to be a suffix, check if it appears after
-              // the textEnd we just found.
+              // the end we just found.
               const suffixResult = checkSuffix(
                   textFragment.suffix, potentialMatch, searchRange,
                   documentToProcess);
@@ -266,20 +266,20 @@ export const processTextFragmentDirective =
                 continue;
               }
             } else {
-              // If we've found textEnd and there's no suffix, then it's a
+              // If we've found end and there's no suffix, then it's a
               // match!
               matchFound = true;
               results.push(potentialMatch.cloneRange());
             }
           }
-          // Stopping match search because suffix or textEnd are missing from
+          // Stopping match search because suffix or end are missing from
           // the rest of the search space.
           if (!matchFound) {
             break;
           }
 
         } else if (textFragment.suffix) {
-          // If there's no textEnd but there is a suffix, search for the suffix
+          // If there's no end but there is a suffix, search for the suffix
           // after potentialMatch
           const suffixResult = checkSuffix(
               textFragment.suffix, potentialMatch, searchRange,
@@ -1105,7 +1105,7 @@ export const setDefaultTextFragmentsStyle = ({backgroundColor, color}) => {
     background-color: ${backgroundColor};
     color: ${color};
   }
-  
+
   .${TEXT_FRAGMENT_CSS_CLASS_NAME} a, a .${TEXT_FRAGMENT_CSS_CLASS_NAME} {
     text-decoration: underline;
   }
