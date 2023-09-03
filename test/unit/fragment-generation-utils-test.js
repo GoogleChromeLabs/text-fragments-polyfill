@@ -40,10 +40,10 @@ describe('FragmentGenerationUtils', function() {
     const result = generationUtils.generateFragment(selection);
     expect(result.status)
         .toEqual(generationUtils.GenerateFragmentStatus.SUCCESS);
-    expect(result.fragment.textStart).not.toBeUndefined();
-    expect(result.fragment.textStart)
+    expect(result.fragment.start).not.toBeUndefined();
+    expect(result.fragment.start)
         .toEqual('this is a trivial test of the marking logic.');
-    expect(result.fragment.textEnd).toBeUndefined();
+    expect(result.fragment.end).toBeUndefined();
     expect(result.fragment.prefix).toBeUndefined();
     expect(result.fragment.suffix).toBeUndefined();
   });
@@ -65,8 +65,8 @@ describe('FragmentGenerationUtils', function() {
     let result = generationUtils.generateFragment(selection);
     expect(result.status)
         .toEqual(generationUtils.GenerateFragmentStatus.SUCCESS);
-    expect(result.fragment.textStart).toEqual('elaborate');
-    expect(result.fragment.textEnd).toEqual('of different stuff');
+    expect(result.fragment.start).toEqual('elaborate');
+    expect(result.fragment.end).toEqual('of different stuff');
     expect(result.fragment.prefix).toBeUndefined();
     expect(result.fragment.suffix).toBeUndefined();
 
@@ -81,8 +81,8 @@ describe('FragmentGenerationUtils', function() {
     result = generationUtils.generateFragment(selection);
     expect(result.status)
         .toEqual(generationUtils.GenerateFragmentStatus.SUCCESS);
-    expect(result.fragment.textStart).toEqual('This is');
-    expect(result.fragment.textEnd).toEqual('stuff\n  in it.');
+    expect(result.fragment.start).toEqual('This is');
+    expect(result.fragment.end).toEqual('stuff\n  in it.');
     expect(result.fragment.prefix).toBeUndefined();
     expect(result.fragment.suffix).toBeUndefined();
   });
@@ -98,8 +98,8 @@ describe('FragmentGenerationUtils', function() {
        selection.addRange(range);
 
        const result = generationUtils.generateFragment(selection);
-       expect(result.fragment.textStart).toEqual('words words words');
-       expect(result.fragment.textEnd).toEqual('words words words');
+       expect(result.fragment.start).toEqual('words words words');
+       expect(result.fragment.end).toEqual('words words words');
      });
 
   it('respects br tags when generating fragments', function() {
@@ -118,7 +118,7 @@ describe('FragmentGenerationUtils', function() {
     const result = generationUtils.generateFragment(selection);
     expect(result.status)
         .toEqual(generationUtils.GenerateFragmentStatus.SUCCESS);
-    expect(result.fragment.textStart).toEqual('elle a brise');
+    expect(result.fragment.start).toEqual('elle a brise');
   });
 
   it('handles a prefix without a suffix', function() {
@@ -135,7 +135,7 @@ describe('FragmentGenerationUtils', function() {
     const result = generationUtils.generateFragment(selection);
     expect(result.status)
         .toEqual(generationUtils.GenerateFragmentStatus.SUCCESS);
-    expect(result.fragment.textStart).toEqual('target');
+    expect(result.fragment.start).toEqual('target');
     expect(result.fragment.prefix).toEqual('prefix');
     expect(result.fragment.suffix).toBeUndefined();
   });
@@ -154,7 +154,7 @@ describe('FragmentGenerationUtils', function() {
     const result = generationUtils.generateFragment(selection);
     expect(result.status)
         .toEqual(generationUtils.GenerateFragmentStatus.SUCCESS);
-    expect(result.fragment.textStart).toEqual('target');
+    expect(result.fragment.start).toEqual('target');
     expect(result.fragment.suffix).toEqual('suffix');
     expect(result.fragment.prefix).toBeUndefined();
   });
@@ -479,8 +479,8 @@ describe('FragmentGenerationUtils', function() {
 
     const fragment = factory.tryToMakeUniqueFragment();
     expect(fragment).not.toBeUndefined();
-    expect(fragment.textStart).toEqual('repeat repeat repeat unique');
-    expect(fragment.textEnd).toEqual('unique repeat repeat repeat');
+    expect(fragment.start).toEqual('repeat repeat repeat unique');
+    expect(fragment.end).toEqual('unique repeat repeat repeat');
 
     expect(factory.embiggen()).toEqual(true);
     expect(startSpace.substring(0, factory.startOffset))
@@ -528,9 +528,9 @@ describe('FragmentGenerationUtils', function() {
 
        const fragment = factory.tryToMakeUniqueFragment();
        expect(fragment).not.toBeUndefined();
-       expect(fragment.textStart)
+       expect(fragment.start)
            .toEqual('いただきますいただきますいただきますご馳走様');
-       expect(fragment.textEnd)
+       expect(fragment.end)
            .toEqual('ご馳走様いただきますいただきますいただきます');
 
        expect(factory.embiggen()).toEqual(true);
@@ -708,8 +708,8 @@ describe('FragmentGenerationUtils', function() {
     selection.addRange(target);
 
     let result = generationUtils.generateFragment(selection);
-    expect(result.fragment.textStart).toEqual('target');
-    expect(result.fragment.textEnd).toBeUndefined();
+    expect(result.fragment.start).toEqual('target');
+    expect(result.fragment.end).toBeUndefined();
     expect(result.fragment.prefix).toEqual('prefix1');
     expect(result.fragment.suffix).toEqual('suffix1 prefix2\n  target');
 
@@ -718,8 +718,8 @@ describe('FragmentGenerationUtils', function() {
     selection.addRange(target);
 
     result = generationUtils.generateFragment(selection);
-    expect(result.fragment.textStart).toEqual('target');
-    expect(result.fragment.textEnd).toBeUndefined();
+    expect(result.fragment.start).toEqual('target');
+    expect(result.fragment.end).toBeUndefined();
     expect(result.fragment.prefix).toEqual('target suffix2 prefix1');
     expect(result.fragment.suffix).toEqual('suffix2\n  prefix2 target');
   });
@@ -738,8 +738,8 @@ describe('FragmentGenerationUtils', function() {
     selection.addRange(target);
 
     const result = generationUtils.generateFragment(selection);
-    expect(result.fragment.textStart).not.toBeFalsy();
-    expect(result.fragment.textEnd).not.toBeFalsy();
+    expect(result.fragment.start).not.toBeFalsy();
+    expect(result.fragment.end).not.toBeFalsy();
     expect(fragmentUtils.forTesting.normalizeString(result.fragment.prefix))
         .toEqual('prefix. lorem ipsum dolor');
     expect(fragmentUtils.forTesting.normalizeString(result.fragment.suffix))
@@ -761,7 +761,7 @@ describe('FragmentGenerationUtils', function() {
     let result = generationUtils.generateFragment(selection);
     expect(fragmentUtils.forTesting.normalizeString(result.fragment.prefix))
         .toEqual('first');
-    expect(fragmentUtils.forTesting.normalizeString(result.fragment.textStart))
+    expect(fragmentUtils.forTesting.normalizeString(result.fragment.start))
         .toEqual('named');
 
     const nodeB = document.getElementById('b').firstChild;
@@ -771,9 +771,9 @@ describe('FragmentGenerationUtils', function() {
     selection.addRange(target);
 
     result = generationUtils.generateFragment(selection);
-    expect(fragmentUtils.forTesting.normalizeString(result.fragment.textStart))
+    expect(fragmentUtils.forTesting.normalizeString(result.fragment.start))
         .toEqual('first named entity');
-    expect(fragmentUtils.forTesting.normalizeString(result.fragment.textEnd))
+    expect(fragmentUtils.forTesting.normalizeString(result.fragment.end))
         .toEqual('june 3, 2014');
   });
 
@@ -1017,7 +1017,7 @@ describe('FragmentGenerationUtils', function() {
        const output = generationUtils.generateFragment(selection);
        expect(output.status)
            .toEqual(generationUtils.GenerateFragmentStatus.SUCCESS);
-       expect(output.fragment.textStart).toEqual('てこの崇高');
+       expect(output.fragment.start).toEqual('てこの崇高');
      });
 
   it('returns true if the first iteration is unique, even if no more' +
@@ -1060,7 +1060,7 @@ describe('FragmentGenerationUtils', function() {
        const generatedFragment = generationUtils.generateFragment(selection);
        const expectedFragment = {
          status: generationUtils.GenerateFragmentStatus.SUCCESS,
-         fragment: {textStart: 'text'},
+         fragment: {start: 'text'},
        };
 
        expect(generatedFragment).toEqual(expectedFragment);
