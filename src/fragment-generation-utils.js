@@ -75,6 +75,18 @@ export const generateFragment = (selection, startTime = Date.now()) => {
   }
 };
 
+export const generateFragmentFromRange = (range, startTime = Date.now()) => {
+  try {
+    return doGenerateFragmentFromRange(range, startTime);
+  } catch (err) {
+    if (err.isTimeout) {
+      return {status: GenerateFragmentStatus.TIMEOUT};
+    } else {
+      return {status: GenerateFragmentStatus.EXECUTION_FAILED};
+    }
+  }
+}
+
 /**
  * Checks whether fragment generation can be attempted for a given range. This
  * checks a handful of simple conditions: the range must be nonempty, not inside
@@ -134,7 +146,6 @@ export const isValidRangeForFragmentGeneration = (range) => {
 
   return true;
 };
-
 /* eslint-disable valid-jsdoc */
 /**
  * @see {@link generateFragment} - this method wraps the error-throwing portions
@@ -143,15 +154,15 @@ export const isValidRangeForFragmentGeneration = (range) => {
  *     timeout length.
  */
 const doGenerateFragment = (selection, startTime) => {
-  recordStartTime(startTime);
-
-  let range;
   try {
-    range = selection.getRangeAt(0);
+    return doGenerateFragmentFromRange(selection.getRangeAt(0), startTime)
   } catch {
     return {status: GenerateFragmentStatus.INVALID_SELECTION};
   }
+};
 
+const doGenerateFragmentFromRange = (range, startTime) => {
+  recordStartTime(startTime);
   expandRangeStartToWordBound(range);
   expandRangeEndToWordBound(range);
   // Keep a copy of the range before we try to shrink it to make it start and
