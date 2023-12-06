@@ -64,14 +64,7 @@ export const GenerateFragmentStatus = {
  * @return {GenerateFragmentResult}
  */
 export const generateFragment = (selection, startTime = Date.now()) => {
-  let range;
-  try {
-    range = selection.getRangeAt(0);
-  } catch {
-    return {status: GenerateFragmentStatus.INVALID_SELECTION};
-  }
-
-  return generateFragmentFromRange(range, startTime);
+  return doGenerateFragment(selection, startTime);
 };
 
 /**
@@ -159,6 +152,19 @@ export const isValidRangeForFragmentGeneration = (range) => {
  *     of that method.
  * @throws {Error} - Will throw if computation takes longer than the accepted
  *     timeout length.
+ */
+const doGenerateFragment = (selection, startTime) => {
+  let range;
+  try {
+    range = selection.getRangeAt(0);
+  } catch {
+    return {status: GenerateFragmentStatus.INVALID_SELECTION};
+  }
+
+  return doGenerateFragmentFromRange(range, startTime);
+}
+/**
+ * @see {@link doGenerateFragment}
  */
 const doGenerateFragmentFromRange = (range, startTime) => {
   recordStartTime(startTime);
