@@ -1100,23 +1100,15 @@ export const applyTargetTextStyle = () => {
  *     to the CSS class.
  */
 export const setDefaultTextFragmentsStyle = ({backgroundColor, color}) => {
-  const styles = document.getElementsByTagName('style');
   const defaultStyle = `.${TEXT_FRAGMENT_CSS_CLASS_NAME} {
     background-color: ${backgroundColor};
     color: ${color};
   }
-  
+
   .${TEXT_FRAGMENT_CSS_CLASS_NAME} a, a .${TEXT_FRAGMENT_CSS_CLASS_NAME} {
     text-decoration: underline;
   }
   `
-  if (styles.length === 0) {
-    document.head.insertAdjacentHTML(
-        'beforeend', `<style type="text/css">${defaultStyle}</style>`);
-  }
-  else {
-    applyTargetTextStyle();
-    const defaultStyleNode = document.createTextNode(defaultStyle);
-    styles[0].insertBefore(defaultStyleNode, styles[0].firstChild);
-  }
+  document.head.insertAdjacentHTML(
+      'beforeend', `<style type="text/css">${defaultStyle}</style>`);
 };
