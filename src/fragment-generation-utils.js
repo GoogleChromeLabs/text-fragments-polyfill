@@ -64,8 +64,20 @@ export const GenerateFragmentStatus = {
  * @return {GenerateFragmentResult}
  */
 export const generateFragment = (selection, startTime = Date.now()) => {
+  return doGenerateFragment(selection, startTime);
+};
+
+/**
+ * Attampts to generate a fragment using a given range. @see {@link generateFragment}
+ * 
+ * @param {Range} range
+ * @param {Date} [startTime] - the time when generation began, for timeout
+ *     purposes. Defaults to current timestamp.
+ * @return {GenerateFragmentResult}
+ */
+export const generateFragmentFromRange = (range, startTime = Date.now()) => {
   try {
-    return doGenerateFragment(selection, startTime);
+    return doGenerateFragmentFromRange(range, startTime);
   } catch (err) {
     if (err.isTimeout) {
       return {status: GenerateFragmentStatus.TIMEOUT};
@@ -73,7 +85,7 @@ export const generateFragment = (selection, startTime = Date.now()) => {
       return {status: GenerateFragmentStatus.EXECUTION_FAILED};
     }
   }
-};
+}
 
 /**
  * Checks whether fragment generation can be attempted for a given range. This
@@ -134,7 +146,6 @@ export const isValidRangeForFragmentGeneration = (range) => {
 
   return true;
 };
-
 /* eslint-disable valid-jsdoc */
 /**
  * @see {@link generateFragment} - this method wraps the error-throwing portions
@@ -143,8 +154,6 @@ export const isValidRangeForFragmentGeneration = (range) => {
  *     timeout length.
  */
 const doGenerateFragment = (selection, startTime) => {
-  recordStartTime(startTime);
-
   let range;
   try {
     range = selection.getRangeAt(0);
@@ -152,6 +161,13 @@ const doGenerateFragment = (selection, startTime) => {
     return {status: GenerateFragmentStatus.INVALID_SELECTION};
   }
 
+  return doGenerateFragmentFromRange(range, startTime);
+}
+/**
+ * @see {@link doGenerateFragment}
+ */
+const doGenerateFragmentFromRange = (range, startTime) => {
+  recordStartTime(startTime);
   expandRangeStartToWordBound(range);
   expandRangeEndToWordBound(range);
   // Keep a copy of the range before we try to shrink it to make it start and
