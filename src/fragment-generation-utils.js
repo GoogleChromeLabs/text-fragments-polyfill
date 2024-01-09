@@ -69,23 +69,24 @@ export const generateFragment = (selection, startTime = Date.now()) => {
 
 /**
  * Attampts to generate a fragment using a given range. @see {@link generateFragment}
- * 
+ *
  * @param {Range} range
  * @param {Date} [startTime] - the time when generation began, for timeout
  *     purposes. Defaults to current timestamp.
  * @return {GenerateFragmentResult}
  */
-export const generateFragmentFromRange = (range, startTime = Date.now()) => {
-  try {
-    return doGenerateFragmentFromRange(range, startTime);
-  } catch (err) {
-    if (err.isTimeout) {
-      return {status: GenerateFragmentStatus.TIMEOUT};
-    } else {
-      return {status: GenerateFragmentStatus.EXECUTION_FAILED};
+export const generateFragmentFromRange =
+    (range, startTime = Date.now()) => {
+      try {
+        return doGenerateFragmentFromRange(range, startTime);
+      } catch (err) {
+        if (err.isTimeout) {
+          return {status: GenerateFragmentStatus.TIMEOUT};
+        } else {
+          return {status: GenerateFragmentStatus.EXECUTION_FAILED};
+        }
+      }
     }
-  }
-}
 
 /**
  * Checks whether fragment generation can be attempted for a given range. This
@@ -153,16 +154,17 @@ export const isValidRangeForFragmentGeneration = (range) => {
  * @throws {Error} - Will throw if computation takes longer than the accepted
  *     timeout length.
  */
-const doGenerateFragment = (selection, startTime) => {
-  let range;
-  try {
-    range = selection.getRangeAt(0);
-  } catch {
-    return {status: GenerateFragmentStatus.INVALID_SELECTION};
-  }
+const doGenerateFragment =
+    (selection, startTime) => {
+      let range;
+      try {
+        range = selection.getRangeAt(0);
+      } catch {
+        return {status: GenerateFragmentStatus.INVALID_SELECTION};
+      }
 
-  return doGenerateFragmentFromRange(range, startTime);
-}
+      return doGenerateFragmentFromRange(range, startTime);
+    }
 /**
  * @see {@link doGenerateFragment}
  */
