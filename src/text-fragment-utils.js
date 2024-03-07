@@ -1083,7 +1083,7 @@ export const applyTargetTextStyle = () => {
   for (const style of styles) {
     const cssRules = style.innerHTML;
     const targetTextRules =
-        cssRules.match(/(\w*)::target-text\s*{\s*((.|\n)*?)\s*}/g);
+        cssRules.match(/::target-text\s*{\s*(?:(?:.|\n)*?)\s*}/g);
     if (!targetTextRules) continue;
 
     const markCss = targetTextRules.join('\n');
