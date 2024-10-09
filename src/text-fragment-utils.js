@@ -717,7 +717,7 @@ const findRangeFromNodeList = (query, range, textNodes, segmenter) => {
   if (!query || !range || !(textNodes || []).length) return undefined;
   const data = normalizeString(getTextContent(textNodes, 0, undefined));
   const normalizedQuery = normalizeString(query);
-  let searchStart = textNodes[0] === range.startNode ? range.startOffset : 0;
+  let searchStart = textNodes[0] === range.startContainer ? range.startOffset : 0;
   let start;
   let end;
   while (searchStart < data.length) {
