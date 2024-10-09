@@ -630,7 +630,7 @@ const FragmentFactory = class {
           while (i < desiredIterations &&
                  this.suffixOffset < this.getSuffixSearchSpace().length) {
             this.suffixOffset = this.getNextOffsetForwards(
-                this.getSuffixSegments(), this.suffixOffset, this.suffixOffset);
+                this.getSuffixSegments(), this.suffixOffset, this.getSuffixSearchSpace());
             i++;
           }
         } else {
