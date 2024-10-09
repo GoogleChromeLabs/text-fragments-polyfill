@@ -547,7 +547,8 @@ const isNodeVisible =
         const nodeStyle = window.getComputedStyle(elt);
         // If the node is not rendered, just skip it.
         if (nodeStyle.visibility === 'hidden' || nodeStyle.display === 'none' ||
-            parseInt(nodeStyle.height, 10) === 0 || parseInt(nodeStyle.width, 10) === 0 ||
+            parseInt(nodeStyle.height, 10) === 0 ||
+            parseInt(nodeStyle.width, 10) === 0 ||
             parseInt(nodeStyle.opacity, 10) === 0) {
           return false;
         }
@@ -659,7 +660,7 @@ const getTextContent = (nodes, startOffset, endOffset) => {
 /**
  * @callback ElementFilterFunction
  * @param {HTMLElement} element - Node to accept, reject or skip.
- * @returns {number} Either NodeFilter.FILTER_ACCEPT, NodeFilter.FILTER_REJECT
+ * @return {number} Either NodeFilter.FILTER_ACCEPT, NodeFilter.FILTER_REJECT
  *     or NodeFilter.FILTER_SKIP.
  */
 
@@ -717,7 +718,8 @@ const findRangeFromNodeList = (query, range, textNodes, segmenter) => {
   if (!query || !range || !(textNodes || []).length) return undefined;
   const data = normalizeString(getTextContent(textNodes, 0, undefined));
   const normalizedQuery = normalizeString(query);
-  let searchStart = textNodes[0] === range.startContainer ? range.startOffset : 0;
+  let searchStart =
+      textNodes[0] === range.startContainer ? range.startOffset : 0;
   let start;
   let end;
   while (searchStart < data.length) {

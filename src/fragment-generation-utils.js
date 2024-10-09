@@ -147,8 +147,11 @@ export const isValidRangeForFragmentGeneration = (range) => {
 
   return true;
 };
-/* eslint-disable valid-jsdoc */
+
 /**
+ * @param {Selection} selection
+ * @param {Date} startTime
+ * @return {GenerateFragmentResult}
  * @see {@link generateFragment} - this method wraps the error-throwing portions
  *     of that method.
  * @throws {Error} - Will throw if computation takes longer than the accepted
@@ -166,6 +169,9 @@ const doGenerateFragment =
       return doGenerateFragmentFromRange(range, startTime);
     }
 /**
+ * @param {Range} range
+ * @param {Date} startTime
+ * @return {GenerateFragmentResult}
  * @see {@link doGenerateFragment}
  */
 const doGenerateFragmentFromRange = (range, startTime) => {
@@ -630,7 +636,8 @@ const FragmentFactory = class {
           while (i < desiredIterations &&
                  this.suffixOffset < this.getSuffixSearchSpace().length) {
             this.suffixOffset = this.getNextOffsetForwards(
-                this.getSuffixSegments(), this.suffixOffset, this.getSuffixSearchSpace());
+                this.getSuffixSegments(), this.suffixOffset,
+                this.getSuffixSearchSpace());
             i++;
           }
         } else {
@@ -764,7 +771,7 @@ const FragmentFactory = class {
    * spaces will be segmented immediately.
    *
    * @param {Intl.Segmenter | Undefined} segmenter
-   * @returns {FragmentFactory} - returns |this| to allow call chaining and
+   * @return {FragmentFactory} - returns |this| to allow call chaining and
    *     assignment
    */
   useSegmenter(segmenter) {
@@ -790,7 +797,7 @@ const FragmentFactory = class {
   }
 
   /**
-   * @returns {number} - how many words should be added to the prefix and suffix
+   * @return {number} - how many words should be added to the prefix and suffix
    *     when embiggening. This changes depending on the current state of the
    *     prefix/suffix, so it should be invoked once per embiggen, before either
    *     is modified.
@@ -802,7 +809,7 @@ const FragmentFactory = class {
   }
 
   /**
-   * @returns {number} - how many words should be added to textStart and textEnd
+   * @return {number} - how many words should be added to textStart and textEnd
    *     when embiggening. This changes depending on the current state of
    *     textStart/textEnd, so it should be invoked once per embiggen, before
    *     either is modified.
@@ -820,7 +827,7 @@ const FragmentFactory = class {
    *     space using Intl.Segmenter
    * @param {number} offset - the current offset
    * @param {string} searchSpace - the search space that was segmented
-   * @returns {number} - the next offset which should be tried.
+   * @return {number} - the next offset which should be tried.
    */
   getNextOffsetForwards(segments, offset, searchSpace) {
     // Find the nearest wordlike segment and move to the end of it.
@@ -846,7 +853,7 @@ const FragmentFactory = class {
    * @param {Segments} segments - the output of segmenting the desired search
    *     space using Intl.Segmenter
    * @param {number} offset - the current offset
-   * @returns {number} - the next offset which should be tried.
+   * @return {number} - the next offset which should be tried.
    */
   getNextOffsetBackwards(segments, offset) {
     // Find the nearest wordlike segment and move to the start of it.
@@ -886,7 +893,7 @@ const FragmentFactory = class {
   }
 
   /**
-   * @returns {Segments | Undefined} - the result of segmenting the start search
+   * @return {Segments | Undefined} - the result of segmenting the start search
    *     space using Intl.Segmenter, or undefined if a segmenter was not
    *     provided.
    */
@@ -905,7 +912,7 @@ const FragmentFactory = class {
   }
 
   /**
-   * @returns {Segments | Undefined} - the result of segmenting the end search
+   * @return {Segments | Undefined} - the result of segmenting the end search
    *     space using Intl.Segmenter, or undefined if a segmenter was not
    *     provided.
    */
@@ -932,7 +939,7 @@ const FragmentFactory = class {
   }
 
   /**
-   * @returns {Segments | Undefined} - the result of segmenting the prefix
+   * @return {Segments | Undefined} - the result of segmenting the prefix
    *     search space using Intl.Segmenter, or undefined if a segmenter was not
    *     provided.
    */
@@ -956,7 +963,7 @@ const FragmentFactory = class {
   }
 
   /**
-   * @returns {Segments | Undefined} - the result of segmenting the suffix
+   * @return {Segments | Undefined} - the result of segmenting the suffix
    *     search space using Intl.Segmenter, or undefined if a segmenter was not
    *     provided.
    */
@@ -1076,7 +1083,7 @@ const BlockTextAccumulator = class {
    * Calculates the intersection of a node with searchRange and returns a Text
    * Node with the intersection
    * @param {Node} node - the node to intercept with searchRange
-   * @returns {Node} - node if node is fully within searchRange or a Text Node
+   * @return {Node} - node if node is fully within searchRange or a Text Node
    *     with the substring of the content of node inside the search range
    */
   getNodeIntersectionWithRange(node) {
@@ -1173,7 +1180,7 @@ const getLastNodeForBlockSearch = (range) => {
 /**
  * Finds the first visible text node within a given range.
  * @param {Range} range - range in which to find the first visible text node
- * @returns {Node} - first visible text node within |range| or null if there are
+ * @return {Node} - first visible text node within |range| or null if there are
  * no visible text nodes within |range|
  */
 const getFirstTextNode = (range) => {
@@ -1194,7 +1201,7 @@ const getFirstTextNode = (range) => {
 /**
  * Finds the last visible text node within a given range.
  * @param {Range} range - range in which to find the last visible text node
- * @returns {Node} - last visible text node within |range| or null if there are
+ * @return {Node} - last visible text node within |range| or null if there are
  * no visible text nodes within |range|
  */
 const getLastTextNode = (range) => {
@@ -1571,7 +1578,7 @@ const expandToNearestWordBoundaryPointUsingSegments =
  * as |node| (i.e., those that are descendents of a common ancestor of |node|
  * with no other block elements in between.)
  * @param {TextNode} node
- * @returns {TextNodeLists}
+ * @return {TextNodeLists}
  */
 const getTextNodesInSameBlock = (node) => {
   const preNodes = [];
@@ -1720,7 +1727,7 @@ const isBlock = (node) => {
 /**
  * Helper to determine if a node is a Text Node or not
  * @param {Node} node - the node to evaluate
- * @returns {Boolean} - true if the node is a Text Node
+ * @return {Boolean} - true if the node is a Text Node
  */
 const isText = (node) => {
   return node.nodeType === Node.TEXT_NODE;
