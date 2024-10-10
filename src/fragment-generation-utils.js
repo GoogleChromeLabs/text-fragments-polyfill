@@ -126,7 +126,7 @@ export const isValidRangeForFragmentGeneration = (range) => {
   let numIterations = 0;
   while (node) {
     if (node.nodeType == Node.ELEMENT_NODE) {
-      if (['TEXTAREA', 'INPUT'].includes(node.tagName)) {
+      if (['TEXTAREA', 'INPUT'].includes(node.tagName.toUpperCase())) {
         return false;
       }
 
@@ -1720,8 +1720,8 @@ const expandRangeEndToWordBound = (range) => {
  */
 const isBlock = (node) => {
   return node.nodeType === Node.ELEMENT_NODE &&
-      (fragments.internal.BLOCK_ELEMENTS.includes(node.tagName) ||
-       node.tagName === 'HTML' || node.tagName === 'BODY');
+      (fragments.internal.BLOCK_ELEMENTS.includes(node.tagName.toUpperCase()) ||
+       node.tagName.toUpperCase() === 'HTML' || node.tagName.toUpperCase() === 'BODY');
 };
 
 /**
