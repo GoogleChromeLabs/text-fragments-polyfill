@@ -1721,7 +1721,8 @@ const expandRangeEndToWordBound = (range) => {
 const isBlock = (node) => {
   return node.nodeType === Node.ELEMENT_NODE &&
       (fragments.internal.BLOCK_ELEMENTS.includes(node.tagName.toUpperCase()) ||
-       node.tagName.toUpperCase() === 'HTML' || node.tagName.toUpperCase() === 'BODY');
+       node.tagName.toUpperCase() === 'HTML' ||
+       node.tagName.toUpperCase() === 'BODY');
 };
 
 /**

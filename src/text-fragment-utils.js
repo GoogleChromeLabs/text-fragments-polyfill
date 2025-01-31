@@ -626,8 +626,8 @@ const getAllTextNodes = (root, range) => {
     if (node.nodeType === Node.TEXT_NODE) {
       tmp.push(node);
     } else if (
-        node instanceof HTMLElement && BLOCK_ELEMENTS.includes(node.tagName.toUpperCase()) &&
-        tmp.length > 0) {
+        node instanceof HTMLElement &&
+        BLOCK_ELEMENTS.includes(node.tagName.toUpperCase()) && tmp.length > 0) {
       // If this is a block element, the current set of text nodes in |tmp| is
       // complete, and we need to move on to a new one.
       blocks.push(tmp);
