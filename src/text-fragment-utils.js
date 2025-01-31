@@ -482,8 +482,8 @@ export const markRange = (range, documentToProcess = document) => {
         acceptNode: function(node) {
           if (!range.intersectsNode(node)) return NodeFilter.FILTER_REJECT;
 
-          if (BLOCK_ELEMENTS.includes(node.tagName.toUpperCase()) ||
-              node.nodeType === Node.TEXT_NODE)
+          if (node.nodeType === Node.TEXT_NODE ||
+              BLOCK_ELEMENTS.includes(node.tagName.toUpperCase()))
             return NodeFilter.FILTER_ACCEPT;
           return NodeFilter.FILTER_SKIP;
         },
@@ -512,11 +512,49 @@ export const markRange = (range, documentToProcess = document) => {
 };
 
 /**
+ * Helper function to check if the element has attribute `hidden="until-found"`.
+ * @param {Element} node - the element to evaluate
+ * @return {Boolean} - true if the element has attribute `hidden="until-found"`
+ */
+const isHiddenUntilFound = (elt) => {
+  if (elt.hidden === 'until-found') {
+    return true;
+  }
+  // Workaround for WebKit. See https://bugs.webkit.org/show_bug.cgi?id=238266
+  const attributes = elt.attributes;
+  if (attributes && attributes['hidden']) {
+    const value = attributes['hidden'].value;
+    if (value === 'until-found') {
+      return true;
+    }
+  }
+  return false;
+};
+
+/**
+ * Helper function to send `beforematch` event and reset the `hidden` attribute
+ * of elements with the `hidden="until-found"` attribute from the provided
+ * element up to the root. Implements
+ * https://html.spec.whatwg.org/multipage/interaction.html#ancestor-hidden-until-found-revealing-algorithm
+ * @param {Element} elt - the element to start with
+ */
+const revealHiddenUntilFoundHierarchy = (elt) => {
+  while (elt) {
+    if (isHiddenUntilFound(elt)) {
+      elt.dispatchEvent(new Event('beforematch'));
+      elt.hidden = '';
+    }
+    elt = elt.parentElement;
+  }
+};
+
+/**
  * Scrolls an element into view, following the recommendation of
  * https://wicg.github.io/scroll-to-text-fragment/#navigating-to-text-fragment
  * @param {Element} element - Element to scroll into view.
  */
 export const scrollElementIntoView = (element) => {
+  revealHiddenUntilFoundHierarchy(element);
   const behavior = {
     behavior: 'auto',
     block: 'center',
@@ -544,7 +582,7 @@ const isNodeVisible =
       let elt = node;
       while (elt != null && !(elt instanceof HTMLElement)) elt = elt.parentNode;
       if (elt != null) {
-        if (elt.hidden === 'until-found') {
+        if (isHiddenUntilFound(elt)) {
           return true;
         }
         const nodeStyle = window.getComputedStyle(elt);
