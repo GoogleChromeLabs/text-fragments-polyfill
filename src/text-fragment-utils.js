@@ -544,6 +544,9 @@ const isNodeVisible =
       let elt = node;
       while (elt != null && !(elt instanceof HTMLElement)) elt = elt.parentNode;
       if (elt != null) {
+        if (elt.hidden === 'until-found') {
+          return true;
+        }
         const nodeStyle = window.getComputedStyle(elt);
         // If the node is not rendered, just skip it.
         if (nodeStyle.visibility === 'hidden' || nodeStyle.display === 'none' ||
