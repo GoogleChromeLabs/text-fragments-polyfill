@@ -35,7 +35,7 @@
     "playwright": "^1.50.1",
     "prettier": "^3.4.2",
     "regenerate": "^1.4.2",
-    "rollup": "^4.32.1",
+    "rollup": "^4.34.1",
     "shx": "^0.3.4",
     "unicode-9.0.0": "^0.7.5"
   },
