@@ -117,11 +117,14 @@ const parseTextFragmentDirective = (textFragment) => {
  *     process.
  * @param {Document} documentToProcess - document where to extract and mark
  *     fragments in.
+ * @param {Element=} root - the root element where to extract and mark
+ *     fragments in.
  * @return {{text: Element[]}} `<mark>` elements created to highlight the
  *     text fragments.
  */
 export const processFragmentDirectives =
-    (parsedFragmentDirectives, documentToProcess = document) => {
+    (parsedFragmentDirectives, documentToProcess = document,
+     root = document.body) => {
       const processedFragmentDirectives = {};
       for (const
                [fragmentDirectiveType,
@@ -131,7 +134,7 @@ export const processFragmentDirectives =
           processedFragmentDirectives[fragmentDirectiveType] =
               fragmentDirectivesOfType.map((fragmentDirectiveOfType) => {
                 const result = processTextFragmentDirective(
-                    fragmentDirectiveOfType, documentToProcess);
+                    fragmentDirectiveOfType, documentToProcess, root);
                 if (result.length >= 1) {
                   // Per spec, the first matching text on the page should be
                   // highlighted when multiple segments match.
@@ -150,6 +153,8 @@ export const processFragmentDirectives =
  * @param {TextFragment} textFragment - Text Fragment to highlight.
  * @param {Document} documentToProcess - document where to extract and mark
  *     fragments in.
+ * @param {Element=} root - the root element where to extract and mark
+ *     fragments in.
  * @return {Ranges[]} - Zero or more ranges within the document corresponding
  *     to the fragment. If the fragment corresponds to more than one location
  *     in the document (i.e., is ambiguous) then the first two matches will be
@@ -158,11 +163,11 @@ export const processFragmentDirectives =
  */
 
 export const processTextFragmentDirective =
-    (textFragment, documentToProcess = document) => {
+    (textFragment, documentToProcess = document, root = document.body) => {
       const results = [];
 
       const searchRange = documentToProcess.createRange();
-      searchRange.selectNodeContents(documentToProcess.body);
+      searchRange.selectNodeContents(root);
 
       while (!searchRange.collapsed && results.length < 2) {
         let potentialMatch;
