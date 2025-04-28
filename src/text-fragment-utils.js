@@ -990,7 +990,7 @@ const makeNewSegmenter = () => {
   if (Intl.Segmenter) {
     let lang = document.documentElement.lang;
     if (!lang) {
-      lang = navigator.languages;
+      lang = navigator.language;
     }
     return new Intl.Segmenter(lang, {granularity: 'word'});
   }
