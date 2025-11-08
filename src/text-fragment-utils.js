@@ -762,19 +762,24 @@ const findTextInRange = (query, range) => {
  */
 const findRangeFromNodeList = (query, range, textNodes, segmenter) => {
   if (!query || !range || !(textNodes || []).length) return undefined;
-  const data = normalizeString(getTextContent(textNodes, 0, undefined));
-  const normalizedQuery = normalizeString(query);
-  let searchStart =
+  const startOffset =
       textNodes[0] === range.startContainer ? range.startOffset : 0;
+  const data =
+      normalizeString(getTextContent(textNodes, startOffset, undefined));
+  const normalizedQuery = normalizeString(query);
+  let searchStart = 0;
   let start;
   let end;
   while (searchStart < data.length) {
     const matchIndex = data.indexOf(normalizedQuery, searchStart);
     if (matchIndex === -1) return undefined;
     if (isWordBounded(data, matchIndex, normalizedQuery.length, segmenter)) {
-      start = getBoundaryPointAtIndex(matchIndex, textNodes, /* isEnd=*/ false);
+      const normalizedStartOffset =
+          normalizeString(textNodes[0].data.slice(0, startOffset)).length;
+      start = getBoundaryPointAtIndex(
+          normalizedStartOffset + matchIndex, textNodes, /* isEnd=*/ false);
       end = getBoundaryPointAtIndex(
-          matchIndex + normalizedQuery.length,
+          normalizedStartOffset + matchIndex + normalizedQuery.length,
           textNodes,
           /* isEnd=*/ true,
       );
