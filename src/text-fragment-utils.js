@@ -593,8 +593,10 @@ const isNodeVisible =
         const nodeStyle = window.getComputedStyle(elt);
         // If the node is not rendered, just skip it.
         if (nodeStyle.visibility === 'hidden' || nodeStyle.display === 'none' ||
-            parseInt(nodeStyle.height, 10) === 0 ||
-            parseInt(nodeStyle.width, 10) === 0 ||
+            parseInt(nodeStyle.height, 10) === 0 &&
+                nodeStyle.overflowY != 'visible' ||
+            parseInt(nodeStyle.width, 10) === 0 &&
+                nodeStyle.overflowX != 'visible' ||
             parseInt(nodeStyle.opacity, 10) === 0) {
           return false;
         }

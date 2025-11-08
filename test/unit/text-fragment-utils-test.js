@@ -1138,4 +1138,35 @@ describe('TextFragmentUtils', function() {
            utils.forTesting.acceptTextNodeIfVisibleInRange(divNode, range);
        expect(filterOutput).toEqual(NodeFilter.FILTER_REJECT);
      });
+
+  it('Ignores zero-width/height elements with hidden overflow', function() {
+    document.body.innerHTML = __html__['hidden-overflow.html'];
+    {
+      const directives = utils.getFragmentDirectives(
+          '#:~:text=Target%20text-fragment%201',
+      );
+      const parsedDirectives = utils.parseFragmentDirectives(directives);
+      const processedDirectives =
+          utils.processFragmentDirectives(parsedDirectives)['text'];
+      expect(processedDirectives[0].length).toBe(1);
+    }
+    {
+      const directives = utils.getFragmentDirectives(
+          '#:~:text=Target%20text-fragment%202',
+      );
+      const parsedDirectives = utils.parseFragmentDirectives(directives);
+      const processedDirectives =
+          utils.processFragmentDirectives(parsedDirectives)['text'];
+      expect(processedDirectives[0].length).toBe(0);
+    }
+    {
+      const directives = utils.getFragmentDirectives(
+          '#:~:text=Target%20text-fragment%203',
+      );
+      const parsedDirectives = utils.parseFragmentDirectives(directives);
+      const processedDirectives =
+          utils.processFragmentDirectives(parsedDirectives)['text'];
+      expect(processedDirectives[0].length).toBe(0);
+    }
+  });
 });
