@@ -155,7 +155,7 @@ export const processFragmentDirectives =
  *     fragments in.
  * @param {Element=} root - the root element where to extract and mark
  *     fragments in.
- * @return {Ranges[]} - Zero or more ranges within the document corresponding
+ * @return {Range[]} - Zero or more ranges within the document corresponding
  *     to the fragment. If the fragment corresponds to more than one location
  *     in the document (i.e., is ambiguous) then the first two matches will be
  *     returned (regardless of how many more matches there may be in the
@@ -344,9 +344,9 @@ const CheckSuffixResult = {
  *     |potentialMatch| will be considered.
  * @param {Document} documentToProcess - document where to extract and mark
  *     fragments in.
- * @return {CheckSuffixResult} - enum value indicating that potentialMatch
- *     should be accepted, that the search should continue, or that the search
- *     should halt.
+ * @return {(typeof CheckSuffixResult)[keyof typeof CheckSuffixResult]} - enum
+ *     value indicating that potentialMatch should be accepted, that the search
+ *     should continue, or that the search should halt.
  */
 const checkSuffix =
     (suffix, potentialMatch, searchRange, documentToProcess) => {
@@ -606,9 +606,9 @@ const isNodeVisible =
  * Filter function for use with TreeWalkers. Rejects nodes that aren't in the
  * given range or aren't visible.
  * @param {Node} node - the Node to evaluate
- * @param {Range|Undefined} range - the range in which node must fall. Optional;
+ * @param {Range|undefined} range - the range in which node must fall. Optional;
  *     if null, the range check is skipped.
- * @return {NodeFilter} - FILTER_ACCEPT or FILTER_REJECT, to be passed along to
+ * @return {Number} - FILTER_ACCEPT or FILTER_REJECT, to be passed along to
  *     a TreeWalker.
  */
 const acceptNodeIfVisibleInRange = (node, range) => {
@@ -627,7 +627,7 @@ const acceptNodeIfVisibleInRange = (node, range) => {
  * @param {Node} node - the Node to evaluate
  * @param {Range} range - the range in which node must fall. Optional;
  *     if null, the range check is skipped/
- * @return {NodeFilter} - NodeFilter value to be passed along to a TreeWalker.
+ * @return {Number} - NodeFilter value to be passed along to a TreeWalker.
  * Values returned:
  *  - FILTER_REJECT: Node not in range or not visible.
  *  - FILTER_SKIP: Non Text Node visible and in range
@@ -649,7 +649,7 @@ const acceptTextNodeIfVisibleInRange = (node, range) => {
  * Extracts all the text nodes within the given range.
  * @param {Node} root - the root node in which to search
  * @param {Range} range - a range restricting the scope of extraction
- * @return {Array<String[]>} - a list of lists of text nodes, in document order.
+ * @return {Array<Text[]>} - a list of lists of text nodes, in document order.
  *     Lists represent block boundaries; i.e., two nodes appear in the same list
  *     iff there are no block element starts or ends in between them.
  */
@@ -735,7 +735,7 @@ function* getElementsIn(root, filter) {
  * Returns a range pointing to the first instance of |query| within |range|.
  * @param {String} query - the string to find
  * @param {Range} range - the range in which to search
- * @return {Range|Undefined} - The first found instance of |query| within
+ * @return {Range|undefined} - The first found instance of |query| within
  *     |range|.
  */
 const findTextInRange = (query, range) => {
@@ -757,29 +757,24 @@ const findTextInRange = (query, range) => {
  * @param {Node[]} textNodes - the visible text nodes within |range|
  * @param {Intl.Segmenter} [segmenter] - a segmenter to be used for finding word
  *     boundaries, if supported
- * @return {Range} - the found range, or undefined if no such range could be
- *     found
+ * @return {Range|undefined} - the found range, or undefined if no such range
+ *     could be found
  */
 const findRangeFromNodeList = (query, range, textNodes, segmenter) => {
   if (!query || !range || !(textNodes || []).length) return undefined;
-  const startOffset =
-      textNodes[0] === range.startContainer ? range.startOffset : 0;
-  const data =
-      normalizeString(getTextContent(textNodes, startOffset, undefined));
+  const data = normalizeString(getTextContent(textNodes, 0, undefined));
   const normalizedQuery = normalizeString(query);
-  let searchStart = 0;
+  let searchStart =
+      textNodes[0] === range.startContainer ? range.startOffset : 0;
   let start;
   let end;
   while (searchStart < data.length) {
     const matchIndex = data.indexOf(normalizedQuery, searchStart);
     if (matchIndex === -1) return undefined;
     if (isWordBounded(data, matchIndex, normalizedQuery.length, segmenter)) {
-      const normalizedStartOffset =
-          normalizeString(textNodes[0].data.slice(0, startOffset)).length;
-      start = getBoundaryPointAtIndex(
-          normalizedStartOffset + matchIndex, textNodes, /* isEnd=*/ false);
+      start = getBoundaryPointAtIndex(matchIndex, textNodes, /* isEnd=*/ false);
       end = getBoundaryPointAtIndex(
-          normalizedStartOffset + matchIndex + normalizedQuery.length,
+          matchIndex + normalizedQuery.length,
           textNodes,
           /* isEnd=*/ true,
       );
@@ -816,8 +811,8 @@ const findRangeFromNodeList = (query, range, textNodes, segmenter) => {
  *     space
  * @param {bool} isEnd - indicates whether the offset is the start or end of the
  *     substring
- * @return {BoundaryPoint} - a boundary point suitable for setting as the start
- *     or end of a Range, or undefined if it couldn't be computed.
+ * @return {BoundaryPoint|undefined} - a boundary point suitable for setting as
+ *     the start or end of a Range, or undefined if it couldn't be computed.
  */
 const getBoundaryPointAtIndex = (index, textNodes, isEnd) => {
   let counted = 0;
@@ -902,7 +897,7 @@ const getBoundaryPointAtIndex = (index, textNodes, isEnd) => {
  * @param {Number} length - the length of the substring
  * @param {Intl.Segmenter} [segmenter] - a segmenter to be used for finding word
  *     boundaries, if supported
- * @return {bool} - true iff startPos and length point to a word-bounded
+ * @return {boolean} - true iff startPos and length point to a word-bounded
  *     substring of |text|.
  */
 const isWordBounded = (text, startPos, length, segmenter) => {
