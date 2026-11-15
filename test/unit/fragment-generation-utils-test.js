@@ -48,6 +48,55 @@ describe('FragmentGenerationUtils', function() {
     expect(result.fragment.suffix).toBeUndefined();
   });
 
+  for (const text of ['＝－／', 'Йода', 'Crème brûlée', 'office ﬃ ligature']) {
+    it(`preserves source characters in exact fragments: ${text}`, function() {
+      document.body.innerHTML = '<p>prefix context</p><p id="target"></p>' +
+          '<p>suffix context</p>';
+      const target = document.getElementById('target');
+      target.textContent = text;
+      const range = document.createRange();
+      range.selectNodeContents(target.firstChild);
+      const result = generationUtils.generateFragmentFromRange(range);
+      expect(result.status)
+          .toEqual(generationUtils.GenerateFragmentStatus.SUCCESS);
+      expect(result.fragment.textStart).toEqual(text.toLowerCase());
+      const matches =
+          fragmentUtils.processTextFragmentDirective(result.fragment);
+      expect(matches.length).toEqual(1);
+      expect(matches[0].toString()).toEqual(text);
+    });
+  }
+
+  it('still disambiguates exact matches that differ only in accents',
+     function() {
+       document.body.innerHTML = '<p>first context café after first</p>' +
+           '<p>second context <span id="target">cafe</span> after second</p>';
+       const range = document.createRange();
+       range.selectNodeContents(document.getElementById('target').firstChild);
+       expect(fragmentUtils.processTextFragmentDirective({textStart: 'cafe'})
+                  .length)
+           .toEqual(2);
+       const result = generationUtils.generateFragmentFromRange(range);
+       expect(result.status)
+           .toEqual(generationUtils.GenerateFragmentStatus.SUCCESS);
+       expect(result.fragment.prefix || result.fragment.suffix).toBeTruthy();
+       const matches =
+           fragmentUtils.processTextFragmentDirective(result.fragment);
+       expect(matches.length).toEqual(1);
+       expect(matches[0].toString()).toEqual('cafe');
+     });
+
+  it('keeps whitespace folding for exact fragments', function() {
+    document.body.innerHTML =
+        '<p id="target">Crème   brûlée with\nextra words</p>';
+    const range = document.createRange();
+    range.selectNodeContents(document.getElementById('target').firstChild);
+    const result = generationUtils.generateFragmentFromRange(range);
+    expect(result.status)
+        .toEqual(generationUtils.GenerateFragmentStatus.SUCCESS);
+    expect(result.fragment.textStart).toEqual('crème brûlée with extra words');
+  });
+
   it('can generate a fragment for a match across block boundaries', function() {
     document.body.innerHTML = __html__['marks-test.html'];
     const range = document.createRange();
@@ -118,7 +167,7 @@ describe('FragmentGenerationUtils', function() {
     const result = generationUtils.generateFragment(selection);
     expect(result.status)
         .toEqual(generationUtils.GenerateFragmentStatus.SUCCESS);
-    expect(result.fragment.textStart).toEqual('elle a brise');
+    expect(result.fragment.textStart).toEqual('elle a brisé');
   });
 
   it('handles a prefix without a suffix', function() {
