@@ -195,7 +195,10 @@ const doGenerateFragmentFromRange = (range, startTime) => {
   let factory;
 
   if (canUseExactMatch(range)) {
-    const exactText = fragments.internal.normalizeString(range.toString());
+    // Preserve the source characters in the generated URL. Normalization is
+    // still used when checking uniqueness, but its compatibility folding can
+    // replace characters that native text-fragment matching distinguishes.
+    const exactText = range.toString().replace(/\s+/g, ' ').toLowerCase();
     const fragment = {
       textStart: exactText,
     };
